@@ -3559,3 +3559,91 @@ select.input {
     animation: spin 1.4s linear infinite !important;
   }
 }
+
+
+/* ============================================================================
+   25. THE FOUNDER'S LETTER (all-in.html)
+   A single long read, so it breaks the site's usual card discipline on
+   purpose: no boxes, generous measure, display serif at body size. This is
+   the one page meant to be read rather than used.
+   ========================================================================= */
+
+.letter {
+  max-width: 62ch;
+  margin: 0 auto;
+}
+
+.letter__note {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cream-mute);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-xl);
+}
+
+.letter__body p {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  line-height: 1.65;
+  color: var(--cream-dim);
+  margin-bottom: var(--space-lg);
+}
+
+/* The opening address carries the letter, so it gets the full cream. */
+.letter__body p:first-child {
+  color: var(--cream);
+}
+
+.letter__signoff {
+  color: var(--cream);
+  font-style: italic;
+}
+
+.letter__rule {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: var(--space-2xl) 0;
+}
+
+.letter__after {
+  max-width: 62ch;
+  margin: var(--space-2xl) auto 0;
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border);
+}
+
+.letter__after p {
+  color: var(--cream-mute);
+  font-size: 0.95rem;
+  margin-bottom: var(--space-sm);
+}
+
+.letter__after a {
+  color: var(--brass);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--dur) var(--ease);
+}
+
+@media (hover: hover) {
+  .letter__after a:hover { color: var(--brass-lift); }
+}
+
+.story__more {
+  margin-top: var(--space-lg);
+  font-size: 0.95rem;
+}
+
+.story__more a {
+  color: var(--brass);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--dur) var(--ease);
+}
+
+@media (hover: hover) {
+  .story__more a:hover { color: var(--brass-lift); }
+}
