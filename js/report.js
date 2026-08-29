@@ -23,8 +23,19 @@
  * final-stack reporting hang off the existing entry with no re-entry.
  *
  * Server RPCs used: check_in(p_night_id, p_code), report_entry(p_night_id,
- * p_final_stack, p_rebuy_chips). Reads: nights (named columns, never *),
- * entries, season_scores, season_enrollments, seasons (all through RLS).
+ * p_final_stack, p_rebuy_chips), rebuy_quote(p_night_id, p_current_stack),
+ * take_rebuy(p_night_id, p_current_stack, p_amount). Reads: nights (named
+ * columns, never *), entries, season_scores, season_enrollments, seasons
+ * (all through RLS).
+ *
+ * THE BANK. Chips only change hands against a SLIP: a full-screen takeover
+ * with one giant number, the pseudonym, and a live clock (so a screenshot
+ * cannot pass as fresh). Buy-in slip after check-in; top-up slip after
+ * take_rebuy. When entry.rebuy_at is set the bank flow was used: the report
+ * form locks step 1 to the recorded amount and NEVER sends a manual rebuy
+ * value (the payload carries the server's own recorded number, which
+ * report_entry ignores anyway). When rebuy_at is null the manual question
+ * stays, as the fallback for a night where the bank flow was not used.
  */
 (function () {
   'use strict';
@@ -55,6 +66,50 @@
    * check-in field arrives pre-filled. Players without a camera type the
    * 5 characters instead. Checked-in players never see the field again. */
   var urlCode = S.normCode(new URLSearchParams(window.location.search).get('n') || '');
+
+  /* Non-null rebuy_at means the live bank flow issued the top-up. That
+   * number is the truth; the manual question disappears. */
+  function bankMode() {
+    return !!(ctx.entry && ctx.entry.rebuy_at);
+  }
+
+  /* ------------------------------------------------------------------
+   * Oslo time. The deadline and the slips are read in one room, in one
+   * timezone; the phone's own zone is irrelevant.
+   * ------------------------------------------------------------------ */
+  function osloClock(date, withSeconds) {
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit',
+        second: withSeconds ? '2-digit' : undefined, hour12: false
+      }).format(date);
+    } catch (e) {
+      // Ancient browser without timeZone support: local time, honestly.
+      return date.toTimeString().slice(0, withSeconds ? 8 : 5);
+    }
+  }
+
+  function osloDateKey(date) {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(date);
+    } catch (e) {
+      return date.toISOString().slice(0, 10);
+    }
+  }
+
+  /* "today" / "tomorrow" / "on Friday 5 September", relative to now. */
+  function osloDayWord(date) {
+    var key = osloDateKey(date);
+    if (key === osloDateKey(new Date())) { return 'today'; }
+    if (key === osloDateKey(new Date(Date.now() + 24 * 60 * 60 * 1000))) { return 'tomorrow'; }
+    try {
+      return 'on ' + new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Oslo', weekday: 'long', day: 'numeric', month: 'long'
+      }).format(date);
+    } catch (e) { return 'on ' + key; }
+  }
 
   /* ------------------------------------------------------------------
    * Outbox sender: one rpc call, honest error classification.
@@ -98,7 +153,9 @@
   function saveDraft() {
     try {
       window.localStorage.setItem(draftKey(), JSON.stringify({
-        rebuy: $('rebuy-input').value,
+        // In bank mode the rebuy is the server's record, not a draft: store
+        // null so a stale manual value can never be restored over it.
+        rebuy: bankMode() ? null : $('rebuy-input').value,
         final: $('final-input').value,
         busted: $('bust-btn').classList.contains('quickpick--active'),
         updated: Date.now()
@@ -154,12 +211,127 @@
     var html =
       ledgerRow('Attendance bonus', '+' + S.fmt(bonus), { plus: true }) +
       ledgerRow('Buy-in', '−' + S.fmt(buyin), { minus: true }) +
-      ledgerRow('Top-up', rebuy > 0 ? '−' + S.fmt(rebuy) : '0', { minus: rebuy > 0 }) +
+      ledgerRow(bankMode() ? 'Top-up (bank)' : 'Top-up',
+                rebuy > 0 ? '−' + S.fmt(rebuy) : '0', { minus: rebuy > 0 }) +
       ledgerRow('Final stack', '+' + S.fmt(finalStack), { plus: finalStack > 0 }) +
       ledgerRow('Net for tonight', S.fmtSigned(net),
                 { total: true, plus: net > 0, minus: net < 0 });
     return { html: html, net: net };
   }
+
+  /* ------------------------------------------------------------------
+   * Slips. The screen the player shows the organiser at the chip bank.
+   * One giant number, the pseudonym, what it is for, and a live clock
+   * so the bank can tell tonight's slip from last week's screenshot.
+   * ------------------------------------------------------------------ */
+  var slipTimer = null;
+  var slipReturnFocus = null;
+
+  function slipTick() {
+    $('slip-clock').textContent = osloClock(new Date(), true);
+  }
+
+  /* opts: { kind: 'buyin' | 'topup', amount, note (string html-safe parts
+   * built here), becomes (number|null), reshow (bool), issuedAt (iso|null) } */
+  function openSlip(opts) {
+    if (!ctx.member || !ctx.night) { return; }
+    var root = $('slip');
+
+    var kicker = opts.kind === 'buyin' ? 'Buy-in' : 'Top-up';
+    if (opts.reshow) { kicker += ' · re-show'; }
+    $('slip-kicker').textContent = kicker;
+
+    $('slip-give').textContent = 'GIVE ' + ctx.member.pseudonym;
+    $('slip-amount').textContent = S.fmt(opts.amount);
+    $('slip-night').textContent = ctx.night.title || ('Night ' + ctx.night.night_no);
+
+    var note = $('slip-note');
+    if (opts.becomes !== null && opts.becomes !== undefined) {
+      note.innerHTML = 'Stack becomes <span class="mono">' +
+        S.escapeHtml(S.fmt(opts.becomes)) + '</span>';
+      S.show(note, true);
+    } else if (opts.note) {
+      note.innerHTML = opts.note;
+      S.show(note, true);
+    } else {
+      S.show(note, false);
+    }
+
+    var stamp = $('slip-stamp');
+    root.classList.toggle('slip--reshow', !!opts.reshow);
+    if (opts.reshow && opts.issuedAt) {
+      // "Recorded", not "honoured": the row exists, but only the bank
+      // knows whether chips already crossed the table for it.
+      var t = new Date(opts.issuedAt);
+      stamp.textContent = 'Re-show · recorded at ' +
+        (isNaN(t) ? String(opts.issuedAt) : osloClock(t, false));
+      S.show(stamp, true);
+    } else {
+      S.show(stamp, false);
+    }
+
+    slipTick();
+    if (slipTimer) { clearInterval(slipTimer); }
+    slipTimer = setInterval(slipTick, 1000);
+
+    slipReturnFocus = document.activeElement;
+    S.show(root, true);
+    document.body.classList.add('no-scroll');
+    $('slip-close').focus();
+  }
+
+  function closeSlip() {
+    if (slipTimer) { clearInterval(slipTimer); slipTimer = null; }
+    S.show($('slip'), false);
+    document.body.classList.remove('no-scroll');
+    if (slipReturnFocus && slipReturnFocus.focus &&
+        document.contains(slipReturnFocus)) {
+      slipReturnFocus.focus();
+    }
+    slipReturnFocus = null;
+  }
+
+  $('slip-close').addEventListener('click', closeSlip);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('slip').hidden) { closeSlip(); }
+  });
+
+  function openBuyinSlip() {
+    if (!ctx.entry) { return; }
+    var buyin = ctx.entry.buyin_chips || 0;
+    var stack = ctx.night ? ctx.night.stack_size : null;
+    openSlip({
+      kind: 'buyin',
+      amount: buyin,
+      // On a short-stack booking the number is deliberately NOT the full
+      // stack: say so, so the bank counts the slip and not the habit.
+      note: (stack !== null && buyin !== stack)
+        ? 'Points-limited buy-in. Tonight\'s full stack is <span class="mono">' +
+          S.escapeHtml(S.fmt(stack)) + '</span>.'
+        : null,
+      becomes: null,
+      reshow: false
+    });
+  }
+
+  function openTopupSlip(reshow) {
+    var e = ctx.entry;
+    if (!e || !e.rebuy_at) { return; }
+    var becomes = (e.rebuy_stack_before !== null && e.rebuy_stack_before !== undefined)
+      ? e.rebuy_stack_before + (e.rebuy_chips || 0)
+      : null;
+    openSlip({
+      kind: 'topup',
+      amount: e.rebuy_chips || 0,
+      becomes: becomes,
+      reshow: !!reshow,
+      issuedAt: e.rebuy_at
+    });
+  }
+
+  $('buyin-slip-btn').addEventListener('click', openBuyinSlip);
+  $('topup-reshow-btn').addEventListener('click', function () { openTopupSlip(true); });
+  $('bank-rebuy-slip-btn').addEventListener('click', function () { openTopupSlip(true); });
 
   /* ------------------------------------------------------------------
    * Sync pill + organiser card, driven by the outbox
@@ -248,6 +420,10 @@
         ctx.entry = Array.isArray(r.data) ? r.data[0] : r.data;
         msg($('checkin-msg'), '', '');
         enterReport();
+        // The first thing the player does after checking in is collect
+        // chips, so the buy-in slip opens itself. Re-openable from the
+        // "Show my buy-in slip" button any time while checked in.
+        openBuyinSlip();
       })
       .catch(function (err) {
         msg($('checkin-msg'), S.friendlyError(err), 'error');
@@ -261,27 +437,72 @@
 
   function enterReport() {
     var n = ctx.night, e = ctx.entry;
+    var bank = bankMode();
     $('report-bonus').textContent = '+' + S.fmt(n.attendance_bonus);
     $('report-buyin').textContent = S.fmt(e.buyin_chips) + ' chips';
-    $('report-cap').textContent = S.fmt(e.rebuy_cap_chips) + ' chips';
+    $('report-cap').textContent = bank
+      ? 'taken at the bank'
+      : S.fmt(e.rebuy_cap_chips) + ' chips';
     $('rebuy-max').textContent = 'Full top-up (' + S.fmt(e.rebuy_cap_chips) + ')';
 
+    // Step 1 has two faces. Bank mode: a read-only record, the live number
+    // is the truth. Manual mode: the old question, untouched, the fallback
+    // for a night where the bank flow was not used.
+    S.show($('manual-rebuy'), !bank);
+    S.show($('bank-rebuy-line'), bank);
+    if (bank) {
+      $('step1-label').textContent = 'Recorded at the bank';
+      $('step1-title').textContent = 'Your top-up tonight';
+      $('bank-rebuy-amount').textContent = S.fmt(e.rebuy_chips || 0);
+    } else {
+      $('step1-label').textContent = 'Step 1 of 2';
+      $('step1-title').textContent = 'Did you top up tonight?';
+    }
+
     // Prefill: server row wins if already reported; else the local draft.
+    // A draft's rebuy is only honoured in manual mode; in bank mode the
+    // input is pinned to the recorded amount below, whatever was drafted.
     var draft = loadDraft();
     if (e.reported) {
       $('rebuy-input').value = String(e.rebuy_chips || 0);
       $('final-input').value = e.final_stack === null ? '' : String(e.final_stack);
     } else if (draft) {
-      $('rebuy-input').value = draft.rebuy || '0';
+      if (!bank) { $('rebuy-input').value = draft.rebuy || '0'; }
       $('final-input').value = draft.final || '';
       $('bust-btn').classList.toggle('quickpick--active', !!draft.busted);
     }
+    if (bank) { $('rebuy-input').value = String(e.rebuy_chips || 0); }
 
     // Cap of zero → the only honest answer is "None".
     disableQuickpicksAboveCap();
     syncQuickpickHighlight();
+    renderTopup();
+    renderDeadline();
     S.show($('review-panel'), false);
     showState('state-report');
+  }
+
+  /* ------------------------------------------------------------------
+   * Deadline line: nights.reports_close_at, shown in Oslo time. The
+   * server enforces it (P0021); this line just keeps nobody surprised.
+   * ------------------------------------------------------------------ */
+  function renderDeadline() {
+    var el = $('deadline-line');
+    var n = ctx.night;
+    if (!n || !n.reports_close_at) { S.show(el, false); return; }
+    var t = new Date(n.reports_close_at);
+    if (isNaN(t)) { S.show(el, false); return; }
+    var when = '<span class="mono">' + S.escapeHtml(osloClock(t, false)) + '</span> ' +
+      S.escapeHtml(osloDayWord(t));
+    if (Date.now() >= t.getTime()) {
+      el.innerHTML = 'Reporting closed at ' + when +
+        ' (Oslo time). Show your numbers to an organiser instead.';
+      el.className = 'report-deadline report-deadline--closed';
+    } else {
+      el.innerHTML = 'You can report until ' + when + ' (Oslo time).';
+      el.className = 'report-deadline';
+    }
+    S.show(el, true);
   }
 
   function disableQuickpicksAboveCap() {
@@ -338,6 +559,201 @@
     saveDraft();
   });
 
+  /* ------------------------------------------------------------------
+   * Top-up at the bank. count your chips → rebuy_quote → pick an amount
+   * → take_rebuy → slip. Every branch ends in a message or a slip;
+   * nothing is ever left spinning.
+   * ------------------------------------------------------------------ */
+  var topupQuote = null;   // last rebuy_quote result, while step 2 is up
+
+  function renderTopup() {
+    var card = $('topup-card');
+    var e = ctx.entry;
+    if (!e) { S.show(card, false); return; }
+    if (e.rebuy_at) {
+      // Already topped up: a quiet record, and the slip on demand.
+      $('topup-done-amount').textContent = S.fmt(e.rebuy_chips || 0);
+      var t = new Date(e.rebuy_at);
+      $('topup-done-time').textContent = isNaN(t) ? '…' : osloClock(t, false);
+      S.show($('topup-open'), false);
+      S.show($('topup-flow'), false);
+      S.show($('topup-done'), true);
+      S.show(card, true);
+    } else if (ctx.night && ctx.night.status === 'open') {
+      S.show($('topup-open'), true);
+      S.show($('topup-flow'), false);
+      S.show($('topup-done'), false);
+      S.show(card, true);
+    } else {
+      // Night reconciling or beyond: the bank has packed up.
+      S.show(card, false);
+    }
+  }
+
+  function topupReset() {
+    topupQuote = null;
+    S.show($('topup-step-count'), true);
+    S.show($('topup-step-quote'), false);
+    msg($('topup-msg'), '', '');
+  }
+
+  /* The bank flow said "already topped up" (this phone raced another tap,
+   * or an organiser entered it). The recorded row is the truth: fetch it,
+   * re-render, and reopen its slip marked as a re-show. */
+  function topupAlreadyDone() {
+    return S.myEntry(ctx.night.id, ctx.member.id).then(function (row) {
+      if (row) { ctx.entry = row; }
+      enterReport();
+      if (bankMode()) { openTopupSlip(true); }
+    }).catch(function () {
+      msg($('topup-msg'),
+          'A top-up is already recorded for you tonight. Reload to see it, or ask an organiser.',
+          'error');
+    });
+  }
+
+  function topupError(err) {
+    var code = err && err.code;
+    if (code === 'P0023') { return topupAlreadyDone(); }
+    var text;
+    if (code === 'P0022') {
+      text = 'You are not checked in to tonight\'s round. Check in first.';
+    } else if (code === 'P0001') {
+      // The flow stays on screen ON PURPOSE: #topup-msg lives inside
+      // #topup-flow, and renderTopup() here would hide the flow and the
+      // explanation with it. The offer disappears on the next reload.
+      text = 'The night is no longer open, so the bank is closed. An organiser can still help.';
+    } else if (code === 'P0024') {
+      text = 'No top-up is available: nothing fits between your stack and tonight\'s ceiling.';
+    } else if (code === 'P0025') {
+      text = S.friendlyError(err) + ' Go back and check the chip count.';
+    } else {
+      text = S.friendlyError(err);
+    }
+    msg($('topup-msg'), text, 'error');
+    return Promise.resolve();
+  }
+
+  $('topup-start-btn').addEventListener('click', function () {
+    S.show($('topup-open'), false);
+    S.show($('topup-flow'), true);
+    topupReset();
+    $('topup-stack-input').focus();
+  });
+
+  $('topup-cancel-btn').addEventListener('click', function () {
+    S.show($('topup-flow'), false);
+    topupReset();
+    renderTopup();
+  });
+
+  $('topup-stack-input').addEventListener('input', function () {
+    msg($('topup-msg'), '', '');
+  });
+
+  $('topup-quote-btn').addEventListener('click', function () {
+    var stack = S.parseChips($('topup-stack-input').value);
+    if (stack === null) {
+      msg($('topup-msg'), 'Count the chips in front of you and type the total. 0 counts.', 'error');
+      $('topup-stack-input').focus();
+      return;
+    }
+    var btn = $('topup-quote-btn');
+    btn.setAttribute('aria-busy', 'true');
+    msg($('topup-msg'), '', '');
+    S.client().rpc('rebuy_quote', { p_night_id: ctx.night.id, p_current_stack: stack })
+      .then(function (r) {
+        if (r.error) { throw r.error; }
+        var q = r.data;
+        if (!q || !q.eligible) {
+          var reason = q && q.reason;
+          if (reason === 'holding_full_stack') {
+            msg($('topup-msg'),
+                'You are holding tonight\'s full stack (' + S.fmt(q.stack_size) +
+                '), so there is nothing to top up.', 'error');
+          } else if (reason === 'no_points_left') {
+            msg($('topup-msg'),
+                'Your season points are spent, so there is no top-up left tonight. You still play what you hold.',
+                'error');
+          } else {
+            msg($('topup-msg'), 'No top-up is available right now.', 'error');
+          }
+          return;
+        }
+        topupQuote = q;
+        $('topup-max-line').innerHTML = 'You can take up to <span class="mono">' +
+          S.escapeHtml(S.fmt(q.max_topup)) + '</span>.';
+        $('topup-amount-input').value = String(q.max_topup);
+        topupBecomes();
+        S.show($('topup-step-count'), false);
+        S.show($('topup-step-quote'), true);
+      })
+      .catch(topupError)
+      .finally(function () { btn.removeAttribute('aria-busy'); });
+  });
+
+  function topupBecomes() {
+    var el = $('topup-becomes');
+    if (!topupQuote) { el.textContent = ''; return; }
+    var amount = S.parseChips($('topup-amount-input').value);
+    if (amount === null || amount <= 0) {
+      el.textContent = 'Type how many chips to take.';
+      return;
+    }
+    if (amount > topupQuote.max_topup) {
+      el.textContent = 'That is over the ceiling: the most you can take is ' +
+        S.fmt(topupQuote.max_topup) + '.';
+      return;
+    }
+    el.innerHTML = 'Your stack becomes <span class="mono">' +
+      S.escapeHtml(S.fmt(topupQuote.current_stack + amount)) + '</span>.';
+  }
+
+  $('topup-amount-input').addEventListener('input', function () {
+    msg($('topup-msg'), '', '');
+    topupBecomes();
+  });
+
+  $('topup-back-btn').addEventListener('click', function () {
+    topupReset();
+    $('topup-stack-input').focus();
+  });
+
+  $('topup-confirm-btn').addEventListener('click', function () {
+    if (!topupQuote) { return; }
+    var amount = S.parseChips($('topup-amount-input').value);
+    if (amount === null || amount <= 0) {
+      msg($('topup-msg'), 'Type how many chips to take, 1 or more.', 'error');
+      $('topup-amount-input').focus();
+      return;
+    }
+    if (amount > topupQuote.max_topup) {
+      msg($('topup-msg'), 'The most you can take is ' + S.fmt(topupQuote.max_topup) +
+          '. Lower the amount.', 'error');
+      $('topup-amount-input').focus();
+      return;
+    }
+    var btn = $('topup-confirm-btn');
+    btn.setAttribute('aria-busy', 'true');
+    msg($('topup-msg'), '', '');
+    // take_rebuy is row-locked server-side: a double tap cannot issue two.
+    S.client().rpc('take_rebuy', {
+      p_night_id: ctx.night.id,
+      p_current_stack: topupQuote.current_stack,
+      p_amount: amount
+    })
+      .then(function (r) {
+        if (r.error) { throw r.error; }
+        ctx.entry = Array.isArray(r.data) ? r.data[0] : r.data;
+        topupReset();
+        S.show($('topup-flow'), false);
+        enterReport();      // re-renders step 1 as the bank record
+        openTopupSlip(false);
+      })
+      .catch(topupError)
+      .finally(function () { btn.removeAttribute('aria-busy'); });
+  });
+
   /* ---------------- review ---------------- */
 
   var reviewed = null; // { final, rebuy } as validated for sending
@@ -345,14 +761,21 @@
   $('report-form').addEventListener('submit', function (e) {
     e.preventDefault();
 
-    var rebuy = S.parseChips($('rebuy-input').value);
-    if (rebuy === null) { rebuy = 0; }
-    var cap = ctx.entry.rebuy_cap_chips;
-    if (rebuy > cap) {
-      rebuy = cap;
-      $('rebuy-input').value = String(cap);
-      msg($('rebuy-msg'), 'Top-ups max out at ' + S.fmt(cap) + ' tonight, adjusted.', 'error');
-      syncQuickpickHighlight();
+    var rebuy;
+    if (bankMode()) {
+      // The bank issued the top-up; the recorded amount is not editable
+      // and no manual value is ever taken from the field.
+      rebuy = ctx.entry.rebuy_chips || 0;
+    } else {
+      rebuy = S.parseChips($('rebuy-input').value);
+      if (rebuy === null) { rebuy = 0; }
+      var cap = ctx.entry.rebuy_cap_chips;
+      if (rebuy > cap) {
+        rebuy = cap;
+        $('rebuy-input').value = String(cap);
+        msg($('rebuy-msg'), 'Top-ups max out at ' + S.fmt(cap) + ' tonight, adjusted.', 'error');
+        syncQuickpickHighlight();
+      }
     }
 
     var finalStack = S.parseChips($('final-input').value);
@@ -388,6 +811,9 @@
 
   $('submit-btn').addEventListener('click', function () {
     if (!reviewed) { return; }
+    // In bank mode reviewed.rebuy IS the server's recorded amount, never a
+    // typed one, and report_entry ignores the parameter anyway when
+    // rebuy_at is set. The manual path sends the typed value as before.
     OB.enqueue(ctx.night.id, ctx.member.id, {
       p_night_id: ctx.night.id,
       p_final_stack: reviewed.final,
@@ -475,9 +901,10 @@
   $('change-btn').addEventListener('click', function () {
     if (ctx.night.status === 'open' || ctx.night.status === 'reconciling') {
       // Preload the last numbers so editing starts from what was sent.
+      // (In bank mode enterReport pins the rebuy to the recorded amount.)
       var nums = reportedNumbers();
       if (nums) {
-        $('rebuy-input').value = String(nums.rebuy);
+        if (!bankMode()) { $('rebuy-input').value = String(nums.rebuy); }
         $('final-input').value = String(nums.final);
       }
       enterReport();

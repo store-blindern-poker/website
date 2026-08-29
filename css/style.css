@@ -107,6 +107,38 @@
      .countdown__going-num   Its numeral. Mono, tabular. The line keeps its
                              height while empty, so filling it shifts nothing.
 
+   BANK SLIPS AND TOP-UP (section 24). Used only by report.html + js/report.js.
+
+     .slip                   Full-screen takeover, same pattern as the night
+                             code: the phone is shown to the organiser at the
+                             chip bank. Toggle with [hidden]. Contains, top to
+                             bottom: kicker, give-line, amount, unit, note,
+                             night, clock, stamp, close.
+     .slip--reshow           A re-rendered slip for a top-up already issued.
+                             The kicker goes clay and the stamp (below) shows
+                             the original issue time, so the bank can tell a
+                             fresh slip from an old one.
+     .slip__kicker           What the slip is for ("BUY-IN", "TOP-UP"). Mono,
+                             uppercase, brass; clay under --reshow.
+     .slip__give             "GIVE <pseudonym>". Sans 600, big.
+     .slip__amount           THE number. Giant mono, brass, tabular.
+     .slip__unit             "chips" under the number. Mono, uppercase.
+     .slip__note             One quiet sanity line ("Stack becomes 10,000").
+                             Wrap numerals in <span class="mono">.
+     .slip__night            Night title. Mono, small caps style.
+     .slip__clock            Live clock, ticking seconds. Mono. Freshness proof.
+     .slip__stamp            The RE-SHOW box: original issue time, clay.
+     .slip__close            The one obvious close. Full-width-ish button at
+                             the bottom, 56px.
+
+     .topup-quote            "You can take up to 7,000." Display face, the
+                             numeral in <span class="mono"> goes brass.
+     .topup-done             Quiet one-liner recording a bank top-up, with an
+                             inline .link-gold re-show button.
+     .report-deadline        "You can report until 09:00 tomorrow." Centred
+                             help line under the report form.
+     .report-deadline--closed  Same line after the deadline: clay.
+
    Legacy token names (--gold, --text-primary, --space-*, --radius-lg, ...) are
    aliased to the new palette at the bottom of the token block, so the inline
    styles still in the HTML keep rendering correctly. Prefer the new names.
@@ -3309,7 +3341,192 @@ select.input {
 }
 
 /* ==========================================================================
-   24. REDUCED MOTION
+   24. BANK SLIPS AND TOP-UP FLOW
+   A slip is the phone screen a player holds up at the chip bank. It is read
+   at arm's length in a dim room: one giant mono number, the pseudonym, what
+   the number is for, and a live clock so last week's screenshot cannot pass
+   as fresh. Same takeover pattern as the night code (section 22).
+   ========================================================================== */
+
+.slip {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background-color: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.2vmin;
+  padding: 4vmin;
+  text-align: center;
+}
+
+.slip__kicker {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(0.8rem, 2.4vmin, 1rem);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.slip__give {
+  font-family: var(--font-sans);
+  font-size: clamp(1.5rem, 7vmin, 2.4rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--cream);
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+/* The single biggest thing on the screen. No glow, no shadow: the number
+   has to survive being read across a chip case. */
+.slip__amount {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: clamp(3.2rem, 17vmin, 8rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--brass);
+  max-width: 100%;
+}
+
+.slip__unit {
+  font-family: var(--font-mono);
+  font-size: clamp(0.95rem, 3.2vmin, 1.3rem);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;             /* re-centres against the tracking */
+  text-transform: uppercase;
+  color: var(--cream-dim);
+}
+
+.slip__note {
+  font-size: clamp(1rem, 3vmin, 1.15rem);
+  line-height: 1.4;
+  color: var(--cream-dim);
+}
+
+.slip__note .mono { color: var(--cream); font-weight: 500; }
+
+.slip__night {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(0.75rem, 2.2vmin, 0.9rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cream-mute);
+  margin-top: 1vmin;
+}
+
+/* Ticking seconds: the freshness proof. A screenshot's clock stands still. */
+.slip__clock {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.1rem, 3.6vmin, 1.5rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--cream);
+}
+
+/* Clay is semantic danger, and this is exactly that: do not hand over chips
+   for a slip that was already honoured once. */
+.slip__stamp {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(0.8rem, 2.6vmin, 1rem);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clay-lift);
+  border: 1px solid var(--clay-line);
+  border-radius: var(--radius);
+  background-color: var(--clay-fill);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.slip--reshow .slip__kicker { color: var(--clay-lift); }
+
+.slip__close {
+  margin-top: 2vmin;
+  min-height: 56px;
+  width: min(340px, 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  color: var(--cream);
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background-color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease);
+}
+
+.slip__close:hover {
+  background-color: var(--surface-2);
+  border-color: var(--border-loud);
+}
+
+/* ---- Top-up flow on the report screen --------------------------------- */
+
+/* "You can take up to 7,000." The answer to the whole trip to the bank. */
+.topup-quote {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: var(--cream);
+  margin-bottom: var(--space-md);
+}
+
+.topup-quote .mono { color: var(--brass); }
+
+/* Quiet record of a top-up already taken. A line, not a card in a card. */
+.topup-done {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--cream-dim);
+}
+
+.topup-done .mono {
+  font-weight: 500;
+  color: var(--cream);
+}
+
+/* .link-gold on a <button>: the button reset (section 2) already strips the
+   chrome, this restores the 48px tap height an inline link button loses.
+   inline-flex + min-height grows only its own line box, so the sentence
+   above it keeps its rhythm. */
+.topup-done .link-gold,
+#bank-rebuy-line .link-gold {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  text-align: left;
+}
+
+/* ---- Reporting deadline ------------------------------------------------ */
+.report-deadline {
+  margin-top: var(--space-md);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--cream-dim);
+}
+
+.report-deadline .mono { color: var(--cream); }
+
+.report-deadline--closed,
+.report-deadline--closed .mono { color: var(--clay-lift); }
+
+/* ==========================================================================
+   25. REDUCED MOTION
    Cut the duration, never the state. Everything still changes, it just
    arrives immediately.
    ========================================================================== */

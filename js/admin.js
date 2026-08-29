@@ -8,9 +8,13 @@
  * check_in(p_night_id, p_member_id), admin proxy path, no p_code needed,
  * report_entry(p_night_id, p_final_stack, p_rebuy_chips, p_member_id,
  * p_note), add_adjustment(p_night_id, p_member_id, p_delta_points, p_kind,
- * p_reason), get_night_code(p_night_id) for the TV takeover.
+ * p_reason), get_night_code(p_night_id) for the TV takeover,
+ * void_rebuy(p_night_id, p_member_id) to undo a bank top-up whose slip was
+ * never honoured, is_super_admin() once at boot, and for super admins only
+ * grant_admin(p_member_id) / revoke_admin(p_member_id).
  * Reads: v_seasons, nights (named columns, never *), entries, adjustments,
- * members (admin RLS).
+ * members (admin RLS), v_member_directory (empty unless admin; the ONLY
+ * place real names and emails may render).
  *
  * The screen that matters as the night winds up is WHO HAS NOT REPORTED, it is the
  * loudest block on the page. The balance indicator (chips in vs out) is
@@ -36,7 +40,10 @@
     membersByKey: {}, // normalised pseudonym -> member
     membersById: {},  // id -> member
     bulkPlan: null,   // validated bulk-paste lines awaiting apply
-    pollTimer: null
+    pollTimer: null,
+    isSuper: false,   // is_super_admin(), asked once at boot
+    directory: [],    // v_member_directory rows (admin-only names + emails)
+    dirState: 'idle'  // idle | ready | failed (skeleton is the idle look)
   };
 
   function msg(el, text, kind) {
@@ -296,12 +303,22 @@
           ? '<span class="badge badge--ok">reported' +
             (e.reported_via !== 'self' ? ' · ' + S.escapeHtml(e.reported_via) : '') + '</span>'
           : '<span class="badge badge--warn">not reported</span>';
+        // rebuy_at set = the top-up was issued live at the bank, so the
+        // number is the server's record, not somebody's memory. Those rows
+        // get the badge and the undo: void_rebuy exists precisely because a
+        // recorded top-up may never have been handed over.
+        var bank = !!e.rebuy_at;
         return '<tr>' +
           '<td>' + S.escapeHtml(pseudonymOf(e.member_id)) + '</td>' +
           '<td class="num">' + S.fmt(e.buyin_chips) + '</td>' +
-          '<td class="num">' + S.fmt(e.rebuy_chips) + '</td>' +
+          '<td class="num">' + S.fmt(e.rebuy_chips) +
+            (bank ? ' <span class="badge badge--gold">bank</span>' : '') + '</td>' +
           '<td class="num">' + (e.reported ? S.fmt(e.final_stack || 0) : '…') + '</td>' +
-          '<td>' + status + '</td>' +
+          '<td>' + status +
+            (bank
+              ? ' <button type="button" class="btn btn--ghost" style="padding: 6px 10px;"' +
+                ' data-void-member="' + S.escapeHtml(e.member_id) + '">Void top-up…</button>'
+              : '') + '</td>' +
         '</tr>';
       }).join('');
     }
@@ -1011,12 +1028,221 @@
   });
 
   /* ------------------------------------------------------------------
+   * Void a bank top-up
+   *
+   * The undo for a slip that was never handed over: the member tapped
+   * "take top-up", the record was written, and then the queue moved on or
+   * the chip case was empty. void_rebuy() is admin-only server-side; the
+   * button renders on any entry whose rebuy_at is set.
+   * ------------------------------------------------------------------ */
+
+  $('entries-body').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-void-member]');
+    if (!btn || !ctx.night) { return; }
+    var memberId = btn.getAttribute('data-void-member');
+    var entry = ctx.entries.filter(function (en) { return en.member_id === memberId; })[0];
+    if (!entry) { return; }
+    var ok = window.confirm(
+      'Void the recorded top-up of ' + S.fmt(entry.rebuy_chips) + ' chips for ' +
+      pseudonymOf(memberId) + '?\n\nOnly do this if the chips were never actually ' +
+      'handed over. Their slip stays on their phone but stops counting.');
+    if (!ok) { return; }
+    btn.disabled = true;
+    msg($('entries-msg'), 'Voiding the top-up…', 'busy');
+    rpc('void_rebuy', { p_night_id: ctx.night.id, p_member_id: memberId })
+      .then(function () {
+        msg($('entries-msg'), 'Top-up voided for ' + pseudonymOf(memberId) + ' ✓', 'ok');
+        return loadEntries();
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        msg($('entries-msg'), S.friendlyError(err), 'error');
+      });
+  });
+
+  /* ------------------------------------------------------------------
+   * Member directory + roles
+   *
+   * v_member_directory is the one read on the whole site that carries real
+   * names and emails, and the database keeps it admin-only (it comes back
+   * empty for anyone else). Search filters client-side: 110 rows is
+   * nothing, and an organiser mid-night gets instant answers.
+   *
+   * Roles: is_super_admin() is asked once at boot. Supers get an Action
+   * column with grant/revoke buttons; plain admins get the directory
+   * read-only. Super admins themselves are managed in the SQL editor, and
+   * the server refuses to touch them anyway, so their action cell is just
+   * a muted note. Every failure stays inside this section: the console
+   * above works fine with no directory at all.
+   * ------------------------------------------------------------------ */
+
+  var DIR_COLS = 'member_id,pseudonym,real_name,email,joined_on,is_active,claimed,is_admin,is_super';
+
+  function isSuperAdmin() {
+    var c = S.client();
+    if (!c) { return Promise.resolve(false); }
+    return c.rpc('is_super_admin').then(function (r) {
+      if (r.error) { return false; }
+      return r.data === true;
+    }).catch(function () { return false; });
+  }
+
+  function dirColspan() { return ctx.isSuper ? 6 : 5; }
+
+  function loadDirectory() {
+    return S.client().from('v_member_directory').select(DIR_COLS)
+      .order('pseudonym', { ascending: true })
+      .then(function (r) {
+        if (r.error) { throw r.error; }
+        ctx.directory = r.data || [];
+        ctx.dirState = 'ready';
+        msg($('members-msg'), '', '');
+        renderDirectory();
+      })
+      .catch(function (err) {
+        if (ctx.dirState === 'ready') {
+          // Keep the last good list on screen; just say the refresh failed.
+          msg($('members-msg'), 'That refresh failed, so this list may be out of date: ' +
+            S.friendlyError(err), 'error');
+          return;
+        }
+        ctx.dirState = 'failed';
+        $('members-count').textContent = '';
+        $('members-body').innerHTML = '<tr><td colspan="' + dirColspan() +
+          '" style="color: var(--text-tertiary);">The directory did not load: ' +
+          S.escapeHtml(S.friendlyError(err)) +
+          ' Refresh to try again; everything else on this page works without it.</td></tr>';
+      });
+  }
+
+  function renderDirectory() {
+    if (ctx.dirState !== 'ready') { return; }
+    var body = $('members-body');
+
+    S.show($('members-actions-th'), !!ctx.isSuper);
+
+    var total = ctx.directory.length;
+    var claimed = ctx.directory.filter(function (m) { return m.claimed; }).length;
+    $('members-count').textContent = total
+      ? S.fmt(total) + (total === 1 ? ' member, ' : ' members, ') +
+        (claimed === 1 ? '1 with an account' : S.fmt(claimed) + ' with accounts')
+      : 'No members yet';
+
+    if (!total) {
+      body.innerHTML = '<tr><td colspan="' + dirColspan() +
+        '" style="color: var(--text-tertiary);">The directory came back empty.</td></tr>';
+      return;
+    }
+
+    var q = String($('members-search').value || '').trim().toLowerCase();
+    var rows = !q ? ctx.directory : ctx.directory.filter(function (m) {
+      return String(m.pseudonym || '').toLowerCase().indexOf(q) !== -1 ||
+             String(m.real_name || '').toLowerCase().indexOf(q) !== -1;
+    });
+
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="' + dirColspan() +
+        '" style="color: var(--text-tertiary);">No member matches "' +
+        S.escapeHtml(q) + '".</td></tr>';
+      return;
+    }
+
+    body.innerHTML = rows.map(function (m) {
+      var badges = [];
+      if (m.is_super) { badges.push('<span class="badge badge--gold">super admin</span>'); }
+      else if (m.is_admin) { badges.push('<span class="badge badge--gold">admin</span>'); }
+      if (!m.claimed) { badges.push('<span class="badge badge--muted">no account yet</span>'); }
+      if (!m.is_active) { badges.push('<span class="badge badge--muted">inactive</span>'); }
+
+      var action = '';
+      if (ctx.isSuper) {
+        var cell = '';
+        if (m.is_super) {
+          // Managed in the SQL editor only; the server refuses anyway.
+          cell = '<span style="color: var(--cream-mute); font-size: 0.85rem;">super admin</span>';
+        } else if (m.is_admin) {
+          cell = '<button type="button" class="btn btn--danger" style="padding: 6px 12px;"' +
+            ' data-role-act="revoke" data-member="' + S.escapeHtml(m.member_id) +
+            '">Remove organiser</button>';
+        } else if (m.claimed) {
+          cell = '<button type="button" class="btn btn--secondary" style="padding: 6px 12px;"' +
+            ' data-role-act="grant" data-member="' + S.escapeHtml(m.member_id) +
+            '">Make organiser</button>';
+        }
+        // Unclaimed non-admins get an empty cell: grant_admin refuses
+        // unclaimed members, so the button would only ever be a dead end.
+        action = '<td>' + cell + '</td>';
+      }
+
+      return '<tr>' +
+        '<td>' + S.escapeHtml(m.pseudonym || '(no pseudonym)') + '</td>' +
+        '<td>' + S.escapeHtml(m.real_name || '') + '</td>' +
+        '<td>' + S.escapeHtml(m.email || '') + '</td>' +
+        '<td><span class="mono" style="font-size: 0.85rem;">' +
+          S.escapeHtml(m.joined_on || '') + '</span></td>' +
+        '<td>' + badges.join(' ') + '</td>' +
+        action +
+      '</tr>';
+    }).join('');
+  }
+
+  $('members-search').addEventListener('input', renderDirectory);
+
+  /* 42501 (not a super admin) and the unclaimed-member refusal both carry a
+   * server-written sentence that says exactly what happened; friendlyError's
+   * generic 42501 line ("for organisers only") would be wrong here, the
+   * caller IS an organiser. So P0-class and 42501 errors speak verbatim. */
+  function roleErrorText(err) {
+    var code = String((err && err.code) || '');
+    if (code === '42501' || /^P0/.test(code)) {
+      return String((err && err.message) || 'The server refused.');
+    }
+    return S.friendlyError(err);
+  }
+
+  $('members-body').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-role-act]');
+    if (!btn) { return; }
+    var id = btn.getAttribute('data-member');
+    var m = ctx.directory.filter(function (x) { return x.member_id === id; })[0];
+    if (!m) { return; }
+    var act = btn.getAttribute('data-role-act');
+    var who = m.pseudonym + (m.real_name ? ' (' + m.real_name + ')' : '');
+    var text = act === 'grant'
+      ? 'Make ' + who + ' an organiser?\n\nThey will run nights, enter results for ' +
+        'anyone, and see this directory, real names and emails included.'
+      : 'Remove ' + who + ' as organiser?\n\nThey keep their account and their ' +
+        'points; they just stop being able to run nights.';
+    if (!window.confirm(text)) { return; }
+    btn.disabled = true;
+    msg($('members-msg'), act === 'grant'
+      ? 'Making ' + m.pseudonym + ' an organiser…'
+      : 'Removing ' + m.pseudonym + ' as organiser…', 'busy');
+    rpc(act === 'grant' ? 'grant_admin' : 'revoke_admin', { p_member_id: id })
+      .then(function () {
+        // Refresh first: loadDirectory() clears the message line on
+        // success, so the confirmation has to land after it.
+        return loadDirectory().then(function () {
+          msg($('members-msg'), m.pseudonym + (act === 'grant'
+            ? ' is now an organiser ✓' : ' is no longer an organiser ✓'), 'ok');
+        });
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        msg($('members-msg'), roleErrorText(err), 'error');
+      });
+  });
+
+  /* ------------------------------------------------------------------
    * Refresh + boot
    * ------------------------------------------------------------------ */
 
   $('refresh-btn').addEventListener('click', function () {
     msg($('lifecycle-msg'), '', '');
     refreshAll();
+    // Separate on purpose: the directory swallows its own failures, and a
+    // directory that will not load must never stop the night refreshing.
+    loadDirectory();
   });
 
   $('denied-signout').addEventListener('click', function () {
@@ -1035,11 +1261,20 @@
         showState('state-denied');
         return;
       }
-      return Promise.all([loadSeason(), loadMembers()])
+      // isSuperAdmin() never rejects (false on any failure), so a hiccup in
+      // the role check can only hide the role buttons, never block the boot.
+      return Promise.all([
+        loadSeason(),
+        loadMembers(),
+        isSuperAdmin().then(function (v) { ctx.isSuper = v; })
+      ])
         .then(loadNights)
         .then(function () {
           S.show($('refresh-btn'), true);
           showState('console');
+          // Fire and forget: loadDirectory() catches everything itself, and
+          // the console must stand whole even if the directory never loads.
+          loadDirectory();
           // Preselect the most relevant night: open > reconciling > next draft.
           var pick = null;
           ['open', 'reconciling', 'draft'].some(function (st) {

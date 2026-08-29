@@ -126,7 +126,7 @@
   var NIGHT_COLS = 'id,season_id,night_no,played_on,title,kind,status,' +
     'counts_as_round,affects_points,stack_size,attendance_bonus,entry_count,' +
     'unreported_count,chips_in,chips_out,chip_balance,opened_at,closed_at,' +
-    'settled_at,settled_by,revision,created_at';
+    'settled_at,settled_by,revision,created_at,reports_close_at';
 
   /* Tonight's night, if any: an 'open' night wins, else a 'reconciling' one
    * (members may still report while the organisers reconcile). */

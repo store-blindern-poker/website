@@ -284,6 +284,11 @@
                 </tbody>
               </table>
             </div>
+            <!-- Speaks for the entries table above it: the void top-up
+                 action reports here. Sits outside the table so a re-render
+                 never wipes an error mid-read. -->
+            <p class="form-msg" id="entries-msg" role="status" aria-live="polite"
+               style="margin-top: calc(-1 * var(--space-md)); margin-bottom: var(--space-lg);"></p>
 
             <!-- Check in / report on behalf -->
             <div class="card-grid" style="margin-bottom: var(--space-lg);">
@@ -441,6 +446,74 @@
                 <p class="form-msg" id="season-msg" role="status" aria-live="polite"></p>
               </form>
             </div>
+          </section>
+
+          <!-- ============ Members: the directory and the organiser roles ============
+               The ONE place real names and emails render. The database
+               already gates v_member_directory to admins (it comes back
+               empty for anyone else), this page just draws what it gets.
+               Role buttons only appear for super admins; js/admin.js asks
+               is_super_admin() once at boot. The whole section fails soft:
+               a directory that will not load says so here and takes nothing
+               else on the page with it. -->
+          <hr class="rule">
+          <section aria-labelledby="members-title" style="margin-bottom: var(--space-3xl);">
+            <div class="whoami">
+              <div>
+                <h2 class="card__title" id="members-title" style="margin-bottom: 0;">Members</h2>
+                <div class="whoami__label" id="members-count">…</div>
+              </div>
+            </div>
+            <p class="card__text" style="margin-bottom: var(--space-md);">
+              Real names and emails appear here and nowhere else on the site.
+              Everywhere public, a member is their pseudonym.
+            </p>
+            <div class="field">
+              <label class="label visually-hidden" for="members-search">Search by pseudonym or name</label>
+              <input class="input" id="members-search" type="search" autocomplete="off"
+                     autocapitalize="off" placeholder="Search by pseudonym or name…">
+            </div>
+            <div class="table-wrapper">
+              <table class="table table--compact">
+                <caption class="visually-hidden">Member directory with roles</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Pseudonym</th>
+                    <th scope="col">Real name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Joined</th>
+                    <th scope="col">Role</th>
+                    <!-- Unhidden by js/admin.js for super admins only; the
+                         rows only render the matching cell then too. -->
+                    <th scope="col" id="members-actions-th" hidden>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="members-body">
+                  <tr aria-hidden="true">
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td><span class="skeleton" style="width: 16ch;"></span></td>
+                    <td><span class="skeleton skeleton--num"></span></td>
+                    <td><span class="skeleton" style="width: 7ch;"></span></td>
+                  </tr>
+                  <tr aria-hidden="true">
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td><span class="skeleton" style="width: 16ch;"></span></td>
+                    <td><span class="skeleton skeleton--num"></span></td>
+                    <td><span class="skeleton" style="width: 7ch;"></span></td>
+                  </tr>
+                  <tr aria-hidden="true">
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td><span class="skeleton" style="width: 16ch;"></span></td>
+                    <td><span class="skeleton skeleton--num"></span></td>
+                    <td><span class="skeleton" style="width: 7ch;"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="form-msg" id="members-msg" role="status" aria-live="polite"></p>
           </section>
         </div>
 
