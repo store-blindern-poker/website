@@ -9,6 +9,14 @@ Rules for anyone (human or AI) working in this repo.
 - The club's voice is set by the founder's "All in" letter: plain, warm, concrete, first person plural, dry humour. Short sentences. Facts over adjectives.
 - The club is always "Store Blindern Poker". English first; Norwegian translation comes later.
 
+## Design
+
+`docs/DESIGN_SYSTEM.md` is binding for anything visual. Read it before touching CSS or
+markup. The short version: warm earth tones on near-black, one brass accent, crisp visible
+borders (never rgba white at 8 percent), a single 4px radius everywhere, Newsreader +
+Instrument Sans + JetBrains Mono (never Inter), snappy `cubic-bezier(0.16, 1, 0.3, 1)`
+motion on named properties, and no cookie-cutter card grids.
+
 ## Hard rules
 
 - This is a points-only club. No money, no payment features, no currency language. Buy-ins, rebuys, and stacks are chips and season points, never cash.

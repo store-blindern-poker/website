@@ -10,7 +10,6 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <div class="noise-overlay"></div>
 
   <div class="page-wrapper">
 
@@ -121,44 +120,44 @@
           <div class="section__header reveal">
             <div class="section__label">What we are</div>
             <h2 class="section__title" id="about-title">A card game, a leaderboard, and good company</h2>
-            <p class="section__description">
-              Every Friday evening we set up the tables, hand out the chips, and
-              play Texas Hold'em for a couple of hours. Results feed a
-              semester-long leaderboard, and at the end of term the top players
-              meet at the final table.
-            </p>
           </div>
 
-          <div class="card-grid">
-            <div class="card card--hover reveal">
-              <div class="card__icon" aria-hidden="true">♠</div>
-              <h3 class="card__title">Points, never money</h3>
-              <p class="card__text">
-                We play for points and nothing else. There is no entry fee, no
-                pot to win, and nothing to lose but your place on the
-                leaderboard. Poker here is what it is at its best: a game of
-                skill, patience and reading people.
+          <!-- Editorial two-column block: lead statement against a ruled
+               definition list. Replaces the old three-card feature grid. -->
+          <div class="editorial reveal">
+            <div class="editorial__lead">
+              <p>
+                Every Friday evening we set up the tables, hand out the chips, and
+                play Texas Hold'em for a couple of hours. Results feed a
+                semester-long leaderboard, and at the end of term the top players
+                meet at the final table.
               </p>
             </div>
-            <div class="card card--hover reveal">
-              <div class="card__icon" aria-hidden="true">♦</div>
-              <h3 class="card__title">Weekly Friday nights</h3>
-              <p class="card__text">
-                Our main event is a Texas Hold'em session every Friday during
-                term, roughly 18:00 to 20:30. Drop in when you can: missing a
-                week is never a problem, and turning up is always rewarded
-                with bonus points.
-              </p>
-            </div>
-            <div class="card card--hover reveal">
-              <div class="card__icon" aria-hidden="true">♥</div>
-              <h3 class="card__title">Open to every student</h3>
-              <p class="card__text">
-                Complete beginner? Perfect. We run friendly intros for new
-                players and you will have the rules down before the first blinds
-                go up. Seasoned grinders are just as welcome. Come test
-                yourself against the field.
-              </p>
+            <div class="editorial__body">
+              <dl class="deflist">
+                <dt>Points, never money</dt>
+                <dd>
+                  We play for points and nothing else. There is no entry fee, no
+                  pot to win, and nothing to lose but your place on the
+                  leaderboard. Poker here is what it is at its best: a game of
+                  skill, patience and reading people.
+                </dd>
+                <dt>Weekly Friday nights</dt>
+                <dd>
+                  Our main event is a Texas Hold'em session every Friday during
+                  term, roughly <span class="mono">18:00</span> to
+                  <span class="mono">20:30</span>. Drop in when you can: missing a
+                  week is never a problem, and turning up is always rewarded
+                  with bonus points.
+                </dd>
+                <dt>Open to every student</dt>
+                <dd>
+                  Complete beginner? Perfect. We run friendly intros for new
+                  players and you will have the rules down before the first blinds
+                  go up. Seasoned grinders are just as welcome. Come test
+                  yourself against the field.
+                </dd>
+              </dl>
             </div>
           </div>
         </div>
@@ -205,11 +204,15 @@
               Republic, Singapore, South Korea and Japan. Today the club is
               led by Wildcard and the board.
             </p>
-            <blockquote class="story-quote">
-              <p>"Yes, we play poker - it's a zero-sum game where someone wins and someone loses - but that's not really the point."</p>
-              <cite>William, founder</cite>
-            </blockquote>
           </div>
+
+          <!-- Pull quote: stands on its own outside the prose column. -->
+          <figure class="story-quote reveal">
+            <blockquote>
+              <p>"Yes, we play poker (it's a zero-sum game where someone wins and someone loses), but that's not really the point."</p>
+            </blockquote>
+            <figcaption><cite>William, founder</cite></figcaption>
+          </figure>
         </div>
       </section>
 
@@ -254,40 +257,45 @@
             <div class="section__label">How a night works</div>
             <h2 class="section__title" id="night-title">From door to final hand</h2>
             <p class="section__description">
-              The short version. The <a href="rules.html" style="color: var(--gold);">rules page</a>
+              The short version. The <a href="rules.html" class="link-gold">rules page</a>
               has the full points system with a worked example.
             </p>
           </div>
 
-          <div class="card-grid">
-            <div class="card card--hover reveal">
-              <div class="card__icon" aria-hidden="true">1.</div>
-              <h3 class="card__title">Check in</h3>
-              <p class="card__text">
-                Turn up, check in on your phone, and collect your attendance
-                bonus: 5,000 points just for showing up. Your buy-in for the
-                night's chip stack comes off your season points.
-              </p>
-            </div>
-            <div class="card card--hover reveal">
-              <div class="card__icon" aria-hidden="true">2.</div>
-              <h3 class="card__title">Play</h3>
-              <p class="card__text">
-                Two hours or so of Texas Hold'em across several tables. Chips,
-                cards and blinds are all handled. You just play. Bust out?
-                One top-up per night keeps you in the game.
-              </p>
-            </div>
-            <div class="card card--hover reveal">
-              <div class="card__icon" aria-hidden="true">3.</div>
-              <h3 class="card__title">Report &amp; climb</h3>
-              <p class="card__text">
-                At the end of the night you report your final chip stack from
-                your phone. Finish above your buy-in and your season points
-                grow; the leaderboard updates once the night is settled.
-              </p>
-            </div>
-          </div>
+          <!-- Numbered step list. The 01/02/03 counters come from CSS. -->
+          <ol class="steps reveal">
+            <li class="step">
+              <div>
+                <h3 class="step__title">Check in</h3>
+                <p>
+                  Turn up, check in on your phone, and collect your attendance
+                  bonus: <span class="mono">5,000</span> points just for showing
+                  up. Your buy-in for the
+                  night's chip stack comes off your season points.
+                </p>
+              </div>
+            </li>
+            <li class="step">
+              <div>
+                <h3 class="step__title">Play</h3>
+                <p>
+                  Two hours or so of Texas Hold'em across several tables. Chips,
+                  cards and blinds are all handled. You just play. Bust out?
+                  One top-up per night keeps you in the game.
+                </p>
+              </div>
+            </li>
+            <li class="step">
+              <div>
+                <h3 class="step__title">Report &amp; climb</h3>
+                <p>
+                  At the end of the night you report your final chip stack from
+                  your phone. Finish above your buy-in and your season points
+                  grow; the leaderboard updates once the night is settled.
+                </p>
+              </div>
+            </li>
+          </ol>
         </div>
       </section>
 
@@ -317,7 +325,7 @@
             Store Blindern Poker is a student association at the University of
             Oslo, and our nights are played on Blindern campus. The Fall 2026
             season opens on Friday 4 September, and everyone starts on the
-            same 40,000 points, including you.
+            same <span class="mono">40,000</span> points, including you.
           </p>
           <div class="hero__actions reveal" style="margin-top: var(--space-xl);">
             <a href="events.html" class="btn btn--primary btn--lg">See the season opener</a>

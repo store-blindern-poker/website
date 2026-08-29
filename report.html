@@ -11,7 +11,6 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <div class="noise-overlay"></div>
 
   <div class="page-wrapper">
 
@@ -71,9 +70,17 @@
           </p>
         </div>
 
-        <!-- STATE: loading -->
+        <!-- STATE: loading. Shaped like the check-in card underneath it, so
+             the screen does not jump when the round arrives. -->
         <div class="card" id="state-loading">
-          <p class="card__text">Loading tonight's round…</p>
+          <p class="visually-hidden" role="status">Loading tonight's round.</p>
+          <div aria-hidden="true">
+            <span class="skeleton skeleton--title" style="margin-bottom: var(--space-lg);"></span>
+            <span class="skeleton skeleton--line" style="margin-bottom: var(--space-sm);"></span>
+            <span class="skeleton skeleton--line" style="margin-bottom: var(--space-xl);"></span>
+            <span class="skeleton" style="height: 56px; margin-bottom: var(--space-md);"></span>
+            <span class="skeleton" style="height: 56px;"></span>
+          </div>
         </div>
 
         <!-- STATE: signed in but no pseudonym claimed -->
@@ -88,12 +95,11 @@
 
         <!-- STATE: no open night -->
         <div class="card" id="state-nonight" hidden>
-          <div class="card__icon" aria-hidden="true">♠</div>
           <h2 class="card__title">No round is open right now</h2>
           <p class="card__text" style="margin-bottom: var(--space-lg);">
             Check-in opens when the organisers open the night, usually just
-            before 18:00 on Fridays. If you're in the room and this looks
-            wrong, wave at an organiser.
+            before <span class="mono">18:00</span> on Fridays. If you're in
+            the room and this looks wrong, wave at an organiser.
           </p>
           <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
             <a class="btn btn--secondary btn--block" href="events.html">See upcoming nights</a>
@@ -122,24 +128,29 @@
                      autocapitalize="characters" autocorrect="off" spellcheck="false"
                      maxlength="5" placeholder="ABCDE" aria-describedby="code-help">
               <p class="help" id="code-help" style="margin-top: var(--space-sm);">
-                5 characters, shown big next to the QR. Scanned the QR with
-                your camera? It's already filled in. Capitals don't matter.
+                <span class="mono">5</span> characters, shown big next to the
+                QR. Scanned the QR with your camera? It's already filled in.
+                Capitals don't matter.
               </p>
             </div>
-            <button class="btn btn--primary btn--block btn--lg" id="checkin-btn" type="button">Check in ♠</button>
+            <button class="btn btn--primary btn--block btn--lg" id="checkin-btn" type="button">Check in</button>
             <p class="form-msg" id="checkin-msg" role="status" aria-live="polite"></p>
             <p class="help">
-              Points only, never money. Short on points? You still play:
-              the buy-in simply adjusts, and nobody sits out.
+              Points only. Short on points? You still play: the buy-in simply
+              adjusts, and nobody sits out.
             </p>
           </div>
         </div>
 
-        <!-- STATE: checked in, the report form -->
+        <!-- STATE: checked in, the report form.
+             Hierarchy, top to bottom: a quiet status card (mono figures, no
+             heading weight), then two numbered step cards that carry the
+             display face, then one brass primary action. Nothing else on the
+             screen is brass-filled except a quick-pick you have chosen. -->
         <div id="state-report" hidden>
           <div class="card" style="margin-bottom: var(--space-lg);">
-            <h2 class="card__title" style="font-size: 1.05rem;">You're checked in ✓</h2>
-            <dl class="kv" style="margin-bottom: 0;">
+            <h2 class="section__label">You are checked in</h2>
+            <dl class="kv" style="margin: 0;">
               <dt>Attendance bonus</dt><dd id="report-bonus">…</dd>
               <dt>Buy-in booked</dt><dd id="report-buyin">…</dd>
               <dt>Top-up allowance left</dt><dd id="report-cap">…</dd>
@@ -148,10 +159,12 @@
 
           <form id="report-form" novalidate>
             <div class="card" style="margin-bottom: var(--space-lg);">
-              <h2 class="card__title" style="font-size: 1.05rem;">1 · Did you top up tonight?</h2>
+              <div class="section__label">Step 1 of 2</div>
+              <h2 class="card__title">Did you top up tonight?</h2>
               <p class="card__text" style="margin-bottom: var(--space-md);">
-                One top-up per night, points for chips 1:1. If you're already
-                holding more than tonight's stack in chips, the answer is 0.
+                One top-up per night, points for chips <span class="mono">1:1</span>.
+                If you're already holding more than tonight's stack in chips,
+                the answer is <span class="mono">0</span>.
               </p>
               <div class="field" style="margin-bottom: var(--space-sm);">
                 <label class="label" for="rebuy-input">Top-up amount (chips)</label>
@@ -165,11 +178,12 @@
                 <button type="button" class="quickpick" data-rebuy="5000">5,000</button>
                 <button type="button" class="quickpick" data-rebuy="max" id="rebuy-max">Full top-up</button>
               </div>
-              <p class="form-msg" id="rebuy-msg" aria-live="polite"></p>
+              <p class="form-msg" id="rebuy-msg" role="status" aria-live="polite"></p>
             </div>
 
             <div class="card" style="margin-bottom: var(--space-lg);">
-              <h2 class="card__title" style="font-size: 1.05rem;">2 · Your final chip stack</h2>
+              <div class="section__label">Step 2 of 2</div>
+              <h2 class="card__title">Your final chip stack</h2>
               <p class="card__text" style="margin-bottom: var(--space-md);">
                 Count everything in front of you and type the total.
               </p>
@@ -179,16 +193,20 @@
                        inputmode="numeric" pattern="[0-9]*" autocomplete="off"
                        placeholder="e.g. 12 350">
               </div>
-              <button type="button" class="btn--bust" id="bust-btn">I busted: 0 chips</button>
-              <p class="form-msg" id="final-msg" aria-live="polite"></p>
+              <!-- The one-tap answer for the most common outcome. 64px of
+                   clay, sitting apart from the submit button on purpose. -->
+              <button type="button" class="btn--bust" id="bust-btn">I busted: <span class="mono">0</span> chips</button>
+              <p class="form-msg" id="final-msg" role="status" aria-live="polite"></p>
             </div>
 
             <button class="btn btn--primary btn--block btn--lg" id="review-btn" type="submit">Review my report</button>
           </form>
 
-          <!-- Review sheet -->
+          <!-- Review sheet. Every figure in here is mono and tabular via
+               .ledger__amount, so the column reads as a receipt. -->
           <div id="review-panel" hidden style="margin-top: var(--space-lg);">
             <div class="card card--accent">
+              <div class="section__label">Last step</div>
               <h2 class="card__title">Check the maths, then send</h2>
               <div class="ledger" id="review-ledger"></div>
               <p class="help" id="review-balance-note" hidden></p>
@@ -225,7 +243,6 @@
 
         <!-- STATE: night settled -->
         <div class="card" id="state-settled" hidden>
-          <div class="card__icon" aria-hidden="true">♠</div>
           <h2 class="card__title">Tonight is settled</h2>
           <p class="card__text" id="settled-text" style="margin-bottom: var(--space-lg);">
             The organisers have settled the night. Spot a mistake in your

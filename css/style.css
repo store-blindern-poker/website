@@ -1,53 +1,121 @@
 /* ==========================================================================
-   Store Blindern Poker - Global Styles
-   Dark mahogany + gold. Playfair Display headings, Inter body.
-   Mobile-first, dark-room-legible: high contrast, big type, 48px tap targets.
-   Shared by every page, including the member (report/admin) screens.
+   Store Blindern Poker - global styles
+   --------------------------------------------------------------------------
+   Warm earth tones on near-black. One accent: brass. One radius: 4px.
+   Newsreader (display) + Instrument Sans (body) + JetBrains Mono (all numerals).
+   Phone-first, dark-room-first: 48px tap targets, high contrast, no glow.
+
+   Binding spec: docs/DESIGN_SYSTEM.md. Do not add tokens that are not in it.
+
+   --------------------------------------------------------------------------
+   NOTES FOR MARKUP AGENTS - read this before editing any HTML
+   --------------------------------------------------------------------------
+   Every class the pages and js/*.js currently use still exists and still works.
+   Nothing was renamed. The following are NEW, added for the layouts the audit
+   asked for. Use them instead of `.card-grid`.
+
+     .editorial              Two-column editorial block. Lead statement left,
+                             detail list right. Stacks below 900px.
+     .editorial__lead        The lead statement. Display face, larger, brass rule.
+     .editorial__body        Right column. Put a `.deflist` in here.
+
+     .deflist                Sharp ruled definition list (<dl>). 1px rules
+                             between pairs, no boxes, no hover. dt is the term,
+                             dd the body. Wrap numerals in <span class="num">.
+     .deflist--lead          Bigger dt, for a standalone list not inside .editorial.
+
+     .steps / .step          RESTYLED, not new. No longer cards. A numbered list
+                             with a mono counter and a 1px rule between steps.
+                             Safe to use on index.html for "How a night works"
+                             and on rules.html. `.step__title` or an <h3> works.
+
+     .stats / .stat          RESTYLED, not new. No longer boxes. A sharp bordered
+                             row: rules top and bottom, 1px dividers between
+                             cells, mono numerals. `.stats--4` for four cells.
+                             index.html needs no markup change for this.
+
+     .podium                 RESTYLED, not new. No longer three raised cards.
+                             Three sharp bordered rows. js/app.js builds this
+                             markup and was not touched.
+
+     .card-grid              KEPT so admin.html's two side-by-side forms still
+                             work. With three or more children it collapses to a
+                             ruled list automatically (`:has()`), because a
+                             three-card equal grid is forbidden. Prefer
+                             .editorial or .deflist for prose; keep .card-grid
+                             only where each child is a real object (a form).
+
+     .num / .mono            Numerals. `.num` is mono + tabular + right aligned
+                             (already used by js/app.js and js/admin.js).
+                             `.mono` is mono + tabular with no alignment change.
+                             Most components apply mono themselves, so existing
+                             markup gets it without changes.
+
+     .skeleton               Loading placeholder block. Modifiers: --rank, --name,
+     .skeleton-table         --num, --line, --title. Wrap rows in
+     .skeleton-table__row    `.skeleton-table` > `.skeleton-table__row`. Always
+                             mark the wrapper aria-hidden="true".
+
+     .is-busy                On a button: shows a spinner, keeps the width, stops
+                             input. `[aria-busy="true"]` does the same, so JS can
+                             use the ARIA attribute instead of a class.
+     .is-disabled            Deliberate disabled look. `[disabled]` and
+                             `[aria-disabled="true"]` match too.
+
+     .lede                   One-off larger intro paragraph, display face.
+     .rule                   A plain 1px horizontal rule, no gradient.
+
+   Legacy token names (--gold, --text-primary, --space-*, --radius-lg, ...) are
+   aliased to the new palette at the bottom of the token block, so the inline
+   styles still in the HTML keep rendering correctly. Prefer the new names.
+
+   Removed on purpose: mahogany and all its tokens, every glow, the animated
+   gradient hero text, the film grain overlay, decorative backdrop blur, pill
+   radii, and the three competing radii.
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap');
 
-/* --------------------------------------------------------------------------
-   1. Design tokens
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   1. TOKENS
+   ========================================================================== */
+
 :root {
-  /* Surfaces */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #111111;
-  --bg-card: #161616;
-  --bg-card-hover: #1c1c1c;
-  --bg-elevated: #1f1f1f;
+  /* ---- Palette. Locked by docs/DESIGN_SYSTEM.md. Do not drift. ---------- */
+  --bg: #0c0c0d;          /* near-black, warm */
+  --surface: #131315;     /* raised */
+  --surface-2: #1a1a1d;   /* input wells, table stripes */
+  --border: #2a2a2f;      /* crisp, visible. never rgba white */
+  --border-loud: #3f3f47; /* hover and focus intensification */
+  --cream: #fbfaf8;       /* primary text */
+  --cream-dim: #a5a5ac;   /* secondary text */
+  --cream-mute: #74747c;  /* tertiary, captions, labels */
+  --brass: #c9a84c;       /* THE single accent, used sparingly */
+  --brass-lift: #dcbe6b;  /* hover only */
+  --felt: #1d4030;        /* semantic only, positive */
+  --clay: #b4503f;        /* semantic only, negative and danger */
 
-  /* Mahogany + gold identity */
-  --mahogany: #7a3535;
-  --mahogany-light: #a04848;
-  --mahogany-glow: rgba(160, 72, 72, 0.2);
-  --gold: #c9a84c;
-  --gold-bright: #dbc06a;
-  --gold-dim: #a68a3e;
-  --gold-glow: rgba(201, 168, 76, 0.1);
+  /* ---- Derived. Not new hues: legible tints of the locked three. --------
+     Felt and clay are surface-weight greens and reds. They cannot carry
+     small text on near-black, so each gets one lift for type and one
+     solid-hex fill and rule for its state block. All solid hex, no alpha,
+     no glassmorphism. Brass reuses --brass-lift for type. -------------- */
+  --felt-lift: #4f9d74;   /* felt as readable type, 5.9:1 on --bg */
+  --clay-lift: #d9705c;   /* clay as readable type, 6.0:1 on --bg */
+  --felt-fill: #13211b;   /* felt mixed into --bg */
+  --felt-line: #274636;
+  --clay-fill: #251614;
+  --clay-line: #4f2721;
+  --brass-fill: #241f13;
+  --brass-line: #584a26;
+  --on-brass: #14100a;    /* type on a brass fill */
 
-  /* Semantic */
-  --ok: #4cc46c;
-  --warn: #e0a93e;
-  --danger: #e05a4e;
+  /* ---- Type ------------------------------------------------------------ */
+  --font-display: 'Newsreader', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
-  /* Text - kept bright: this site is read on phones in a dim room */
-  --text-primary: #f5f5f7;
-  --text-secondary: #b6b6bc;
-  --text-tertiary: #8a8a92;
-  --text-on-gold: #14100a;
-
-  /* Borders */
-  --border: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.16);
-  --border-accent: rgba(201, 168, 76, 0.25);
-
-  /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif: 'Playfair Display', Georgia, serif;
-
-  /* Spacing */
+  /* ---- Spacing. Unchanged: the markup depends on these. ---------------- */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
@@ -57,23 +125,53 @@
   --space-3xl: 64px;
   --space-4xl: 96px;
 
-  /* Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* ---- Radius. One value. No exceptions. ------------------------------- */
+  --radius: 4px;
 
-  /* Controls */
-  --tap-target: 48px;         /* minimum height for anything a thumb hits */
+  /* ---- Controls -------------------------------------------------------- */
+  --tap-target: 48px;     /* minimum height for anything a thumb hits */
   --nav-height: 64px;
 
-  /* Motion */
-  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* ---- Motion ---------------------------------------------------------- */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.18s;
+  --dur-enter: 0.42s;     /* derived: first-paint and scroll entrances only */
+
+  /* ---- Compatibility aliases -------------------------------------------
+     The HTML still carries inline `var(--gold)`, `var(--text-primary)` and
+     friends, and js/app.js reads `var(--text-tertiary)`. These map the old
+     names onto the new palette so nothing renders wrong mid-migration.
+     Delete an alias only after grepping *.html and js/ for it. ---------- */
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--surface);
+  --bg-card: var(--surface);
+  --bg-card-hover: var(--surface-2);
+  --bg-elevated: var(--surface-2);
+  --gold: var(--brass);
+  --gold-bright: var(--brass-lift);
+  --gold-dim: var(--brass);
+  --text-primary: var(--cream);
+  --text-secondary: var(--cream-dim);
+  --text-tertiary: var(--cream-mute);
+  --text-on-gold: var(--on-brass);
+  --border-hover: var(--border-loud);
+  --border-accent: var(--brass-line);
+  --ok: var(--felt-lift);
+  --danger: var(--clay-lift);
+  --warn: var(--brass);   /* the spec has no third semantic hue. Brass is the
+                             attention state: felt positive, brass pending,
+                             clay negative. */
+  --font-serif: var(--font-display);
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
 }
 
-/* --------------------------------------------------------------------------
-   2. Reset + base
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   2. RESET AND BASE
+   ========================================================================== */
+
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -85,15 +183,16 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
 }
 
 body {
   font-family: var(--font-sans);
-  background:
-    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(122, 53, 53, 0.07), transparent 70%),
-    var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.6;
+  background: var(--bg);
+  color: var(--cream);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.55;
   overflow-x: hidden;
 }
 
@@ -106,51 +205,122 @@ button {
   border: none;
   background: none;
   font-family: inherit;
+  font-size: inherit;
   color: inherit;
 }
 
 ul, ol { list-style: none; }
 
-/* Rules page uses real lists inside prose */
-.prose ul, .prose ol {
-  list-style: revert;
-  padding-left: 1.4em;
+code, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+  color: var(--cream);
 }
 
-/* Accessibility: one global, obvious focus ring */
+::selection {
+  background: var(--brass);
+  color: var(--on-brass);
+}
+
+/* One global focus ring: 2px brass at 2px offset. Never a glow. */
 :focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--brass);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 
 .skip-link {
   position: absolute;
-  top: -48px;
+  top: -60px;
   left: var(--space-md);
   z-index: 2000;
-  padding: 10px 18px;
-  background: var(--gold);
-  color: var(--text-on-gold);
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  min-height: var(--tap-target);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 18px;
+  background: var(--brass);
+  color: var(--on-brass);
+  border-radius: 0 0 var(--radius) var(--radius);
   font-weight: 600;
-  transition: top 0.2s var(--ease);
+  transition: top var(--dur) var(--ease);
 }
 
 .skip-link:focus { top: 0; }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  html { scroll-behavior: auto; }
+/* The film grain was decoration, not signal. The element stays in the markup
+   for now so no page has to change; it renders nothing. */
+.noise-overlay { display: none; }
+
+/* ==========================================================================
+   3. UTILITIES
+   ========================================================================== */
+
+/* Numerals. Points, chips, ranks, dates, codes: all mono, all tabular, so
+   columns hold their position as the leaderboard reorders. */
+.mono,
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
 }
 
-/* --------------------------------------------------------------------------
-   3. Layout
-   -------------------------------------------------------------------------- */
+.num { text-align: right; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+[hidden] { display: none !important; }
+
+.rule {
+  height: 1px;
+  background: var(--border);
+  border: 0;
+  margin: var(--space-2xl) 0;
+}
+
+/* .divider is the old name for the same thing. It used to be a gradient. */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-2xl) 0;
+}
+
+.lede {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 3vw, 1.6rem);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+}
+
+.link-gold {
+  color: var(--brass);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--brass-line);
+  transition: color var(--dur) var(--ease), text-decoration-color var(--dur) var(--ease);
+}
+
+.link-gold:hover {
+  color: var(--brass-lift);
+  text-decoration-color: var(--brass-lift);
+}
+
+/* ==========================================================================
+   4. LAYOUT
+   ========================================================================== */
+
 .container {
   width: 100%;
   max-width: 1080px;
@@ -158,7 +328,7 @@ ul, ol { list-style: none; }
   padding: 0 var(--space-md);
 }
 
-.container--narrow { max-width: 780px; }
+.container--narrow { max-width: 760px; }
 
 @media (min-width: 640px) {
   .container { padding: 0 var(--space-lg); }
@@ -180,63 +350,50 @@ ul, ol { list-style: none; }
   .section { padding: var(--space-4xl) 0; }
 }
 
-.section__header { margin-bottom: var(--space-2xl); }
+.section__header {
+  margin-bottom: var(--space-2xl);
+  max-width: 720px;
+}
 
 .section__label {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--gold);
+  letter-spacing: 0.14em;
+  color: var(--brass);
   margin-bottom: var(--space-sm);
-  text-shadow: 0 0 24px rgba(201, 168, 76, 0.3);
 }
 
 .section__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: clamp(1.8rem, 3.5vw, 2.5rem);
   font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--cream);
 }
 
 .section__description {
-  color: var(--text-secondary);
+  color: var(--cream-dim);
   font-size: 1rem;
+  line-height: 1.55;
   margin-top: var(--space-md);
-  max-width: 620px;
-  line-height: 1.7;
+  max-width: 60ch;
 }
 
-.divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(160, 72, 72, 0.3), rgba(201, 168, 76, 0.2), rgba(160, 72, 72, 0.3), transparent);
-  margin: var(--space-2xl) 0;
-}
+/* ==========================================================================
+   5. NAVIGATION (shared chrome, byte-identical markup on every page)
+   ========================================================================== */
 
-/* Film grain - cheap, static, no JS */
-.noise-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.028;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
-}
-
-/* --------------------------------------------------------------------------
-   4. Navigation (shared chrome - identical markup on every page)
-   -------------------------------------------------------------------------- */
 .nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(10, 10, 10, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 
@@ -252,17 +409,22 @@ ul, ol { list-style: none; }
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-family: var(--font-serif);
-  font-size: 1.1rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   white-space: nowrap;
-  transition: opacity 0.2s var(--ease);
+  color: var(--cream);
+  transition: color var(--dur) var(--ease);
 }
 
-.nav__brand:hover { opacity: 0.85; }
+.nav__brand:hover { color: var(--brass-lift); }
 
-.nav__brand-icon { color: var(--gold); font-size: 1.25rem; }
+.nav__brand-icon {
+  color: var(--brass);
+  font-size: 1.2rem;
+  line-height: 1;
+}
 
 .nav__links {
   display: flex;
@@ -277,23 +439,22 @@ ul, ol { list-style: none; }
   padding: 0 var(--space-xs);
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--cream-dim);
   position: relative;
-  transition: color 0.2s var(--ease);
+  transition: color var(--dur) var(--ease);
 }
 
 .nav__link:hover,
-.nav__link--active { color: var(--text-primary); }
+.nav__link--active { color: var(--cream); }
 
 .nav__link--active::after {
   content: '';
   position: absolute;
-  bottom: 8px;
+  bottom: 10px;
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--gold);
-  border-radius: 1px;
+  background: var(--brass);
 }
 
 /* "Member login" call to action in the nav */
@@ -303,18 +464,21 @@ ul, ol { list-style: none; }
   gap: 6px;
   min-height: 40px;
   padding: 0 var(--space-md);
-  border: 1px solid var(--border-accent);
-  border-radius: 100px;
+  border: 1px solid var(--brass-line);
+  border-radius: var(--radius);
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--brass);
   white-space: nowrap;
-  transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+  transition: background-color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease);
 }
 
 .nav__cta:hover {
-  background: rgba(201, 168, 76, 0.1);
-  border-color: rgba(201, 168, 76, 0.4);
+  background-color: var(--brass-fill);
+  border-color: var(--brass);
+  color: var(--brass-lift);
 }
 
 /* Mobile menu */
@@ -322,19 +486,20 @@ ul, ol { list-style: none; }
   display: none;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: 5px;
   width: var(--tap-target);
   height: var(--tap-target);
-  align-items: center;
+  margin-right: calc(var(--space-xs) * -1);
 }
 
 .nav__toggle span {
   display: block;
   width: 20px;
   height: 2px;
-  background: var(--text-primary);
-  border-radius: 2px;
-  transition: all 0.3s var(--ease);
+  background: var(--cream);
+  transition: background-color var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
 }
 
 @media (max-width: 720px) {
@@ -345,34 +510,40 @@ ul, ol { list-style: none; }
     top: var(--nav-height);
     left: 0;
     right: 0;
-    background: rgba(10, 10, 10, 0.97);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: var(--bg);
     flex-direction: column;
     align-items: stretch;
-    padding: var(--space-lg) var(--space-lg) var(--space-xl);
-    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md) var(--space-lg);
+    gap: 0;
     border-bottom: 1px solid var(--border);
-    transform: translateY(-110%);
+    transform: translateY(-8px);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: transform 0.3s var(--ease), opacity 0.3s var(--ease);
+    transition: transform var(--dur) var(--ease),
+                opacity var(--dur) var(--ease),
+                visibility 0s linear var(--dur);
   }
 
   .nav__links--open {
     transform: translateY(0);
     opacity: 1;
-    pointer-events: all;
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform var(--dur) var(--ease),
+                opacity var(--dur) var(--ease),
+                visibility 0s;
   }
 
   .nav__link {
     min-height: var(--tap-target);
     font-size: 1.05rem;
     padding: 0 var(--space-sm);
+    border-bottom: 1px solid var(--border);
   }
 
   .nav__link--active::after { display: none; }
-  .nav__link--active { color: var(--gold); }
+  .nav__link--active { color: var(--brass); }
 
   .nav__cta {
     margin-top: var(--space-md);
@@ -381,96 +552,172 @@ ul, ol { list-style: none; }
   }
 }
 
-/* --------------------------------------------------------------------------
-   5. Buttons
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   6. BUTTONS
+   ========================================================================== */
+
 .btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
   min-height: var(--tap-target);
-  padding: 12px 26px;
-  border-radius: var(--radius-md);
+  padding: 12px 22px;
+  border: 1px solid transparent;   /* keeps every variant the same height */
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
   font-size: 0.95rem;
   font-weight: 600;
   line-height: 1.2;
+  letter-spacing: -0.005em;
   text-align: center;
-  transition: background 0.2s var(--ease), border-color 0.2s var(--ease),
-              transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  transition: background-color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
   -webkit-tap-highlight-color: transparent;
 }
 
-.btn:active { transform: translateY(1px); }
+@media (hover: hover) {
+  .btn:hover { transform: translateY(-1px); }
+}
+
+.btn:active { transform: translateY(0); }
 
 .btn--primary {
-  background: var(--gold);
-  color: var(--text-on-gold);
+  background-color: var(--brass);
+  border-color: var(--brass);
+  color: var(--on-brass);
 }
 
 .btn--primary:hover {
-  background: var(--gold-bright);
-  box-shadow: 0 4px 24px rgba(201, 168, 76, 0.25);
+  background-color: var(--brass-lift);
+  border-color: var(--brass-lift);
 }
 
 .btn--secondary {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--cream);
 }
 
 .btn--secondary:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-hover);
+  background-color: var(--surface-2);
+  border-color: var(--border-loud);
 }
 
 .btn--ghost {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid transparent;
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--cream-dim);
 }
 
-.btn--ghost:hover { color: var(--text-primary); border-color: var(--border); }
+.btn--ghost:hover {
+  color: var(--cream);
+  border-color: var(--border);
+}
 
 .btn--danger {
-  background: transparent;
-  color: var(--danger);
-  border: 1px solid rgba(224, 90, 78, 0.35);
+  background-color: var(--clay-fill);
+  border-color: var(--clay-line);
+  color: var(--clay-lift);
 }
 
-.btn--danger:hover { background: rgba(224, 90, 78, 0.1); }
+.btn--danger:hover {
+  background-color: var(--clay);
+  border-color: var(--clay);
+  color: var(--cream);
+}
 
-/* Full width on phones - the report screen is used one-handed */
+/* Full width on phones. The report screen is used one-handed. */
 .btn--block { width: 100%; }
 
 .btn--lg {
   min-height: 56px;
-  padding: 16px 32px;
+  padding: 16px 28px;
   font-size: 1.05rem;
 }
 
-.btn[disabled], .btn--disabled {
-  opacity: 0.45;
+/* ---- Disabled. Deliberate, not broken. --------------------------------
+   No opacity trick: a half-faded control reads as a rendering fault. This
+   reads as a control that is switched off on purpose. ------------------- */
+.btn[disabled],
+.btn[aria-disabled="true"],
+.btn--disabled,
+.is-disabled {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--cream-mute);
+  cursor: not-allowed;
+  transform: none;
   pointer-events: none;
 }
 
-/* --------------------------------------------------------------------------
-   6. Forms - used by login/report/admin pages
-   -------------------------------------------------------------------------- */
+.btn[disabled]:hover,
+.btn--disabled:hover,
+.is-disabled:hover {
+  transform: none;
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--cream-mute);
+}
+
+/* ---- Busy. Keeps its own width so the layout never jumps. ------------- */
+.btn.is-busy,
+.btn[aria-busy="true"] {
+  color: transparent;
+  pointer-events: none;
+  cursor: progress;
+}
+
+.btn.is-busy::after,
+.btn[aria-busy="true"]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid currentColor;
+  border-radius: 50%;               /* a ring, not a corner */
+  border-top-color: transparent;
+  color: var(--on-brass);
+  animation: spin 0.7s linear infinite;
+}
+
+.btn--secondary.is-busy::after,
+.btn--ghost.is-busy::after,
+.btn--danger.is-busy::after,
+.btn--secondary[aria-busy="true"]::after,
+.btn--ghost[aria-busy="true"]::after,
+.btn--danger[aria-busy="true"]::after {
+  color: var(--cream-dim);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   7. FORMS
+   ========================================================================== */
+
 .field { margin-bottom: var(--space-lg); }
 
 .label {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--cream);
   margin-bottom: var(--space-sm);
 }
 
 .help {
-  font-size: 0.8rem;
-  color: var(--text-tertiary);
-  margin-top: var(--space-xs);
+  font-size: 0.85rem;
+  color: var(--cream-dim);
+  margin-top: var(--space-sm);
   line-height: 1.5;
 }
 
@@ -481,105 +728,134 @@ textarea.input {
   width: 100%;
   min-height: var(--tap-target);
   padding: 12px 14px;
-  background: var(--bg-secondary);
+  background-color: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 1rem;                 /* 16px+ prevents iOS zoom-on-focus */
-  line-height: 1.4;
-  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  border-radius: var(--radius);
+  color: var(--cream);
+  font-family: var(--font-sans);
+  font-size: 1rem;                 /* 16px or more stops iOS zoom on focus */
+  line-height: 1.5;
+  transition: border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease);
 }
 
-.input::placeholder { color: var(--text-tertiary); }
+.input::placeholder { color: var(--cream-mute); }
 
-.input:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
+/* Native checkboxes and radios pick up the accent instead of browser blue.
+   admin.html sizes its one checkbox inline, so it stays under 48px until
+   that inline style is removed. Its label is the reliable tap target. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--brass);
+  cursor: pointer;
 }
 
-.input--error {
-  border-color: var(--danger);
+.input:hover { border-color: var(--border-loud); }
+
+.input:focus,
+.input:focus-visible {
+  border-color: var(--brass);
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
 }
 
-.input--error:focus {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 3px rgba(224, 90, 78, 0.15);
+.input--error { border-color: var(--clay); }
+
+.input--error:focus,
+.input--error:focus-visible {
+  border-color: var(--clay);
+  outline-color: var(--clay-lift);
 }
 
-/* Big numeric entry (final stack) - legible at arm's length */
+/* Big numeric entry (final stack). Read at arm's length, typed one-handed. */
 .input--numeric {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   text-align: center;
   min-height: 56px;
 }
 
-textarea.input { min-height: 120px; resize: vertical; }
+textarea.input {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.55;
+}
 
 select.input {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a1a1a6' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2374747c' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
   padding-right: 40px;
 }
 
-/* Stepper: − [value] + . Big targets for tired thumbs. */
+/* Stepper: minus, value, plus. Big targets for tired thumbs. */
 .stepper {
   display: flex;
   align-items: stretch;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  background-color: var(--surface-2);
   overflow: hidden;
 }
+
+.stepper:focus-within { border-color: var(--brass); }
 
 .stepper__btn {
   width: 56px;
   min-height: 56px;
   font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--gold);
-  background: var(--bg-card);
+  font-weight: 500;
+  color: var(--brass);
+  background-color: var(--surface);
   flex-shrink: 0;
-  transition: background 0.15s var(--ease);
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
 
-.stepper__btn:hover { background: var(--bg-card-hover); }
-.stepper__btn:active { background: var(--bg-elevated); }
+.stepper__btn:hover { background-color: var(--surface-2); color: var(--brass-lift); }
+.stepper__btn:active { background-color: var(--brass-fill); }
 
-.stepper__btn[disabled] { opacity: 0.35; pointer-events: none; }
+.stepper__btn[disabled] {
+  color: var(--cream-mute);
+  background-color: var(--surface);
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .stepper__value {
   flex: 1;
   border: none;
   background: transparent;
-  color: var(--text-primary);
+  color: var(--cream);
   text-align: center;
-  font-family: inherit;
+  font-family: var(--font-mono);
   font-size: 1.35rem;
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
   min-width: 0;
 }
 
-.stepper__value:focus { outline: none; }
+/* The field keeps a focus ring. Stripping it left a keyboard user with no
+   visible focus at all, which is a bug even in a component nothing uses yet. */
+.stepper__value:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
 
-/* Radio-pill group (e.g. "Did you top up tonight?") */
+/* Choice group (for example "Did you top up tonight?") */
 .choice-row {
   display: flex;
   gap: var(--space-sm);
   flex-wrap: wrap;
 }
 
-.choice {
-  position: relative;
-}
+.choice { position: relative; }
 
 .choice input {
   position: absolute;
@@ -593,41 +869,42 @@ select.input {
   align-items: center;
   justify-content: center;
   min-height: var(--tap-target);
-  padding: 10px 22px;
+  padding: 10px 20px;
   border: 1px solid var(--border);
-  border-radius: 100px;
+  border-radius: var(--radius);
   font-size: 0.95rem;
   font-weight: 500;
-  color: var(--text-secondary);
-  transition: all 0.2s var(--ease);
+  color: var(--cream-dim);
+  background-color: var(--surface);
+  transition: background-color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease);
 }
 
+.choice:hover span { border-color: var(--border-loud); color: var(--cream); }
+
 .choice input:checked + span {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--text-on-gold);
+  background-color: var(--brass);
+  border-color: var(--brass);
+  color: var(--on-brass);
   font-weight: 600;
 }
 
 .choice input:focus-visible + span {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--brass);
   outline-offset: 2px;
 }
 
-/* --------------------------------------------------------------------------
-   7. Cards + badges
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   8. CARDS, BADGES, NOTICES
+   A card is a container for a real thing: one night, one event, one form.
+   It is never a way to arrange three sentences.
+   ========================================================================== */
+
 .card {
-  background-color: var(--bg-card);
-  background-image:
-    repeating-linear-gradient(95deg,
-      transparent 0px, transparent 4px,
-      rgba(160, 72, 72, 0.025) 4px, rgba(160, 72, 72, 0.025) 6px),
-    repeating-linear-gradient(87deg,
-      transparent 0px, transparent 12px,
-      rgba(160, 72, 72, 0.015) 12px, rgba(160, 72, 72, 0.015) 16px);
+  background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   padding: var(--space-lg);
 }
 
@@ -635,130 +912,368 @@ select.input {
   .card { padding: var(--space-xl); }
 }
 
-.card--accent { border-color: var(--border-accent); }
+.card--accent { border-color: var(--brass-line); }
 
 .card--hover {
-  transition: border-color 0.3s var(--ease), background-color 0.3s var(--ease),
-              transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  transition: border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
 }
 
-.card--hover:hover {
-  border-color: rgba(160, 72, 72, 0.25);
-  background-color: var(--bg-card-hover);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 40px rgba(122, 53, 53, 0.15);
+@media (hover: hover) {
+  .card--hover:hover {
+    border-color: var(--border-loud);
+    background-color: var(--surface-2);
+    transform: translateY(-2px);
+  }
 }
 
-.card__icon { font-size: 1.8rem; margin-bottom: var(--space-md); }
+.card--hover:active { transform: translateY(0); }
+
+.card__icon {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--brass);
+  line-height: 1;
+  margin-bottom: var(--space-md);
+}
 
 .card__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--cream);
   margin-bottom: var(--space-sm);
 }
 
 .card__text {
-  color: var(--text-secondary);
+  color: var(--cream-dim);
   font-size: 0.95rem;
-  line-height: 1.7;
+  line-height: 1.55;
 }
 
+/* ---- .card-grid -------------------------------------------------------
+   Two real objects side by side is a legitimate grid: admin.html puts two
+   forms here. Three or more is the forbidden cookie-cutter feature grid,
+   so it collapses into a ruled list instead. Browsers without :has() fall
+   back to the old grid, which is off-spec but never broken. ------------- */
 .card-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-md);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 720px) {
   .card-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: var(--space-lg);
   }
 }
 
-/* Badges */
+.card-grid:has(> :nth-child(3)) {
+  display: block;
+  border-top: 1px solid var(--border);
+  max-width: 72ch;
+}
+
+.card-grid:has(> :nth-child(3)) > .card {
+  background-color: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: var(--space-lg) 0;
+  transform: none;
+}
+
+.card-grid:has(> :nth-child(3)) > .card:hover {
+  background-color: transparent;
+  transform: none;
+}
+
+.card-grid:has(> :nth-child(3)) > .card .card__icon {
+  margin-bottom: var(--space-sm);
+  letter-spacing: 0.08em;
+}
+
+.card-grid:has(> :nth-child(3)) > .card .card__title {
+  font-size: 1.15rem;
+}
+
+/* ---- Badges. Square, not pills. --------------------------------------- */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border-radius: 100px;
+  padding: 4px 10px;
+  border-radius: var(--radius);
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
+  background-color: var(--surface-2);
+  color: var(--cream-dim);
 }
 
 .badge--gold {
-  background: rgba(201, 168, 76, 0.12);
-  color: var(--gold);
-  border-color: rgba(201, 168, 76, 0.25);
+  background-color: var(--brass-fill);
+  color: var(--brass);
+  border-color: var(--brass-line);
 }
 
+/* Live is the attention state, so it is brass. It does not blink: a badge
+   that pulses forever is decoration, and it competes with the sync pill. */
 .badge--live {
-  background: rgba(122, 53, 53, 0.25);
-  color: var(--mahogany-light);
-  border-color: rgba(160, 72, 72, 0.35);
-  animation: pulse 2s ease-in-out infinite;
+  background-color: var(--brass);
+  color: var(--on-brass);
+  border-color: var(--brass);
 }
 
 .badge--ok {
-  background: rgba(76, 196, 108, 0.1);
-  color: var(--ok);
-  border-color: rgba(76, 196, 108, 0.25);
+  background-color: var(--felt-fill);
+  color: var(--felt-lift);
+  border-color: var(--felt-line);
 }
 
 .badge--warn {
-  background: rgba(224, 169, 62, 0.1);
-  color: var(--warn);
-  border-color: rgba(224, 169, 62, 0.3);
+  background-color: var(--brass-fill);
+  color: var(--brass);
+  border-color: var(--brass-line);
 }
 
-.badge--muted { color: var(--text-tertiary); }
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+.badge--muted {
+  color: var(--cream-mute);
+  background-color: var(--surface);
 }
 
-/* Notice blocks (info / success / warning) */
+/* ---- Notices ---------------------------------------------------------- */
 .notice {
   display: flex;
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-accent);
-  background: rgba(201, 168, 76, 0.06);
-  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  color: var(--cream-dim);
   font-size: 0.95rem;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .notice--warn {
-  border-color: rgba(224, 169, 62, 0.35);
-  background: rgba(224, 169, 62, 0.07);
+  border-color: var(--brass-line);
+  border-left-color: var(--brass);
+  background-color: var(--brass-fill);
 }
 
 .notice--danger {
-  border-color: rgba(224, 90, 78, 0.35);
-  background: rgba(224, 90, 78, 0.07);
+  border-color: var(--clay-line);
+  border-left-color: var(--clay);
+  background-color: var(--clay-fill);
 }
 
-/* --------------------------------------------------------------------------
-   8. Hero (landing)
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   9. EDITORIAL BLOCK AND DEFINITION LIST  (NEW)
+   The replacement for the three-card feature grid. A lead statement carried
+   by the display face, against a ruled list of specifics.
+   ========================================================================== */
+
+.editorial {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .editorial {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--space-4xl);
+  }
+}
+
+.editorial__lead {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+  border-left: 2px solid var(--brass);
+  padding-left: var(--space-lg);
+}
+
+.editorial__lead p + p { margin-top: var(--space-md); }
+
+.editorial__body { min-width: 0; }
+
+/* ---- Definition list -------------------------------------------------- */
+.deflist {
+  border-top: 1px solid var(--border);
+}
+
+.deflist dt {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cream);
+  letter-spacing: -0.01em;
+  padding-top: var(--space-lg);
+}
+
+.deflist dd {
+  color: var(--cream-dim);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  padding: var(--space-xs) 0 var(--space-lg);
+  border-bottom: 1px solid var(--border);
+  max-width: 60ch;
+}
+
+.deflist dt .num,
+.deflist dt .mono {
+  color: var(--brass);
+  font-weight: 500;
+  text-align: left;
+}
+
+.deflist--lead dt {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   10. NUMBERED STEP LIST
+   Was five cards with circular counters. Now a list with a rule between
+   steps and a mono counter in the gutter. Shared by rules.html and index.html.
+   ========================================================================== */
+
+.steps {
+  counter-reset: step;
+  margin: var(--space-xl) 0;
+  border-top: 1px solid var(--border);
+  max-width: 68ch;
+}
+
+.step {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: var(--space-md);
+  align-items: start;
+  padding: var(--space-lg) 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  border-radius: 0;
+}
+
+.step::before {
+  content: counter(step, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  color: var(--brass);
+  padding-top: 2px;
+}
+
+.step h3,
+.step .step__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+  margin: 0 0 var(--space-xs);
+}
+
+.step p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--cream-dim);
+  max-width: 60ch;
+}
+
+/* ==========================================================================
+   11. STATS BAND
+   A sharp bordered row. Rules top and bottom, 1px dividers between cells,
+   mono numerals, no boxes.
+   ========================================================================== */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  gap: 0;
+}
+
+@media (min-width: 640px) {
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stats--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.stat {
+  padding: var(--space-lg) var(--space-md);
+  border-left: 1px solid var(--border);
+  background: none;
+  border-radius: 0;
+  text-align: left;
+}
+
+/* No dangling left rule at the start of each visual row. */
+.stat:nth-child(odd) { border-left: 0; }
+
+@media (min-width: 640px) {
+  .stat:nth-child(odd) { border-left: 1px solid var(--border); }
+  .stat:first-child { border-left: 0; }
+  .stats:not(.stats--4) .stat:nth-child(3n + 1) { border-left: 0; }
+  .stats--4 .stat:nth-child(4n + 1) { border-left: 0; }
+}
+
+/* The second row of the 2-up phone layout needs its own top rule. */
+@media (max-width: 639px) {
+  .stat:nth-child(n + 3) { border-top: 1px solid var(--border); }
+}
+
+.stat__value {
+  font-family: var(--font-mono);
+  font-size: clamp(1.6rem, 6vw, 2.1rem);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--brass);
+}
+
+.stat__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--cream-mute);
+  margin-top: var(--space-sm);
+}
+
+/* ==========================================================================
+   12. HERO
+   ========================================================================== */
+
 .hero {
   position: relative;
   padding: calc(var(--nav-height) + var(--space-3xl)) 0 var(--space-3xl);
-  text-align: center;
   overflow: hidden;
   min-height: 78vh;
   display: flex;
   align-items: center;
+  text-align: center;
 }
 
 .hero__media {
@@ -774,14 +1289,16 @@ select.input {
   object-position: center 60%;
 }
 
-/* Dark scrim so the title stays readable over the photo */
+/* The one motivated gradient on the site: a scrim so the title stays
+   readable over a photograph. Tuned to --bg so it lands on the page colour. */
 .hero__media::after {
   content: '';
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(10, 10, 10, 0.82) 0%, rgba(10, 10, 10, 0.6) 45%, rgba(10, 10, 10, 0.95) 100%),
-    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(122, 53, 53, 0.25), transparent 75%);
+  background: linear-gradient(180deg,
+    rgba(12, 12, 13, 0.86) 0%,
+    rgba(12, 12, 13, 0.66) 45%,
+    rgba(12, 12, 13, 0.97) 100%);
 }
 
 .hero__inner { width: 100%; }
@@ -790,57 +1307,50 @@ select.input {
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: 8px 18px;
-  background: rgba(22, 22, 22, 0.75);
+  min-height: 34px;
+  padding: 6px 14px;
+  background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 100px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--cream-dim);
   margin-bottom: var(--space-xl);
-  backdrop-filter: blur(8px);
 }
 
 .hero__badge-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
-  background: var(--gold);
-  animation: pulse 2s ease-in-out infinite;
+  background-color: var(--brass);
+  flex-shrink: 0;
 }
 
 .hero__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: clamp(2.6rem, 7vw, 4.5rem);
   font-weight: 600;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--cream);
   margin-bottom: var(--space-lg);
-  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
 }
 
 .hero__title em {
   font-style: italic;
-  background: linear-gradient(135deg, var(--gold), var(--gold-bright), var(--gold-dim), var(--gold));
-  background-size: 300% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 8s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0%, 100% { background-position: 0% center; }
-  50% { background-position: 200% center; }
+  font-weight: 400;
+  color: var(--brass);
 }
 
 .hero__subtitle {
-  font-size: clamp(1.05rem, 2vw, 1.2rem);
-  color: var(--text-secondary);
-  max-width: 560px;
+  font-size: clamp(1.05rem, 2vw, 1.15rem);
+  font-weight: 400;
+  color: var(--cream-dim);
+  max-width: 52ch;
   margin: 0 auto var(--space-2xl);
-  line-height: 1.7;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.7);
+  line-height: 1.55;
 }
 
 .hero__actions {
@@ -851,35 +1361,34 @@ select.input {
   flex-wrap: wrap;
 }
 
-/* --------------------------------------------------------------------------
-   9. Countdown
-   -------------------------------------------------------------------------- */
+@media (max-width: 479px) {
+  .hero__actions { flex-direction: column; align-items: stretch; }
+  .hero__actions .btn { width: 100%; }
+}
+
+/* ==========================================================================
+   13. COUNTDOWN
+   ========================================================================== */
+
 .countdown-section { padding: var(--space-2xl) 0 0; }
 
 .countdown {
   display: flex;
   flex-direction: column;
-  text-align: center;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-lg);
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-accent);
-  border-radius: var(--radius-xl);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--radius);
   padding: var(--space-lg);
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
-}
-
-.countdown:hover {
-  border-color: rgba(201, 168, 76, 0.4);
-  box-shadow: 0 0 40px rgba(201, 168, 76, 0.07);
+  transition: border-color var(--dur) var(--ease);
 }
 
 @media (min-width: 768px) {
   .countdown {
     flex-direction: row;
-    text-align: left;
+    align-items: center;
     justify-content: space-between;
     padding: var(--space-xl) var(--space-2xl);
   }
@@ -888,41 +1397,39 @@ select.input {
 .countdown__info { flex: 1; min-width: 0; }
 
 .countdown__label {
+  font-family: var(--font-mono);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--gold);
-  margin-bottom: 4px;
+  letter-spacing: 0.14em;
+  color: var(--brass);
+  margin-bottom: var(--space-xs);
 }
 
 .countdown__event-name {
-  font-family: var(--font-serif);
-  font-size: 1.25rem;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
   font-weight: 600;
-  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+  margin-bottom: var(--space-xs);
 }
 
 .countdown__meta {
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--cream-dim);
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
 }
 
-@media (min-width: 768px) {
-  .countdown__meta { justify-content: flex-start; }
-}
-
-.countdown__meta-sep { color: var(--text-tertiary); }
+.countdown__meta-sep { color: var(--cream-mute); }
 
 .countdown__timer {
   display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+  align-items: flex-start;
+  gap: var(--space-xs);
   flex-shrink: 0;
 }
 
@@ -934,17 +1441,19 @@ select.input {
 }
 
 .countdown__digit {
-  font-family: var(--font-serif);
+  font-family: var(--font-mono);
   font-size: 1.6rem;
-  font-weight: 700;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
   line-height: 1;
-  background: var(--bg-elevated);
+  color: var(--cream);
+  background-color: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  border-radius: var(--radius);
+  padding: 10px 8px;
   min-width: 48px;
   text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 
 @media (min-width: 768px) {
@@ -953,64 +1462,29 @@ select.input {
 
 .countdown__unit-label {
   font-size: 0.6rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
+  letter-spacing: 0.1em;
+  color: var(--cream-mute);
   margin-top: 6px;
 }
 
 .countdown__sep {
-  font-family: var(--font-serif);
+  font-family: var(--font-mono);
   font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--gold-dim);
-  padding-bottom: 18px;
-  animation: pulse 2s ease-in-out infinite;
+  font-weight: 400;
+  color: var(--cream-mute);
+  line-height: 1;
+  padding-top: 12px;
 }
 
-.countdown--live { border-color: rgba(160, 72, 72, 0.4); }
-.countdown--live .countdown__label { color: var(--mahogany-light); }
+.countdown--live { border-left-color: var(--brass-lift); }
+.countdown--live .countdown__label { color: var(--brass-lift); }
 
-/* --------------------------------------------------------------------------
-   10. Stats band
-   -------------------------------------------------------------------------- */
-.stats {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-md);
-}
+/* ==========================================================================
+   14. PHOTOGRAPHY
+   ========================================================================== */
 
-@media (min-width: 640px) {
-  .stats { grid-template-columns: repeat(3, 1fr); }
-}
-
-.stat {
-  text-align: center;
-  padding: var(--space-lg);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-}
-
-.stat__value {
-  font-family: var(--font-serif);
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--gold);
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-}
-
-.stat__label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-top: var(--space-xs);
-}
-
-/* --------------------------------------------------------------------------
-   11. Photo section breaks
-   -------------------------------------------------------------------------- */
 .photo-break {
   position: relative;
   height: 260px;
@@ -1027,20 +1501,20 @@ select.input {
   object-fit: cover;
 }
 
+/* Motivated: blends a full-bleed photograph into the page colour. */
 .photo-break::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, var(--bg-primary) 0%, transparent 22%, transparent 78%, var(--bg-primary) 100%);
+  background: linear-gradient(180deg, var(--bg) 0%, transparent 22%, transparent 78%, var(--bg) 100%);
   pointer-events: none;
 }
 
-/* Inline figure (e.g. chip stack on rules page) */
 .figure {
   margin: var(--space-xl) 0;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
   border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .figure img { width: 100%; }
@@ -1048,14 +1522,16 @@ select.input {
 .figure figcaption {
   padding: var(--space-sm) var(--space-md);
   font-size: 0.8rem;
-  color: var(--text-tertiary);
-  background: var(--bg-secondary);
+  color: var(--cream-dim);
+  background-color: var(--surface);
   border-top: 1px solid var(--border);
 }
 
-/* --------------------------------------------------------------------------
-   12. Event cards
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   15. EVENT CARDS
+   A night is a real object, so this one stays a card.
+   ========================================================================== */
+
 .events-list {
   display: flex;
   flex-direction: column;
@@ -1064,63 +1540,75 @@ select.input {
 
 .event-card {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 56px 1fr;
   align-items: center;
   gap: var(--space-md);
-  background-color: var(--bg-card);
+  background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   padding: var(--space-md);
-  transition: border-color 0.3s var(--ease), background-color 0.3s var(--ease),
-              transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  transition: border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
 }
 
 @media (min-width: 640px) {
   .event-card {
-    grid-template-columns: 80px 1fr auto;
+    grid-template-columns: 72px 1fr auto;
     gap: var(--space-lg);
     padding: var(--space-lg) var(--space-xl);
   }
 }
 
-.event-card:hover {
-  border-color: rgba(160, 72, 72, 0.25);
-  background-color: var(--bg-card-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(122, 53, 53, 0.12);
+@media (hover: hover) {
+  .event-card:hover {
+    border-color: var(--border-loud);
+    background-color: var(--surface-2);
+    transform: translateY(-2px);
+  }
 }
 
-.event-card__date { text-align: center; }
+.event-card__date {
+  text-align: center;
+  border-right: 1px solid var(--border);
+  padding-right: var(--space-md);
+}
 
 .event-card__day {
-  font-family: var(--font-serif);
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 1.7rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
   line-height: 1;
+  color: var(--cream);
 }
 
 .event-card__month {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--gold);
-  margin-top: 4px;
+  letter-spacing: 0.12em;
+  color: var(--brass);
+  margin-top: 6px;
 }
 
 .event-card__weekday {
   font-size: 0.7rem;
-  color: var(--text-tertiary);
+  color: var(--cream-mute);
   margin-top: 2px;
 }
 
 .event-card__info { min-width: 0; }
 
 .event-card__title {
-  font-family: var(--font-serif);
-  font-size: 1.15rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
   font-weight: 600;
-  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+  margin-bottom: var(--space-xs);
 }
 
 .event-card__meta {
@@ -1128,22 +1616,33 @@ select.input {
   align-items: center;
   gap: var(--space-md);
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--cream-dim);
   flex-wrap: wrap;
+}
+
+/* The first cell is always the start time, from js/app.js and from the
+   noscript fallback alike. Styling it here keeps both renders identical
+   without touching the script. */
+.event-card__meta > span:first-child {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--cream);
 }
 
 .event-card__desc {
   margin-top: var(--space-sm);
   font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.65;
+  color: var(--cream-dim);
+  line-height: 1.55;
+  max-width: 60ch;
 }
 
 .event-card__links {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  margin-top: var(--space-sm);
+  margin-top: var(--space-md);
   flex-wrap: wrap;
 }
 
@@ -1151,20 +1650,20 @@ select.input {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 36px;
-  padding: 4px 14px;
-  border-radius: 100px;
+  min-height: 38px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  transition: all 0.2s var(--ease);
+  color: var(--cream-dim);
+  background-color: var(--surface-2);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
 .event-link:hover {
-  color: var(--text-primary);
-  border-color: var(--border-hover);
+  color: var(--cream);
+  border-color: var(--border-loud);
 }
 
 .event-card__badge { justify-self: start; }
@@ -1173,13 +1672,14 @@ select.input {
   .event-card__badge { grid-column: 1 / -1; }
 }
 
-/* --------------------------------------------------------------------------
-   13. Tables + leaderboard
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   16. TABLES, LEADERBOARD, PODIUM
+   ========================================================================== */
+
 .table-wrapper {
-  background: var(--bg-secondary);
+  background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -1187,20 +1687,34 @@ select.input {
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 480px;
 }
 
 .table th {
   padding: var(--space-md) var(--space-lg);
+  font-family: var(--font-sans);
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-tertiary);
+  letter-spacing: 0.12em;
+  color: var(--cream-mute);
   text-align: left;
-  background: var(--bg-secondary);
+  background-color: var(--surface);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+}
+
+.table th.num,
+.table td.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.table th.num {
+  font-family: var(--font-sans);
+  letter-spacing: 0.12em;
 }
 
 .table td {
@@ -1208,140 +1722,172 @@ select.input {
   border-bottom: 1px solid var(--border);
   font-size: 0.9rem;
   vertical-align: middle;
+  color: var(--cream);
 }
 
 .table tbody tr:last-child td { border-bottom: none; }
 
-.table tbody tr { transition: background 0.2s var(--ease); }
-.table tbody tr:hover { background: var(--bg-card); }
+.table tbody tr { transition: background-color var(--dur) var(--ease); }
+.table tbody tr:hover { background-color: var(--surface-2); }
 
-.table .num {
-  text-align: right;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
+.table td.num { font-weight: 500; }
 
 @media (max-width: 639px) {
   .table th, .table td { padding: var(--space-sm) var(--space-md); }
-  .table td { font-size: 0.85rem; }
+  .table td { font-size: 0.875rem; }
 }
 
-/* Rank + podium */
+/* ---- Rank ------------------------------------------------------------- */
 .rank-number {
-  font-family: var(--font-serif);
-  font-size: 1.1rem;
-  font-weight: 700;
-  min-width: 28px;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--cream-mute);
+  min-width: 2.2ch;
   display: inline-block;
+  text-align: right;
 }
 
-.leaderboard tbody tr:nth-child(1) .rank-number { color: var(--gold); }
-.leaderboard tbody tr:nth-child(2) .rank-number { color: #b8bcc4; }
-.leaderboard tbody tr:nth-child(3) .rank-number { color: #b87333; }
+/* One accent. The top three are marked by brass and a rule, not by silver,
+   bronze, and a gold wash. */
+.leaderboard tbody tr:nth-child(-n + 3) .rank-number {
+  color: var(--brass);
+}
 
-.leaderboard tbody tr:nth-child(-n+3) {
-  background: linear-gradient(90deg, rgba(201, 168, 76, 0.05), transparent 55%);
+/* An inset shadow here is a rule, not a lift: a real border-left would
+   reflow the cell by 2px and knock the rank column out of alignment. */
+.leaderboard tbody tr:nth-child(-n + 3) td:first-child {
+  box-shadow: inset 2px 0 0 0 var(--brass);
+}
+
+/* A full-width cell is never a rank cell: it is the empty state or a message
+   row. Without this it would sit at tr:nth-child(1) and get flagged as first
+   place. No :has() involved, so it holds in every browser. */
+.leaderboard tbody td[colspan] {
+  box-shadow: none;
+}
+
+.leaderboard tbody tr:nth-child(-n + 3) .player-name {
+  color: var(--cream);
+  font-weight: 600;
 }
 
 .player-cell {
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  min-width: 0;
 }
 
 .player-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--bg-card);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius);
+  background-color: var(--surface-2);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--gold);
+  font-weight: 500;
+  color: var(--brass);
   flex-shrink: 0;
 }
 
-.player-name { font-weight: 500; }
+.player-name {
+  font-weight: 500;
+  color: var(--cream);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-/* Podium cards above the table */
+/* ---- Podium -----------------------------------------------------------
+   Was three raised cards with a glow. Now three sharp rows above the table.
+   js/app.js emits medal, name, points in that order. ------------------- */
 .podium {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-md);
+  display: block;
+  border-top: 1px solid var(--border);
   margin-bottom: var(--space-xl);
 }
 
-@media (min-width: 640px) {
-  .podium {
-    grid-template-columns: repeat(3, 1fr);
-    align-items: end;
-  }
-  /* champion in the middle, raised */
-  .podium__place--1 { order: 2; transform: translateY(-8px); }
-  .podium__place--2 { order: 1; }
-  .podium__place--3 { order: 3; }
-}
-
 .podium__place {
-  text-align: center;
-  padding: var(--space-lg);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  border-radius: 0;
+  text-align: left;
 }
 
 .podium__place--1 {
-  border-color: var(--border-accent);
-  box-shadow: 0 0 40px rgba(201, 168, 76, 0.08);
+  border-bottom-color: var(--border-loud);
+  padding: var(--space-lg) 0;
 }
 
 .podium__medal {
-  font-family: var(--font-serif);
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  margin-bottom: var(--space-sm);
+  color: var(--cream-mute);
+  min-width: 8ch;
 }
 
-.podium__place--1 .podium__medal { color: var(--gold); }
-.podium__place--2 .podium__medal { color: #b8bcc4; }
-.podium__place--3 .podium__medal { color: #b87333; }
+.podium__place--1 .podium__medal { color: var(--brass); }
 
 .podium__name {
-  font-family: var(--font-serif);
-  font-size: 1.3rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
   font-weight: 600;
-  margin-bottom: 2px;
+  letter-spacing: -0.02em;
+  color: var(--cream);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
+
+.podium__place--1 .podium__name { font-size: 1.5rem; }
 
 .podium__points {
+  font-family: var(--font-mono);
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--cream-dim);
+  white-space: nowrap;
 }
 
-/* Data status line under a live table */
+.podium__place--1 .podium__points { color: var(--brass); }
+
+@media (max-width: 479px) {
+  .podium__medal { min-width: 6ch; font-size: 0.65rem; }
+  .podium__name { font-size: 1rem; }
+  .podium__place--1 .podium__name { font-size: 1.2rem; }
+}
+
 .data-status {
-  text-align: center;
   margin-top: var(--space-md);
   font-size: 0.8rem;
-  color: var(--text-tertiary);
+  color: var(--cream-mute);
 }
 
-/* --------------------------------------------------------------------------
-   14. Page header (subpages)
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   17. PAGE HEADER AND PROSE
+   ========================================================================== */
+
 .page-header {
   padding: calc(var(--nav-height) + var(--space-2xl)) 0 var(--space-2xl);
-  text-align: center;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-2xl);
 }
 
 @media (min-width: 768px) {
@@ -1349,109 +1895,86 @@ select.input {
 }
 
 .page-header__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--cream);
   margin-bottom: var(--space-sm);
 }
 
 .page-header__subtitle {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  max-width: 520px;
-  margin: 0 auto;
-  line-height: 1.7;
+  color: var(--cream-dim);
+  font-size: 1.05rem;
+  max-width: 56ch;
+  line-height: 1.55;
 }
 
-/* --------------------------------------------------------------------------
-   15. Prose (rules page)
-   -------------------------------------------------------------------------- */
 .prose {
-  color: var(--text-secondary);
+  color: var(--cream-dim);
   font-size: 1rem;
-  line-height: 1.75;
+  line-height: 1.55;
+  max-width: 68ch;
 }
 
 .prose h2 {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.7rem;
   font-weight: 600;
-  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--cream);
   margin: var(--space-2xl) 0 var(--space-md);
-  letter-spacing: -0.01em;
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border);
 }
 
+.prose > h2:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+
 .prose h3 {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  color: var(--cream);
   margin: var(--space-xl) 0 var(--space-sm);
 }
 
 .prose p { margin-bottom: var(--space-md); }
 
+.prose ul, .prose ol {
+  list-style: revert;
+  padding-left: 1.4em;
+  margin-bottom: var(--space-md);
+}
+
 .prose li { margin-bottom: var(--space-sm); }
 
-.prose strong { color: var(--text-primary); }
+.prose strong { color: var(--cream); font-weight: 600; }
 
-.prose em { color: var(--gold-bright); font-style: italic; }
+.prose em { color: var(--cream); font-style: italic; }
 
-.prose .table-wrapper { margin: var(--space-lg) 0; }
-
-/* Numbered step list for "a night, start to finish" */
-.steps {
-  counter-reset: step;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  margin: var(--space-lg) 0;
+.prose a:not(.btn) {
+  color: var(--brass);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: var(--brass-line);
+  transition: color var(--dur) var(--ease), text-decoration-color var(--dur) var(--ease);
 }
 
-.step {
-  counter-increment: step;
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  gap: var(--space-md);
-  align-items: start;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
+.prose a:not(.btn):hover {
+  color: var(--brass-lift);
+  text-decoration-color: var(--brass-lift);
 }
 
-.step::before {
-  content: counter(step);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-accent);
-  font-family: var(--font-serif);
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--gold);
-}
+.prose .table-wrapper { margin: var(--space-lg) 0; max-width: none; }
 
-.step h3, .step .step__title {
-  font-family: var(--font-serif);
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 var(--space-xs);
-}
-
-.step p { margin: 0; font-size: 0.95rem; }
-
-/* Worked example ledger */
+/* ---- Worked example ledger -------------------------------------------- */
 .ledger {
-  background: var(--bg-secondary);
+  background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   overflow: hidden;
   margin: var(--space-lg) 0;
 }
@@ -1464,52 +1987,89 @@ select.input {
   padding: var(--space-md) var(--space-lg);
   border-bottom: 1px solid var(--border);
   font-size: 0.95rem;
+  color: var(--cream-dim);
 }
 
 .ledger__row:last-child { border-bottom: none; }
 
 .ledger__row--total {
-  background: rgba(201, 168, 76, 0.06);
+  background-color: var(--surface-2);
+  border-top: 1px solid var(--border-loud);
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--cream);
 }
 
 .ledger__amount {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  color: var(--cream);
   white-space: nowrap;
 }
 
-.ledger__amount--plus { color: var(--ok); }
-.ledger__amount--minus { color: var(--danger); }
+.ledger__amount--plus { color: var(--felt-lift); }
+.ledger__amount--minus { color: var(--clay-lift); }
 
-/* The no-money statement - deliberately the loudest block on the site */
+/* ---- The points-only statement. Deliberately the loudest block. ------- */
 .no-money {
-  border: 1px solid var(--border-accent);
-  border-left: 4px solid var(--gold);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(201, 168, 76, 0.07), rgba(122, 53, 53, 0.07));
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--radius);
+  background-color: var(--surface);
   padding: var(--space-xl);
   margin: var(--space-xl) 0;
 }
 
 .no-money h2, .no-money h3 {
-  font-family: var(--font-serif);
-  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cream);
   margin: 0 0 var(--space-sm);
+  padding: 0;
+  border: 0;
 }
 
-.no-money p { color: var(--text-secondary); margin-bottom: var(--space-sm); }
+.no-money p { color: var(--cream-dim); margin-bottom: var(--space-sm); }
 .no-money p:last-child { margin-bottom: 0; }
 
-/* --------------------------------------------------------------------------
-   16. Footer (shared chrome - identical markup on every page)
-   -------------------------------------------------------------------------- */
+/* ---- Founder quote ---------------------------------------------------- */
+.story-quote {
+  margin: var(--space-lg) 0 0;
+  padding: var(--space-sm) 0 var(--space-sm) var(--space-lg);
+  border-left: 2px solid var(--brass);
+  background: none;
+  border-radius: 0;
+}
+
+.story-quote p {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: var(--cream);
+  margin-bottom: var(--space-sm);
+}
+
+.story-quote cite {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cream-mute);
+}
+
+/* ==========================================================================
+   18. FOOTER (shared chrome, byte-identical markup on every page)
+   ========================================================================== */
+
 .footer {
   margin-top: var(--space-3xl);
   padding: var(--space-2xl) 0;
-  border-top: 1px solid transparent;
-  border-image: linear-gradient(90deg, transparent 5%, rgba(160, 72, 72, 0.3), rgba(201, 168, 76, 0.15), rgba(160, 72, 72, 0.3), transparent 95%) 1;
+  border-top: 1px solid var(--border);
 }
 
 .footer__inner {
@@ -1521,9 +2081,11 @@ select.input {
 }
 
 .footer__brand {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.05rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cream);
 }
 
 .footer__links {
@@ -1538,16 +2100,16 @@ select.input {
   align-items: center;
   min-height: var(--tap-target);
   font-size: 0.85rem;
-  color: var(--text-tertiary);
-  transition: color 0.2s var(--ease);
+  color: var(--cream-dim);
+  transition: color var(--dur) var(--ease);
 }
 
-.footer__link:hover { color: var(--text-secondary); }
+.footer__link:hover { color: var(--cream); }
 
 .footer__socials {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .footer__social {
@@ -1556,70 +2118,146 @@ select.input {
   justify-content: center;
   width: var(--tap-target);
   height: var(--tap-target);
-  border-radius: 50%;
   border: 1px solid var(--border);
-  color: var(--text-tertiary);
-  transition: all 0.3s var(--ease);
+  border-radius: var(--radius);
+  color: var(--cream-dim);
+  transition: color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
 }
 
-.footer__social:hover {
-  color: var(--gold);
-  border-color: var(--gold);
-  background: rgba(201, 168, 76, 0.08);
+@media (hover: hover) {
+  .footer__social:hover {
+    color: var(--brass);
+    border-color: var(--border-loud);
+    transform: translateY(-1px);
+  }
 }
+
+.footer__social:active { transform: translateY(0); }
 
 .footer__nomoney {
-  max-width: 560px;
+  max-width: 60ch;
   font-size: 0.8rem;
-  color: var(--text-tertiary);
-  line-height: 1.6;
+  color: var(--cream-mute);
+  line-height: 1.55;
 }
 
 .footer__text {
   font-size: 0.8rem;
-  color: var(--text-tertiary);
-  opacity: 0.7;
+  color: var(--cream-mute);
 }
 
-/* --------------------------------------------------------------------------
-   17. Empty state + reveal animation
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   19. EMPTY, LOADING, AND ENTRANCE STATES
+   ========================================================================== */
+
 .empty-state {
   text-align: center;
   padding: var(--space-3xl) var(--space-lg);
+  border: 1px dashed var(--border-loud);
+  border-radius: var(--radius);
 }
 
+/* The 3rem glyph at half opacity was decoration. Kept as a small brass mark
+   so existing markup does not leave a hole. */
 .empty-state__icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-md);
-  opacity: 0.5;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--brass);
+  margin-bottom: var(--space-sm);
+  line-height: 1;
 }
 
 .empty-state__text {
-  color: var(--text-secondary);
+  color: var(--cream-dim);
   font-size: 1rem;
 }
 
-.fade-in {
-  opacity: 0;
-  transform: translateY(16px);
-  animation: fadeIn 0.6s var(--ease) forwards;
+/* ---- Skeletons --------------------------------------------------------
+   For the leaderboard and the admin tables while the first query is in
+   flight. The sweep is motion that means "working", not decoration.
+   Mark the wrapper aria-hidden="true": screen readers get aria-live copy. */
+.skeleton {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  height: 0.95em;
+  background-color: var(--surface-2);
+  border-radius: var(--radius);
+  color: transparent;
+  user-select: none;
 }
 
-@keyframes fadeIn {
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--border-loud), transparent);
+  animation: skeleton-sweep 1.3s var(--ease) infinite;
+}
+
+@keyframes skeleton-sweep {
+  to { transform: translateX(100%); }
+}
+
+.skeleton--rank { width: 2ch; }
+.skeleton--name { width: min(14ch, 60%); }
+.skeleton--num { width: 6ch; margin-left: auto; }
+.skeleton--line { width: 100%; }
+.skeleton--title { width: 45%; height: 1.4em; }
+
+.skeleton-table {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+}
+
+.skeleton-table__row {
+  display: grid;
+  grid-template-columns: 3ch 1fr 6ch;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.skeleton-table__row:last-child { border-bottom: 0; }
+
+/* Stagger, so the rows read as a list loading rather than one flat block. */
+.skeleton-table__row:nth-child(2) .skeleton::after { animation-delay: 0.08s; }
+.skeleton-table__row:nth-child(3) .skeleton::after { animation-delay: 0.16s; }
+.skeleton-table__row:nth-child(4) .skeleton::after { animation-delay: 0.24s; }
+.skeleton-table__row:nth-child(5) .skeleton::after { animation-delay: 0.32s; }
+
+@media (max-width: 639px) {
+  .skeleton-table__row { padding: var(--space-md); }
+}
+
+/* ---- Entrance ---------------------------------------------------------
+   .fade-in runs on first paint. .reveal is gated behind the .js class that
+   js/app.js sets before anything else, so if the script never runs the
+   content is simply there. Enhance downward, never hide by default. ----- */
+.fade-in {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: enter var(--dur-enter) var(--ease) forwards;
+}
+
+@keyframes enter {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.fade-in-delay-1 { animation-delay: 0.1s; }
-.fade-in-delay-2 { animation-delay: 0.2s; }
-.fade-in-delay-3 { animation-delay: 0.3s; }
+.fade-in-delay-1 { animation-delay: 0.06s; }
+.fade-in-delay-2 { animation-delay: 0.12s; }
+.fade-in-delay-3 { animation-delay: 0.18s; }
 
-/* Scroll reveal - gated behind .js on <html> so a JS failure never blanks
-   the page (js/app.js adds the class before anything else runs). */
 .js .reveal {
   opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+  transform: translateY(10px);
+  transition: opacity var(--dur-enter) var(--ease),
+              transform var(--dur-enter) var(--ease);
 }
 
 .js .reveal--visible {
@@ -1627,12 +2265,10 @@ select.input {
   transform: translateY(0);
 }
 
-/* --------------------------------------------------------------------------
-   18. Member app screens (login / report / admin)
+/* ==========================================================================
+   20. MEMBER APP SCREENS (login, report, admin)
    Phone-first, dark-room-first: big targets, loud states, zero ambiguity.
-   The `hidden` attribute is the one state switch - make it absolute.
-   -------------------------------------------------------------------------- */
-[hidden] { display: none !important; }
+   ========================================================================== */
 
 .app-main {
   padding-top: calc(var(--nav-height) + var(--space-xl));
@@ -1640,65 +2276,62 @@ select.input {
 }
 
 .app-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: clamp(1.7rem, 5vw, 2.3rem);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--cream);
   margin-bottom: var(--space-xs);
 }
 
 .app-subtitle {
-  color: var(--text-secondary);
+  color: var(--cream-dim);
   font-size: 0.95rem;
+  line-height: 1.55;
   margin-bottom: var(--space-xl);
 }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.link-gold { color: var(--gold); }
-.link-gold:hover { color: var(--gold-bright); text-decoration: underline; }
-
-/* Segmented tabs (Sign in / Create account) */
+/* ---- Segmented tabs (Sign in / Create account) ------------------------ */
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
-  background: var(--bg-secondary);
+  gap: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
+  overflow: hidden;
   margin-bottom: var(--space-lg);
 }
 
 .tabs__btn {
   min-height: var(--tap-target);
-  border-radius: var(--radius-sm);
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--text-secondary);
-  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+  color: var(--cream-dim);
+  background-color: var(--surface);
+  border-radius: 0;
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 
+.tabs__btn + .tabs__btn { border-left: 1px solid var(--border); }
+
+.tabs__btn:hover { color: var(--cream); }
+
+/* Same again: the selected underline is drawn inset so the label does not
+   shift 2px when selection moves between the two tabs. */
 .tabs__btn[aria-selected="true"] {
-  background: var(--bg-elevated);
-  color: var(--gold);
-  box-shadow: inset 0 0 0 1px var(--border-accent);
+  background-color: var(--brass-fill);
+  color: var(--brass);
+  box-shadow: inset 0 -2px 0 0 var(--brass);
 }
 
-/* "or" divider between auth methods */
+/* ---- "or" divider ----------------------------------------------------- */
 .or-divider {
   display: flex;
   align-items: center;
   gap: var(--space-md);
   margin: var(--space-lg) 0;
-  color: var(--text-tertiary);
+  color: var(--cream-mute);
   font-size: 0.8rem;
 }
 
@@ -1707,26 +2340,27 @@ select.input {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--border);
+  background-color: var(--border);
 }
 
-/* Inline status / error line under a form */
+/* ---- Inline status line under a form ---------------------------------- */
 .form-msg {
   margin-top: var(--space-md);
   font-size: 0.9rem;
   line-height: 1.5;
   min-height: 1.4em;
+  color: var(--cream-dim);
 }
 
-.form-msg--error { color: var(--danger); }
-.form-msg--ok { color: var(--ok); }
-.form-msg--busy { color: var(--text-secondary); }
+.form-msg--error { color: var(--clay-lift); }
+.form-msg--ok { color: var(--felt-lift); }
+.form-msg--busy { color: var(--cream-dim); }
 
-/* Pseudonym availability line + suggestion chips */
+/* ---- Pseudonym availability ------------------------------------------- */
 .avail { font-size: 0.85rem; margin-top: var(--space-sm); min-height: 1.4em; }
-.avail--free { color: var(--ok); }
-.avail--legacy { color: var(--gold); }
-.avail--neutral { color: var(--text-tertiary); }
+.avail--free { color: var(--felt-lift); }
+.avail--legacy { color: var(--brass); }
+.avail--neutral { color: var(--cream-mute); }
 
 .chip-suggestions {
   display: flex;
@@ -1737,31 +2371,41 @@ select.input {
 
 .chip-suggestion {
   min-height: 40px;
-  padding: 6px 16px;
+  padding: 6px 14px;
   border: 1px solid var(--border);
-  border-radius: 100px;
-  background: var(--bg-card);
-  color: var(--text-secondary);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  color: var(--cream-dim);
   font-size: 0.9rem;
-  transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 
-.chip-suggestion:hover { border-color: var(--border-accent); color: var(--gold); }
+.chip-suggestion:hover { border-color: var(--border-loud); color: var(--brass); }
 
-/* Signed-in identity strip */
+/* ---- Signed-in identity strip ----------------------------------------- */
 .whoami {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
   padding: var(--space-sm) 0 var(--space-lg);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-lg);
   flex-wrap: wrap;
 }
 
-.whoami__name { font-weight: 600; color: var(--text-primary); }
-.whoami__label { font-size: 0.8rem; color: var(--text-tertiary); }
+.whoami__name { font-weight: 600; color: var(--cream); }
 
-/* Night banner at the top of the report screen */
+.whoami__label {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cream-mute);
+}
+
+/* ---- Night banner at the top of the report screen --------------------- */
 .night-banner {
   display: flex;
   justify-content: space-between;
@@ -1769,38 +2413,57 @@ select.input {
   gap: var(--space-md);
   flex-wrap: wrap;
   padding: var(--space-md) var(--space-lg);
-  background: var(--bg-card);
-  border: 1px solid var(--border-accent);
-  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--radius);
   margin-bottom: var(--space-lg);
 }
 
 .night-banner__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cream);
 }
 
-.night-banner__meta { font-size: 0.85rem; color: var(--text-secondary); }
+.night-banner__meta {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--cream-dim);
+}
 
-/* Key figures (bonus, buy-in, cap) */
+/* ---- Key figures (bonus, buy-in, cap) --------------------------------- */
 .kv {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: var(--space-xs) var(--space-md);
+  gap: 0 var(--space-md);
   margin: var(--space-md) 0;
   font-size: 0.95rem;
 }
 
-.kv dt { color: var(--text-secondary); }
-.kv dd {
-  text-align: right;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
+.kv dt {
+  color: var(--cream-dim);
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--border);
 }
 
-/* Quick-pick amount buttons (rebuy) */
+.kv dd {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--border);
+}
+
+.kv dt:first-of-type, .kv dd:first-of-type { border-top: 0; }
+
+/* ---- Quick-pick amounts ----------------------------------------------- */
 .quickpicks {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1816,129 +2479,174 @@ select.input {
   min-height: var(--tap-target);
   padding: 10px 8px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  color: var(--text-primary);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  color: var(--cream);
+  font-family: var(--font-mono);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+  letter-spacing: -0.02em;
+  transition: border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease),
+              color var(--dur) var(--ease);
   -webkit-tap-highlight-color: transparent;
 }
 
-.quickpick:hover { border-color: var(--border-hover); }
+.quickpick:hover { border-color: var(--border-loud); }
 
 .quickpick--active {
-  background: rgba(201, 168, 76, 0.14);
-  border-color: var(--gold);
-  color: var(--gold-bright);
-}
-
-.quickpick[disabled] { opacity: 0.35; pointer-events: none; }
-
-/* The one-tap bust button - impossible to miss */
-.btn--bust {
-  width: 100%;
-  min-height: 64px;
-  margin-top: var(--space-sm);
-  background: rgba(122, 53, 53, 0.25);
-  border: 1px solid rgba(160, 72, 72, 0.5);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: 1.1rem;
+  background-color: var(--brass);
+  border-color: var(--brass);
+  color: var(--on-brass);
   font-weight: 700;
 }
 
-.btn--bust:hover { background: rgba(122, 53, 53, 0.4); }
-
-.btn--bust.quickpick--active {
-  background: var(--mahogany);
-  border-color: var(--mahogany-light);
-  color: #fff;
+.quickpick[disabled] {
+  background-color: var(--surface);
+  color: var(--cream-mute);
+  border-color: var(--border);
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
-/* Outbox status pill */
+/* ---- The one-tap bust button. Impossible to miss, hard to hit by
+   accident: it sits apart and reads as a state, not a submit. ---------- */
+.btn--bust {
+  width: 100%;
+  min-height: 64px;
+  margin-top: var(--space-md);
+  background-color: var(--clay-fill);
+  border: 1px solid var(--clay-line);
+  border-radius: var(--radius);
+  color: var(--clay-lift);
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: background-color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn--bust:hover { border-color: var(--clay); color: var(--cream); }
+.btn--bust:active { transform: translateY(1px); }
+
+.btn--bust.quickpick--active {
+  background-color: var(--clay);
+  border-color: var(--clay);
+  color: var(--cream);
+  font-weight: 700;
+}
+
+/* ---- Outbox status pill ----------------------------------------------- */
 .sync-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
-  border-radius: 100px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--text-secondary);
+  background-color: var(--surface);
+  color: var(--cream-dim);
 }
 
 .sync-pill__dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
+  background-color: var(--cream-mute);
   flex-shrink: 0;
 }
 
-.sync-pill--sending .sync-pill__dot { background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
-.sync-pill--sent .sync-pill__dot { background: var(--ok); }
-.sync-pill--failed .sync-pill__dot { background: var(--danger); }
-.sync-pill--queued .sync-pill__dot { background: var(--warn); }
+/* Sending is the one place a repeating animation is earned: it is the
+   spinner for a queued write, and it stops when the write lands. */
+.sync-pill--sending .sync-pill__dot {
+  background-color: var(--brass);
+  animation: blink 1.1s steps(2, jump-none) infinite;
+}
 
-/* Receipt */
+.sync-pill--queued .sync-pill__dot { background-color: var(--brass); }
+.sync-pill--sent .sync-pill__dot { background-color: var(--felt-lift); }
+.sync-pill--failed .sync-pill__dot { background-color: var(--clay-lift); }
+
+.sync-pill--sent { border-color: var(--felt-line); color: var(--felt-lift); }
+.sync-pill--failed { border-color: var(--clay-line); color: var(--clay-lift); }
+.sync-pill--queued, .sync-pill--sending { border-color: var(--brass-line); color: var(--brass); }
+
+@keyframes blink {
+  50% { opacity: 0.25; }
+}
+
+/* ---- Receipt ---------------------------------------------------------- */
 .receipt__icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   margin: 0 auto var(--space-md);
-  background: rgba(76, 196, 108, 0.12);
-  border: 1px solid rgba(76, 196, 108, 0.4);
-  color: var(--ok);
+  background-color: var(--felt-fill);
+  border: 1px solid var(--felt-line);
+  color: var(--felt-lift);
 }
 
 .receipt__icon--saved {
-  background: rgba(224, 169, 62, 0.12);
-  border-color: rgba(224, 169, 62, 0.4);
-  color: var(--warn);
+  background-color: var(--brass-fill);
+  border-color: var(--brass-line);
+  color: var(--brass);
 }
 
-/* "Couldn't send - show this to an organiser": the payload must be readable
-   across a table in a dark room. 24px minimum, high contrast. */
+/* ---- "Could not send, show this to an organiser" ----------------------
+   Read across a table in a dark room. Mono, 24px, high contrast. ------- */
 .organiser-card {
-  border: 2px solid var(--danger);
-  border-radius: var(--radius-lg);
-  background: rgba(224, 90, 78, 0.08);
+  border: 1px solid var(--clay);
+  border-left: 3px solid var(--clay);
+  border-radius: var(--radius);
+  background-color: var(--clay-fill);
   padding: var(--space-lg);
   margin-top: var(--space-lg);
 }
 
 .organiser-card h3 {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin-bottom: var(--space-md);
-  color: var(--text-primary);
+  color: var(--cream);
 }
 
 .organiser-payload {
-  background: var(--bg-primary);
+  background-color: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   padding: var(--space-lg);
+  font-family: var(--font-mono);
   font-size: 24px;
-  line-height: 1.5;
-  font-weight: 600;
+  line-height: 1.4;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  color: var(--cream);
 }
 
 .organiser-payload .organiser-payload__label {
   display: block;
-  font-size: 0.7em;
+  font-family: var(--font-sans);
+  font-size: 0.65em;
   font-weight: 500;
-  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cream-mute);
+  margin-bottom: 2px;
 }
 
 .organiser-payload > div + div {
@@ -1947,9 +2655,10 @@ select.input {
   border-top: 1px solid var(--border);
 }
 
-/* --------------------------------------------------------------------------
-   19. Admin console
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   21. ADMIN CONSOLE
+   ========================================================================== */
+
 .toolbar {
   display: flex;
   gap: var(--space-sm);
@@ -1959,117 +2668,156 @@ select.input {
 
 .toolbar--right { justify-content: flex-end; }
 
-/* Night status pills */
+/* ---- Night status pills ----------------------------------------------- */
 .status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 12px;
-  border-radius: 100px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   border: 1px solid var(--border);
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--cream-dim);
+  background-color: var(--surface-2);
 }
 
-.status-pill--draft { color: var(--text-tertiary); }
+.status-pill--draft { color: var(--cream-mute); }
+
 .status-pill--open {
-  color: var(--ok);
-  border-color: rgba(76, 196, 108, 0.4);
-  background: rgba(76, 196, 108, 0.1);
+  color: var(--felt-lift);
+  border-color: var(--felt-line);
+  background-color: var(--felt-fill);
 }
-.status-pill--reconciling {
-  color: var(--warn);
-  border-color: rgba(224, 169, 62, 0.4);
-  background: rgba(224, 169, 62, 0.1);
-}
-.status-pill--settled {
-  color: var(--gold);
-  border-color: var(--border-accent);
-  background: rgba(201, 168, 76, 0.1);
-}
-.status-pill--void { color: var(--danger); }
 
-/* Night list rows */
+.status-pill--reconciling {
+  color: var(--brass);
+  border-color: var(--brass-line);
+  background-color: var(--brass-fill);
+}
+
+.status-pill--settled {
+  color: var(--on-brass);
+  border-color: var(--brass);
+  background-color: var(--brass);
+}
+
+.status-pill--void {
+  color: var(--clay-lift);
+  border-color: var(--clay-line);
+  background-color: var(--clay-fill);
+}
+
+/* ---- Night list rows --------------------------------------------------- */
 .night-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
   width: 100%;
+  min-height: var(--tap-target);
   text-align: left;
   padding: var(--space-md) var(--space-lg);
-  background: var(--bg-card);
+  background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   margin-bottom: var(--space-sm);
-  transition: border-color 0.2s var(--ease);
   font-size: 0.95rem;
+  transition: border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease);
 }
 
-.night-row:hover { border-color: var(--border-hover); }
-.night-row--selected { border-color: var(--gold); }
+.night-row:hover { border-color: var(--border-loud); background-color: var(--surface-2); }
 
-.night-row__title { font-weight: 600; }
-.night-row__meta { font-size: 0.8rem; color: var(--text-tertiary); }
+.night-row--selected {
+  border-color: var(--brass);
+  background-color: var(--brass-fill);
+}
 
-/* Mini stat tiles for the selected night */
+.night-row__title { font-weight: 600; color: var(--cream); }
+
+.night-row__meta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--cream-mute);
+}
+
+/* ---- Mini stats for the selected night --------------------------------
+   Same sharp-row logic as the front page band, at admin density. ------- */
 .mini-stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-sm);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   margin: var(--space-md) 0 var(--space-lg);
+  overflow: hidden;
 }
 
 @media (min-width: 640px) {
-  .mini-stats { grid-template-columns: repeat(4, 1fr); }
+  .mini-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .mini-stat {
   padding: var(--space-md);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  text-align: center;
+  background-color: var(--surface);
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+
+.mini-stat:nth-child(odd) { border-left: 0; }
+.mini-stat:nth-child(-n + 2) { border-top: 0; }
+
+@media (min-width: 640px) {
+  .mini-stat { border-top: 0; }
+  .mini-stat:nth-child(odd) { border-left: 1px solid var(--border); }
+  .mini-stat:first-child { border-left: 0; }
 }
 
 .mini-stat__value {
-  font-family: var(--font-serif);
+  font-family: var(--font-mono);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--cream);
 }
 
 .mini-stat__label {
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  color: var(--cream-mute);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-top: 2px;
+  letter-spacing: 0.1em;
+  margin-top: var(--space-xs);
 }
 
-.mini-stat--alert { border-color: rgba(224, 169, 62, 0.5); }
-.mini-stat--alert .mini-stat__value { color: var(--warn); }
-.mini-stat--ok .mini-stat__value { color: var(--ok); }
+.mini-stat--alert { background-color: var(--brass-fill); }
+.mini-stat--alert .mini-stat__value { color: var(--brass); }
+.mini-stat--ok .mini-stat__value { color: var(--felt-lift); }
 
-/* WHO HAS NOT REPORTED - the loudest thing on the admin screen */
+/* ---- Who has not reported. The loudest thing on the admin screen. ----- */
 .notreported {
-  border: 2px solid rgba(224, 169, 62, 0.55);
-  border-radius: var(--radius-lg);
-  background: rgba(224, 169, 62, 0.06);
+  border: 1px solid var(--brass);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--radius);
+  background-color: var(--brass-fill);
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
 }
 
 .notreported h3 {
-  font-family: var(--font-serif);
-  font-size: 1.15rem;
-  color: var(--warn);
-  margin-bottom: var(--space-sm);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--brass);
+  margin-bottom: var(--space-md);
 }
 
 .notreported__names {
@@ -2079,81 +2827,90 @@ select.input {
 }
 
 .notreported__name {
-  padding: 8px 16px;
-  border-radius: 100px;
-  background: var(--bg-card);
-  border: 1px solid rgba(224, 169, 62, 0.4);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  border: 1px solid var(--brass-line);
+  color: var(--cream);
   font-size: 1rem;
   font-weight: 600;
 }
 
 .notreported--clear {
-  border-color: rgba(76, 196, 108, 0.45);
-  background: rgba(76, 196, 108, 0.05);
+  border-color: var(--felt-line);
+  border-left-color: var(--felt-lift);
+  background-color: var(--felt-fill);
 }
 
-.notreported--clear h3 { color: var(--ok); }
+.notreported--clear h3 { color: var(--felt-lift); }
 
-/* Inline two-tap confirm (settle etc.) */
+/* ---- Inline two-tap confirm ------------------------------------------- */
 .confirm-strip {
   display: flex;
   gap: var(--space-sm);
   align-items: center;
   flex-wrap: wrap;
   padding: var(--space-md);
-  border: 1px solid rgba(224, 90, 78, 0.4);
-  border-radius: var(--radius-md);
-  background: rgba(224, 90, 78, 0.07);
+  border: 1px solid var(--clay-line);
+  border-left: 3px solid var(--clay);
+  border-radius: var(--radius);
+  background-color: var(--clay-fill);
   font-size: 0.9rem;
+  color: var(--cream);
 }
 
-/* Bulk paste preview line states */
-.bulk-line--ok { color: var(--ok); }
-.bulk-line--bad { color: var(--danger); }
+/* ---- Bulk paste preview ----------------------------------------------- */
+.bulk-line--ok { color: var(--felt-lift); }
+.bulk-line--bad { color: var(--clay-lift); }
 
-/* Compact tables inside admin cards */
-.table--compact th, .table--compact td { padding: var(--space-sm) var(--space-md); }
-.table--compact { min-width: 0; }
+/* ---- Compact tables inside admin cards -------------------------------- */
+.table--compact th,
+.table--compact td { padding: var(--space-sm) var(--space-md); }
 
-/* Deviation figure */
-.deviation--bad { color: var(--warn); }
-.deviation--zero { color: var(--ok); }
+/* ---- Deviation figure -------------------------------------------------- */
+.deviation--bad { color: var(--brass); font-weight: 600; }
+.deviation--zero { color: var(--felt-lift); }
 
 /* ==========================================================================
-   Night attendance code - check-in input (report.html) and the full-screen
-   TV takeover (admin.html). The code is 5 unambiguous characters; both
-   surfaces derive it from the night id via SBP.nightCode().
+   22. NIGHT ATTENDANCE CODE
+   The 5-character code, typed on report.html and projected from admin.html.
+   The alphabet already drops 0/O and 1/I/L; mono removes the rest of the
+   ambiguity. This is why the whole site carries a mono face.
    ========================================================================== */
 
-/* The member's code field: big, centred, impossible to misread. */
 .input--code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 1.8rem;
-  letter-spacing: 0.35em;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;              /* re-centres against the trailing space */
   text-align: center;
   text-transform: uppercase;
-  font-weight: 700;
   padding: var(--space-md);
+  min-height: 64px;
 }
+
 .input--code::placeholder {
-  letter-spacing: 0.35em;
-  opacity: 0.25;
+  letter-spacing: 0.3em;
+  color: var(--cream-mute);
 }
 
 /* Body lock while the takeover is up. */
 .no-scroll { overflow: hidden; }
 
-/* The takeover itself: near-black, made to be read from across a room. */
 .code-takeover {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: var(--bg-primary);
+  background-color: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 4vmin;
   text-align: center;
 }
+
 .code-takeover[hidden] { display: none; }
 
 .code-takeover__inner {
@@ -2165,27 +2922,31 @@ select.input {
 }
 
 .code-takeover__night {
-  font-size: 2.4vmin;
-  color: var(--text-tertiary);
-  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 2.2vmin;
+  color: var(--cream-mute);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .code-takeover__lead {
   font-size: 3vmin;
-  color: var(--text-secondary);
+  font-weight: 500;
+  color: var(--cream-dim);
 }
 
 .code-takeover__url {
-  font-family: var(--font-serif);
-  font-size: 4.4vmin;
-  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 4vmin;
+  color: var(--brass);
+  letter-spacing: -0.01em;
 }
 
-/* White card behind the QR: quiet-zone contrast for cameras. */
+/* White card behind the QR: quiet-zone contrast for phone cameras. */
 .code-takeover__qr {
   background: #fff;
-  border-radius: 2vmin;
+  border-radius: var(--radius);
   padding: 2vmin;
   width: min(44vmin, 90vw);
   height: min(44vmin, 90vw);
@@ -2193,68 +2954,76 @@ select.input {
   align-items: center;
   justify-content: center;
 }
+
 .code-takeover__qr svg {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-/* The code: the single biggest thing on the screen. */
+/* The single biggest thing on the screen. No text-shadow: a glow on the one
+   glyph set that has to survive being read across a room is sabotage. */
 .code-takeover__code {
-  font-family: var(--font-serif);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   font-size: 16vmin;
   line-height: 1;
-  letter-spacing: 0.08em;
-  color: var(--gold);
-  text-shadow: 0 0 6vmin rgba(201, 168, 76, 0.35);
+  letter-spacing: 0.08em;          /* deliberate positive tracking: a code,
+                                      not a headline. Separates the glyphs. */
+  text-indent: 0.08em;
+  color: var(--brass);
 }
 
 .code-takeover__close {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: var(--space-md);
+  right: var(--space-md);
   background: transparent;
-  border: 1px solid var(--border, rgba(255,255,255,0.2));
-  border-radius: 100px;
-  color: var(--text-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--cream-dim);
   font-size: 1rem;
-  width: 44px;
-  height: 44px;
-  cursor: pointer;
-}
-.code-takeover__close:hover { color: var(--text-primary); border-color: var(--text-tertiary); }
-
-/* --------------------------------------------------------------------------
-   Stats band with four tiles (the real club numbers on the front page)
-   -------------------------------------------------------------------------- */
-.stats--4 { grid-template-columns: 1fr 1fr; }
-
-@media (min-width: 640px) {
-  .stats--4 { grid-template-columns: repeat(4, 1fr); }
+  width: var(--tap-target);
+  height: var(--tap-target);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
-/* --------------------------------------------------------------------------
-   Founder quote in the "Our story" section
-   -------------------------------------------------------------------------- */
-.story-quote {
-  margin: var(--space-lg) 0 0;
-  padding: var(--space-md) var(--space-lg);
-  border-left: 3px solid var(--gold);
-  background: var(--bg-card);
-  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+.code-takeover__close:hover {
+  color: var(--cream);
+  border-color: var(--border-loud);
 }
 
-.story-quote p {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  margin-bottom: var(--space-xs);
-}
+/* ==========================================================================
+   23. REDUCED MOTION
+   Cut the duration, never the state. Everything still changes, it just
+   arrives immediately.
+   ========================================================================== */
 
-.story-quote cite {
-  font-style: normal;
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0.01ms;
+    --dur-enter: 0.01ms;
+  }
+
+  html { scroll-behavior: auto; }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* The skeleton has to keep saying "still working", so it stays animated,
+     slowly and without travel. */
+  .skeleton::after {
+    animation: none !important;
+    transform: none;
+    background: var(--surface-2);
+  }
+
+  .btn.is-busy::after,
+  .btn[aria-busy="true"]::after {
+    animation: spin 1.4s linear infinite !important;
+  }
 }

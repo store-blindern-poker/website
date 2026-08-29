@@ -11,7 +11,6 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <div class="noise-overlay"></div>
 
   <div class="page-wrapper">
 
@@ -60,7 +59,12 @@
 
         <!-- STATE: loading -->
         <div class="card" id="state-loading">
-          <p class="card__text">Checking access…</p>
+          <p class="visually-hidden" role="status">Checking access.</p>
+          <div aria-hidden="true">
+            <span class="skeleton skeleton--title" style="margin-bottom: var(--space-lg);"></span>
+            <span class="skeleton skeleton--line" style="margin-bottom: var(--space-sm);"></span>
+            <span class="skeleton skeleton--line" style="width: 70%;"></span>
+          </div>
         </div>
 
         <!-- STATE: signed in but not an organiser -->
@@ -83,8 +87,8 @@
           <!-- Nights -->
           <section aria-labelledby="nights-title" style="margin-bottom: var(--space-xl);">
             <div class="whoami">
-              <h2 class="section__title" id="nights-title" style="font-size: 1.4rem;">Nights</h2>
-              <button class="btn btn--secondary" id="toggle-create" type="button">+ New night</button>
+              <h2 class="card__title" id="nights-title" style="margin-bottom: 0;">Nights</h2>
+              <button class="btn btn--secondary" id="toggle-create" type="button">New night</button>
             </div>
 
             <form class="card" id="create-form" hidden style="margin-bottom: var(--space-lg);">
@@ -105,39 +109,63 @@
                   <option value="bonus_only">Bonus only (no chips)</option>
                 </select>
               </div>
+              <!-- Was an inline-sized 18px checkbox, the only control on the
+                   site under 48px. The .choice toggle is a real tap target
+                   and reads its own state: brass when it counts. -->
               <div class="field">
-                <label class="label" for="create-affects" style="display:flex;align-items:center;gap:0.5rem;">
-                  <input type="checkbox" id="create-affects" checked style="width:1.1rem;height:1.1rem;">
-                  Counts toward season points
-                </label>
+                <div class="choice-row">
+                  <label class="choice">
+                    <input type="checkbox" id="create-affects" checked>
+                    <span>Counts toward season points</span>
+                  </label>
+                </div>
                 <p class="help">Untick for a stand-alone special (an Omaha night, say): results and
                 chips are still recorded, the season leaderboard is untouched.</p>
               </div>
               <div class="field">
                 <label class="label" for="create-stack">Stack size (chips per buy-in)</label>
                 <input class="input input--numeric" id="create-stack" type="text" inputmode="numeric" value="10000">
-                <p class="help">Lower it on a chip-shortage night (9,700 has happened).</p>
+                <p class="help">Lower it on a chip-shortage night (<span class="mono">9,700</span> has happened).</p>
               </div>
               <div class="field">
                 <label class="label" for="create-bonus">Attendance bonus (points)</label>
                 <input class="input input--numeric" id="create-bonus" type="text" inputmode="numeric" value="5000">
               </div>
               <button class="btn btn--primary btn--block" id="create-submit" type="submit">Create night (as draft)</button>
-              <p class="form-msg" id="create-msg" aria-live="polite"></p>
+              <p class="form-msg" id="create-msg" role="status" aria-live="polite"></p>
             </form>
 
+            <!-- Skeleton rows until the first nights query lands. js/admin.js
+                 replaces the whole innerHTML, so both children go together. -->
             <div id="nights-list">
-              <div class="card"><p class="card__text">Loading nights…</p></div>
+              <p class="visually-hidden" role="status">Loading nights.</p>
+              <div class="skeleton-table" aria-hidden="true">
+                <div class="skeleton-table__row">
+                  <span class="skeleton skeleton--rank"></span>
+                  <span class="skeleton skeleton--name"></span>
+                  <span class="skeleton skeleton--num"></span>
+                </div>
+                <div class="skeleton-table__row">
+                  <span class="skeleton skeleton--rank"></span>
+                  <span class="skeleton skeleton--name"></span>
+                  <span class="skeleton skeleton--num"></span>
+                </div>
+                <div class="skeleton-table__row">
+                  <span class="skeleton skeleton--rank"></span>
+                  <span class="skeleton skeleton--name"></span>
+                  <span class="skeleton skeleton--num"></span>
+                </div>
+              </div>
             </div>
           </section>
 
           <!-- Selected night -->
           <section id="night-detail" hidden aria-labelledby="detail-title">
-            <div class="divider"></div>
+            <hr class="rule">
 
             <div class="whoami">
               <div>
-                <h2 class="section__title" id="detail-title" style="font-size: 1.4rem;">…</h2>
+                <h2 class="card__title" id="detail-title">…</h2>
                 <div class="whoami__label" id="detail-meta">…</div>
               </div>
               <span class="status-pill" id="detail-status">…</span>
@@ -148,9 +176,9 @@
               <button class="btn btn--secondary" id="btn-close" type="button" hidden>Close reporting</button>
               <button class="btn btn--primary" id="btn-settle" type="button" hidden>Settle night…</button>
               <button class="btn btn--secondary" id="btn-reopen" type="button" hidden>Reopen for corrections</button>
-              <button class="btn btn--secondary" id="btn-code" type="button" hidden>Display code ⛶</button>
+              <button class="btn btn--secondary" id="btn-code" type="button" hidden>Show the code on the TV</button>
             </div>
-            <p class="form-msg" id="lifecycle-msg" aria-live="polite"></p>
+            <p class="form-msg" id="lifecycle-msg" role="status" aria-live="polite"></p>
 
             <!-- Two-tap settle confirm -->
             <div class="confirm-strip" id="settle-confirm" hidden>
@@ -159,18 +187,25 @@
               <button class="btn btn--ghost" id="btn-settle-cancel" type="button">Cancel</button>
             </div>
 
-            <!-- Numbers of the night -->
-            <div class="mini-stats" id="mini-stats"></div>
-
-            <!-- WHO HAS NOT REPORTED -->
-            <div class="notreported" id="notreported">
+            <!-- WHO HAS NOT REPORTED. This sits directly under the lifecycle
+                 controls, above the numbers and the table, because at 22:30
+                 it is the only block that decides what an organiser does
+                 next. js/admin.js rewrites its class, so it carries no other
+                 class than .notreported here. -->
+            <div class="notreported" id="notreported" style="margin-top: var(--space-lg);">
               <h3 id="notreported-title">Not reported yet</h3>
               <div class="notreported__names" id="notreported-names"></div>
             </div>
 
-            <!-- Entries table -->
+            <!-- Numbers of the night -->
+            <div class="mini-stats" id="mini-stats"></div>
+
+            <!-- Entries table. The skeleton rows are replaced whole by
+                 renderDetail(), which writes either the entries or its own
+                 "No entries yet" row. -->
             <div class="table-wrapper" style="margin-bottom: var(--space-lg);">
               <table class="table table--compact">
+                <caption class="visually-hidden">Check-ins and reports for the selected night</caption>
                 <thead>
                   <tr>
                     <th scope="col">Player</th>
@@ -181,7 +216,34 @@
                   </tr>
                 </thead>
                 <tbody id="entries-body">
-                  <tr><td colspan="5" style="color: var(--text-tertiary);">No entries yet.</td></tr>
+                  <tr aria-hidden="true">
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td><span class="skeleton" style="width: 9ch;"></span></td>
+                  </tr>
+                  <tr aria-hidden="true">
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td><span class="skeleton" style="width: 9ch;"></span></td>
+                  </tr>
+                  <tr aria-hidden="true">
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td><span class="skeleton" style="width: 9ch;"></span></td>
+                  </tr>
+                  <tr aria-hidden="true">
+                    <td><span class="skeleton skeleton--name"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td class="num"><span class="skeleton skeleton--num"></span></td>
+                    <td><span class="skeleton" style="width: 9ch;"></span></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -189,18 +251,18 @@
             <!-- Check in / report on behalf -->
             <div class="card-grid" style="margin-bottom: var(--space-lg);">
               <form class="card" id="proxy-checkin-form">
-                <h3 class="card__title" style="font-size: 1.05rem;">Check someone in</h3>
+                <h3 class="card__title">Check someone in</h3>
                 <div class="field">
                   <label class="label" for="proxy-checkin-name">Pseudonym</label>
                   <input class="input" id="proxy-checkin-name" list="member-list"
                          autocomplete="off" autocapitalize="off" placeholder="Start typing…">
                 </div>
                 <button class="btn btn--secondary btn--block" type="submit">Check in</button>
-                <p class="form-msg" id="proxy-checkin-msg" aria-live="polite"></p>
+                <p class="form-msg" id="proxy-checkin-msg" role="status" aria-live="polite"></p>
               </form>
 
               <form class="card" id="proxy-report-form">
-                <h3 class="card__title" style="font-size: 1.05rem;">Report on behalf</h3>
+                <h3 class="card__title">Report on behalf</h3>
                 <div class="field">
                   <label class="label" for="proxy-report-name">Pseudonym</label>
                   <input class="input" id="proxy-report-name" list="member-list"
@@ -217,7 +279,7 @@
                          inputmode="numeric" placeholder="0">
                 </div>
                 <button class="btn btn--primary btn--block" type="submit">Save report</button>
-                <p class="form-msg" id="proxy-report-msg" aria-live="polite"></p>
+                <p class="form-msg" id="proxy-report-msg" role="status" aria-live="polite"></p>
               </form>
             </div>
 
@@ -225,7 +287,7 @@
 
             <!-- Bulk paste from the paper sheets -->
             <div class="card" style="margin-bottom: var(--space-lg);">
-              <h3 class="card__title" style="font-size: 1.05rem;">Bulk paste from the paper sheet</h3>
+              <h3 class="card__title">Bulk paste from the paper sheet</h3>
               <p class="card__text" style="margin-bottom: var(--space-md);">
                 One player per line: <code>pseudonym, top-up, final&nbsp;stack</code>
                 (two values means top-up 0: <code>pseudonym, final</code>).
@@ -242,24 +304,31 @@
               </div>
               <div class="table-wrapper" id="bulk-preview-wrap" hidden style="margin-top: var(--space-md);">
                 <table class="table table--compact">
+                  <caption class="visually-hidden">Preview of the pasted lines</caption>
                   <thead>
-                    <tr><th>Player</th><th class="num">Top-up</th><th class="num">Final</th><th>Check</th></tr>
+                    <tr>
+                      <th scope="col">Player</th>
+                      <th scope="col" class="num">Top-up</th>
+                      <th scope="col" class="num">Final</th>
+                      <th scope="col">Check</th>
+                    </tr>
                   </thead>
                   <tbody id="bulk-preview-body"></tbody>
                 </table>
               </div>
-              <p class="form-msg" id="bulk-msg" aria-live="polite"></p>
+              <p class="form-msg" id="bulk-msg" role="status" aria-live="polite"></p>
             </div>
 
             <!-- Adjustments: admin corrections with a visible reason.
-                 Friday's use: granting the promised 5,000 Welcome Round
+                 Friday's use: granting the promised <span class="mono">5,000</span> Welcome Round
                  points per attendee, reason on the record. -->
             <div class="card" style="margin-bottom: var(--space-lg);">
-              <h3 class="card__title" style="font-size: 1.05rem;">Adjustments</h3>
+              <h3 class="card__title">Adjustments</h3>
               <p class="card__text" style="margin-bottom: var(--space-md);">
                 Point corrections with a reason, on the record and visible in
-                history. Leave the pseudonym empty (and the amount 0) for a
-                night-level note, e.g. explaining a chip imbalance.
+                history. Leave the pseudonym empty (and the amount
+                <span class="mono">0</span>) for a night-level note, e.g.
+                explaining a chip imbalance.
               </p>
               <form id="adjust-form">
                 <div class="field">
@@ -268,7 +337,7 @@
                          autocomplete="off" autocapitalize="off" placeholder="Start typing… (empty = night-level note)">
                 </div>
                 <div class="field">
-                  <label class="label" for="adjust-delta">Points (+ / −)</label>
+                  <label class="label" for="adjust-delta">Points, with a leading minus to take points away</label>
                   <input class="input input--numeric" id="adjust-delta" type="text"
                          inputmode="numeric" placeholder="e.g. 5000 or -2500" value="0">
                 </div>
@@ -286,19 +355,27 @@
                          placeholder="e.g. Welcome Round bonus as promised">
                 </div>
                 <button class="btn btn--primary btn--block" type="submit">Record adjustment</button>
-                <p class="form-msg" id="adjust-msg" aria-live="polite"></p>
+                <p class="form-msg" id="adjust-msg" role="status" aria-live="polite"></p>
               </form>
+              <!-- Deliberately empty, not a skeleton: js/admin.js swallows a
+                   failed history fetch, so a skeleton here would sweep for
+                   ever and claim to be loading something nobody is fetching. -->
               <div id="adjust-history" style="margin-top: var(--space-md);"></div>
             </div>
 
           </section>
 
           <!-- ============ Season rollover (twice a year, guarded) ============ -->
-          <section class="section" style="margin-top: var(--space-xl);">
-            <h2 class="section__title" style="font-size: 1.4rem;">Season</h2>
+          <hr class="rule">
+          <section aria-label="Season" style="margin-bottom: var(--space-3xl);">
+            <h2 class="card__title">Season</h2>
             <div class="card">
-              <p class="card__text" id="season-current">Current season loading…</p>
-              <button class="btn btn--secondary" id="season-toggle" type="button">Start a new season…</button>
+              <p class="card__text" id="season-current">
+                Seasons are frozen and started here, once a semester. The
+                current season is named in the line under the page title.
+              </p>
+              <button class="btn btn--secondary" id="season-toggle" type="button"
+                      style="margin-top: var(--space-md);">Start a new season…</button>
               <form id="season-form" hidden style="margin-top: var(--space-md);">
                 <p class="card__text">
                   This freezes the current season for good: its leaderboard becomes a permanent
@@ -324,7 +401,7 @@
                          inputmode="numeric" value="40000">
                 </div>
                 <button class="btn btn--primary btn--block" type="submit">Freeze current season and start this one</button>
-                <p class="form-msg" id="season-msg" aria-live="polite"></p>
+                <p class="form-msg" id="season-msg" role="status" aria-live="polite"></p>
               </form>
             </div>
           </section>
@@ -368,13 +445,16 @@
   <!-- Full-screen night-code takeover: point a TV at this. The QR encodes
        https://storeblindernpoker.org/report?n=CODE and the code itself is
        readable from the back of the room. -->
-  <div class="code-takeover" id="code-takeover" hidden>
-    <button class="code-takeover__close" id="code-close" type="button" aria-label="Close">✕</button>
+  <div class="code-takeover" id="code-takeover" role="dialog"
+       aria-label="Tonight's check-in code" hidden>
+    <button class="code-takeover__close" id="code-close" type="button" aria-label="Close the code display">✕</button>
     <div class="code-takeover__inner">
       <div class="code-takeover__night" id="code-night">…</div>
-      <div class="code-takeover__lead">Check in on your phone: scan, or type the code at</div>
+      <div class="code-takeover__lead">Check in on your phone: scan this, or type the code at</div>
       <div class="code-takeover__url">storeblindernpoker.org/report</div>
       <div class="code-takeover__qr" id="code-qr" aria-hidden="true"></div>
+      <!-- 16vmin of brass mono, no shadow, no glow. This is the one thing on
+           the TV that has to be right from the back of the room. -->
       <div class="code-takeover__code" id="code-big">…</div>
     </div>
   </div>

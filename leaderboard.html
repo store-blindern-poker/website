@@ -10,7 +10,6 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <div class="noise-overlay"></div>
 
   <div class="page-wrapper">
 
@@ -40,7 +39,8 @@
         <h1 class="page-header__title">Leaderboard</h1>
         <p class="page-header__subtitle">
           The Fall 2026 season standings. Everyone starts the season on
-          40,000 points; only pseudonyms are ever shown here.
+          <span class="mono">40,000</span> points; only pseudonyms are ever
+          shown here.
         </p>
       </div>
     </header>
@@ -49,24 +49,25 @@
 
       <section class="section" style="padding-top: 0;" aria-labelledby="standings-title">
         <div class="container">
-          <h2 class="section__title" id="standings-title" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Season standings</h2>
+          <h2 class="section__title visually-hidden" id="standings-title">Season standings</h2>
 
           <!-- Podium for the top three, filled by js/app.js once the first
                night has been settled; hidden until then. -->
           <div id="leaderboard-podium" class="podium" style="display:none;"></div>
 
-          <!-- Pre-season placeholder. js/app.js hides this the moment live
+          <!-- Pre-season notice. js/app.js hides this the moment live
                standings arrive from the database. -->
-          <div id="leaderboard-placeholder" class="card card--accent" style="text-align: center; margin-bottom: var(--space-xl);">
-            <div class="card__icon" aria-hidden="true">♠</div>
-            <h3 class="card__title">The season starts 4 September</h3>
-            <p class="card__text">
-              Standings appear here after the first Friday night of Fall 2026
-              is played and settled. Every member begins on
-              <strong style="color: var(--text-primary);">40,000 points</strong>.
-              Join mid-season and you start on 40,000 too, so it is never too
-              late to enter the race.
-            </p>
+          <div id="leaderboard-placeholder" class="notice" style="margin-bottom: var(--space-xl);">
+            <div>
+              <h3 class="card__title">The season starts 4 September</h3>
+              <p class="card__text">
+                Standings appear here after the first Friday night of Fall 2026
+                is played and settled. Every member begins on
+                <strong style="color: var(--cream);"><span class="mono">40,000</span> points</strong>.
+                Join mid-season and you start on 40,000 too, so it is never too
+                late to enter the race.
+              </p>
+            </div>
           </div>
 
           <div class="table-wrapper">
@@ -80,16 +81,66 @@
                 </tr>
               </thead>
               <tbody id="leaderboard-body">
-                <!-- Live rows replace this placeholder once the first night settles. -->
+                <!-- Empty state. js/app.js replaces the whole tbody once rows
+                     exist, and deliberately leaves this alone when the season
+                     has no settled nights yet, so it must read as a finished
+                     state, never as something still loading. The brass
+                     top-three rank rule is cancelled in the stylesheet for any
+                     td[colspan], so this row is not flagged as first place. -->
                 <tr>
-                  <td colspan="4" style="text-align: center; color: var(--text-tertiary); padding: var(--space-2xl) var(--space-lg);">
+                  <td colspan="4" style="padding: var(--space-2xl) var(--space-lg); color: var(--cream-mute);">
                     Awaiting the first settled night of the season.
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p class="data-status" id="leaderboard-status">
+
+          <!-- Loading state, inert until script clones it. A <template>
+               renders nothing, which is deliberate: js/app.js leaves
+               #leaderboard-body untouched when the query returns no rows, so
+               statically rendered skeleton rows would shimmer forever on a
+               pre-season leaderboard. To turn it on, one line in js/app.js
+               immediately before fetchLiveLeaderboard(), once someone owns
+               that file:
+                 var sk = document.getElementById('leaderboard-skeleton');
+                 if (sk) { leaderboardBody.innerHTML = sk.innerHTML; }
+               Every path that finds rows already overwrites the tbody. The
+               no-rows path must restore the empty-state row above. -->
+          <template id="leaderboard-skeleton">
+            <tr aria-hidden="true">
+              <td><span class="skeleton skeleton--rank"></span></td>
+              <td><span class="skeleton skeleton--name"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+            </tr>
+            <tr aria-hidden="true">
+              <td><span class="skeleton skeleton--rank"></span></td>
+              <td><span class="skeleton skeleton--name"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+            </tr>
+            <tr aria-hidden="true">
+              <td><span class="skeleton skeleton--rank"></span></td>
+              <td><span class="skeleton skeleton--name"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+            </tr>
+            <tr aria-hidden="true">
+              <td><span class="skeleton skeleton--rank"></span></td>
+              <td><span class="skeleton skeleton--name"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+            </tr>
+            <tr aria-hidden="true">
+              <td><span class="skeleton skeleton--rank"></span></td>
+              <td><span class="skeleton skeleton--name"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+              <td class="num"><span class="skeleton skeleton--num"></span></td>
+            </tr>
+          </template>
+
+          <p class="data-status" id="leaderboard-status" aria-live="polite">
             Standings update after each night is settled by the organisers.
           </p>
         </div>
@@ -118,34 +169,28 @@
             <div class="section__label">How the numbers move</div>
             <h2 class="section__title" id="how-points-title">Points in one minute</h2>
           </div>
-          <div class="card-grid">
-            <div class="card">
-              <h3 class="card__title">Show up: +5,000</h3>
-              <p class="card__text">
-                Every night starts with an attendance bonus, credited before
-                anything else. Consistency is the most reliable way up this
-                leaderboard.
-              </p>
-            </div>
-            <div class="card">
-              <h3 class="card__title">Play the night</h3>
-              <p class="card__text">
-                Your buy-in comes off your points; your final chip stack goes
-                back on. Finish above what you paid in and the night was a win.
-              </p>
-            </div>
-            <div class="card">
-              <h3 class="card__title">Champions are forever</h3>
-              <p class="card__text">
-                The leaderboard resets to 40,000 each semester, but season
-                champions keep their title for good: the hall of fame is
-                permanent.
-              </p>
-            </div>
-          </div>
-          <p style="margin-top: var(--space-xl); color: var(--text-secondary);">
+          <dl class="deflist deflist--lead">
+            <dt>Show up: <span class="num">+5,000</span></dt>
+            <dd>
+              Every night starts with an attendance bonus, credited before
+              anything else. Consistency is the most reliable way up this
+              leaderboard.
+            </dd>
+            <dt>Play the night</dt>
+            <dd>
+              Your buy-in comes off your points; your final chip stack goes
+              back on. Finish above what you paid in and the night was a win.
+            </dd>
+            <dt>Champions are forever</dt>
+            <dd>
+              The leaderboard resets to <span class="mono">40,000</span> each
+              semester, but season champions keep their title for good: the
+              hall of fame is permanent.
+            </dd>
+          </dl>
+          <p class="help" style="margin-top: var(--space-xl);">
             The full points system, including the one-top-up rule and a worked
-            example, lives on the <a href="rules.html" style="color: var(--gold);">rules page</a>.
+            example, lives on the <a href="rules.html" class="link-gold">rules page</a>.
           </p>
         </div>
       </section>

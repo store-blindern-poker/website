@@ -4,14 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Member login - Store Blindern Poker</title>
-  <meta name="description" content="Sign in to Store Blindern Poker to check in, report your chips and follow your season points. Points only, never money.">
+  <meta name="description" content="Sign in to Store Blindern Poker to check in, report your chips and follow your season points. Points only.">
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <div class="noise-overlay"></div>
 
   <div class="page-wrapper">
 
@@ -42,7 +41,7 @@
         <h1 class="app-title">Member login</h1>
         <p class="app-subtitle">
           One account for the whole club: check in on Friday nights, report
-          your chips, follow your points. Free, and never any money involved.
+          your chips, follow your season points. Free to join, points only.
         </p>
 
         <!-- In-app webview escape hatch: Facebook/Instagram/Messenger
@@ -56,7 +55,7 @@
             <strong>&ldquo;Open in Safari&rdquo;</strong>, or copy the link:
             <div style="margin-top: var(--space-sm);">
               <button class="btn btn--secondary" id="webview-copy" type="button">Copy link</button>
-              <span id="webview-copied" class="form-msg--ok" hidden>Copied ✓</span>
+              <span id="webview-copied" class="form-msg--ok" role="status" hidden>Copied ✓</span>
             </div>
           </div>
         </div>
@@ -72,9 +71,16 @@
           </p>
         </div>
 
-        <!-- STATE: checking session -->
+        <!-- STATE: checking session. The skeleton is shaped like the sign-in
+             card that is about to replace it, so nothing jumps. -->
         <div class="card" id="state-loading">
-          <p class="card__text">Checking your session…</p>
+          <p class="visually-hidden" role="status">Checking your session.</p>
+          <div aria-hidden="true">
+            <span class="skeleton skeleton--title" style="margin-bottom: var(--space-xl);"></span>
+            <span class="skeleton skeleton--line" style="margin-bottom: var(--space-md);"></span>
+            <span class="skeleton skeleton--line" style="margin-bottom: var(--space-xl);"></span>
+            <span class="skeleton" style="height: var(--tap-target);"></span>
+          </div>
         </div>
 
         <!-- STATE: signed out, sign in / create account -->
@@ -98,7 +104,7 @@
                        autocomplete="current-password" required minlength="6"
                        placeholder="••••••••">
                 <p class="help" id="signup-help" hidden>
-                  At least 6 characters. No confirmation email is sent; you
+                  At least <span class="mono">6</span> characters. No confirmation email is sent; you
                   are in straight away.
                 </p>
               </div>
@@ -163,7 +169,7 @@
                 <div class="whoami__label">Signed in as</div>
                 <div class="whoami__name" id="signedin-name">…</div>
               </div>
-              <span class="badge badge--gold">Fall 2026</span>
+              <span class="badge badge--gold mono">Fall 2026</span>
             </div>
             <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
               <a class="btn btn--primary btn--lg btn--block" href="report.html">Tonight: check in &amp; report</a>

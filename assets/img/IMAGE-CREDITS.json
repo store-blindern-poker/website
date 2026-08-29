@@ -27,7 +27,7 @@
       "sourceDims": "4624x3472",
       "sourceBytes": 2155806,
       "outputBytes": 636973,
-      "use": "Rules page. 50/500/1000/5000 denominations legible: illustrates the 10,000 stack."
+      "use": "Rules page. Chip denominations legible (50, 500, 1000, 5000). NOTE: this is a large mid-game or winning stack, NOT a starting stack. A starting stack is 10,000 total. Never caption it as typical."
     },
     {
       "index": 70,
@@ -36,7 +36,7 @@
       "sourceDims": "4624x3472",
       "sourceBytes": 2134669,
       "outputBytes": 603025,
-      "use": "Rules page alt."
+      "use": "Rules page alt. Same caveat as stack-denominations: a big stack, not a starting stack."
     },
     {
       "index": 5,
