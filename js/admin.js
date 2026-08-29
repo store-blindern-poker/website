@@ -559,7 +559,8 @@
       p_kind: kind,
       p_stack_size: stack === null ? null : stack,
       p_attendance_bonus: bonus === null ? null : bonus,
-      p_counts_as_round: kind === 'tournament'
+      p_counts_as_round: kind === 'tournament',
+      p_affects_points: $('create-affects').checked
     }).then(function (night) {
       msg($('create-msg'), 'Created as draft ✓. Open it when doors open.', 'ok');
       $('create-title').value = '';
@@ -568,6 +569,50 @@
       });
     }).catch(function (err) {
       msg($('create-msg'), S.friendlyError(err), 'error');
+    });
+  });
+
+  /* ------------------------------------------------------------------
+   * Season rollover. Twice a year, guarded by a typed confirmation.
+   * ------------------------------------------------------------------ */
+
+  $('season-toggle').addEventListener('click', function () {
+    var form = $('season-form');
+    S.show(form, form.hidden);
+    if (!form.hidden && ctx.season) {
+      $('season-current').textContent =
+        'Current season: ' + ctx.season.name + ' (' + ctx.season.rounds + ' settled rounds so far).';
+    }
+  });
+
+  $('season-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('season-name').value.trim();
+    var slug = $('season-slug').value.trim().toLowerCase();
+    var starts = $('season-starts').value;
+    var pts = S.parseChips($('season-points').value);
+    if (!name || !slug || !starts) {
+      msg($('season-msg'), 'Name, slug and first night are all required.', 'error');
+      return;
+    }
+    var current = ctx.season ? ctx.season.name : 'the current season';
+    var typed = window.prompt(
+      'This permanently freezes ' + current + ' and starts "' + name + '".\n' +
+      'Type the new season name to confirm:');
+    if (typed === null) { return; }
+    if (typed.trim() !== name) {
+      msg($('season-msg'), 'Confirmation text did not match. Nothing was changed.', 'error');
+      return;
+    }
+    msg($('season-msg'), 'Starting the new season…', 'busy');
+    rpc('start_season', {
+      p_slug: slug, p_name: name, p_starts_on: starts,
+      p_starting_points: pts === null ? 40000 : pts
+    }).then(function () {
+      msg($('season-msg'), 'Done. Reloading…', 'ok');
+      window.location.reload();
+    }).catch(function (err) {
+      msg($('season-msg'), S.friendlyError(err), 'error');
     });
   });
 

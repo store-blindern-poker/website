@@ -106,6 +106,14 @@
                 </select>
               </div>
               <div class="field">
+                <label class="label" for="create-affects" style="display:flex;align-items:center;gap:0.5rem;">
+                  <input type="checkbox" id="create-affects" checked style="width:1.1rem;height:1.1rem;">
+                  Counts toward season points
+                </label>
+                <p class="help">Untick for a stand-alone special (an Omaha night, say): results and
+                chips are still recorded, the season leaderboard is untouched.</p>
+              </div>
+              <div class="field">
                 <label class="label" for="create-stack">Stack size (chips per buy-in)</label>
                 <input class="input input--numeric" id="create-stack" type="text" inputmode="numeric" value="10000">
                 <p class="help">Lower it on a chip-shortage night (9,700 has happened).</p>
@@ -283,6 +291,42 @@
               <div id="adjust-history" style="margin-top: var(--space-md);"></div>
             </div>
 
+          </section>
+
+          <!-- ============ Season rollover (twice a year, guarded) ============ -->
+          <section class="section" style="margin-top: var(--space-xl);">
+            <h2 class="section__title" style="font-size: 1.4rem;">Season</h2>
+            <div class="card">
+              <p class="card__text" id="season-current">Current season loading…</p>
+              <button class="btn btn--secondary" id="season-toggle" type="button">Start a new season…</button>
+              <form id="season-form" hidden style="margin-top: var(--space-md);">
+                <p class="card__text">
+                  This freezes the current season for good: its leaderboard becomes a permanent
+                  record and no more nights can be settled into it. Everyone starts the new season
+                  on the starting points below. Do this once per semester, never mid-season.
+                </p>
+                <div class="field">
+                  <label class="label" for="season-name">Name</label>
+                  <input class="input" id="season-name" type="text" maxlength="40" placeholder="Spring 2027">
+                </div>
+                <div class="field">
+                  <label class="label" for="season-slug">Slug (short id, lowercase)</label>
+                  <input class="input" id="season-slug" type="text" maxlength="40"
+                         autocapitalize="off" placeholder="spring-2027">
+                </div>
+                <div class="field">
+                  <label class="label" for="season-starts">First night</label>
+                  <input class="input" id="season-starts" type="date">
+                </div>
+                <div class="field">
+                  <label class="label" for="season-points">Starting points</label>
+                  <input class="input input--numeric" id="season-points" type="text"
+                         inputmode="numeric" value="40000">
+                </div>
+                <button class="btn btn--primary btn--block" type="submit">Freeze current season and start this one</button>
+                <p class="form-msg" id="season-msg" aria-live="polite"></p>
+              </form>
+            </div>
           </section>
         </div>
 
