@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard - Store Blindern Poker</title>
+  <meta name="description" content="The Fall 2026 season standings at Store Blindern Poker. Everyone starts on 40,000 points, and the leaderboard tracks the whole semester.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="noise-overlay"></div>
+
+  <div class="page-wrapper">
+
+    <!-- ================= Shared chrome: header (identical on every page) ================= -->
+    <nav class="nav" aria-label="Main navigation">
+      <div class="container nav__inner">
+        <a href="index.html" class="nav__brand">
+          <span class="nav__brand-icon">♠</span>
+          Store Blindern Poker
+        </a>
+        <button class="nav__toggle" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav__links">
+          <a href="index.html" class="nav__link">Home</a>
+          <a href="events.html" class="nav__link">Events</a>
+          <a href="leaderboard.html" class="nav__link nav__link--active" aria-current="page">Leaderboard</a>
+          <a href="rules.html" class="nav__link">Rules</a>
+          <a href="login.html" class="nav__cta">Member login</a>
+        </div>
+      </div>
+    </nav>
+    <!-- =============== End shared chrome: header =============== -->
+
+    <header class="page-header">
+      <div class="container">
+        <h1 class="page-header__title">Leaderboard</h1>
+        <p class="page-header__subtitle">
+          The Fall 2026 season standings. Everyone starts the season on
+          40,000 points; only pseudonyms are ever shown here.
+        </p>
+      </div>
+    </header>
+
+    <main id="main" class="page-content">
+
+      <section class="section" style="padding-top: 0;" aria-labelledby="standings-title">
+        <div class="container">
+          <h2 class="section__title" id="standings-title" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Season standings</h2>
+
+          <!-- Podium for the top three, filled by js/app.js once the first
+               night has been settled; hidden until then. -->
+          <div id="leaderboard-podium" class="podium" style="display:none;"></div>
+
+          <!-- Pre-season placeholder. js/app.js hides this the moment live
+               standings arrive from the database. -->
+          <div id="leaderboard-placeholder" class="card card--accent" style="text-align: center; margin-bottom: var(--space-xl);">
+            <div class="card__icon" aria-hidden="true">♠</div>
+            <h3 class="card__title">The season starts 4 September</h3>
+            <p class="card__text">
+              Standings appear here after the first Friday night of Fall 2026
+              is played and settled. Every member begins on
+              <strong style="color: var(--text-primary);">40,000 points</strong>.
+              Join mid-season and you start on 40,000 too, so it is never too
+              late to enter the race.
+            </p>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="table leaderboard" aria-describedby="leaderboard-status">
+              <thead>
+                <tr>
+                  <th scope="col">Rank</th>
+                  <th scope="col">Player</th>
+                  <th scope="col" class="num">Points</th>
+                  <th scope="col" class="num">Nights</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body">
+                <!-- Live rows replace this placeholder once the first night settles. -->
+                <tr>
+                  <td colspan="4" style="text-align: center; color: var(--text-tertiary); padding: var(--space-2xl) var(--space-lg);">
+                    Awaiting the first settled night of the season.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="data-status" id="leaderboard-status">
+            Standings update after each night is settled by the organisers.
+          </p>
+        </div>
+      </section>
+
+      <!-- Photo break -->
+      <div class="photo-break" aria-hidden="true">
+        <picture>
+          <source type="image/webp"
+                  srcset="assets/img/season-winner-chips@480.webp 480w,
+                          assets/img/season-winner-chips@960.webp 960w,
+                          assets/img/season-winner-chips.webp 1920w"
+                  sizes="100vw">
+          <img src="assets/img/season-winner-chips@960.jpg"
+               srcset="assets/img/season-winner-chips@480.jpg 480w,
+                       assets/img/season-winner-chips@960.jpg 960w,
+                       assets/img/season-winner-chips.jpg 1920w"
+               sizes="100vw"
+               alt="" loading="lazy">
+        </picture>
+      </div>
+
+      <section class="section" aria-labelledby="how-points-title">
+        <div class="container">
+          <div class="section__header">
+            <div class="section__label">How the numbers move</div>
+            <h2 class="section__title" id="how-points-title">Points in one minute</h2>
+          </div>
+          <div class="card-grid">
+            <div class="card">
+              <h3 class="card__title">Show up: +5,000</h3>
+              <p class="card__text">
+                Every night starts with an attendance bonus, credited before
+                anything else. Consistency is the most reliable way up this
+                leaderboard.
+              </p>
+            </div>
+            <div class="card">
+              <h3 class="card__title">Play the night</h3>
+              <p class="card__text">
+                Your buy-in comes off your points; your final chip stack goes
+                back on. Finish above what you paid in and the night was a win.
+              </p>
+            </div>
+            <div class="card">
+              <h3 class="card__title">Champions are forever</h3>
+              <p class="card__text">
+                The leaderboard resets to 40,000 each semester, but season
+                champions keep their title for good: the hall of fame is
+                permanent.
+              </p>
+            </div>
+          </div>
+          <p style="margin-top: var(--space-xl); color: var(--text-secondary);">
+            The full points system, including the one-top-up rule and a worked
+            example, lives on the <a href="rules.html" style="color: var(--gold);">rules page</a>.
+          </p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= Shared chrome: footer (identical on every page) ================= -->
+    <footer class="footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">♠ Store Blindern Poker</div>
+        <div class="footer__links">
+          <a href="events.html" class="footer__link">Events</a>
+          <a href="leaderboard.html" class="footer__link">Leaderboard</a>
+          <a href="rules.html" class="footer__link">Rules</a>
+          <a href="login.html" class="footer__link">Member login</a>
+          <a href="privacy.html" class="footer__link">Privacy</a>
+          <a href="mailto:it@storeblindernpoker.org" class="footer__link">it@storeblindernpoker.org</a>
+        </div>
+        <div class="footer__socials">
+          <a href="https://www.facebook.com/groups/1353698180088990/" target="_blank" rel="noopener" class="footer__social" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener" class="footer__social" aria-label="Discord">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+        </div>
+        <p class="footer__nomoney">
+          Store Blindern Poker is a points-only association. No money is
+          wagered, staked or exchanged at our events, and this site never
+          processes payments.
+        </p>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+      </div>
+    </footer>
+    <!-- =============== End shared chrome: footer =============== -->
+
+  </div>
+
+  <!-- Order matters: config, then the vendored Supabase bundle, then app.js -->
+  <script src="js/config.js" defer></script>
+  <script src="js/vendor/supabase.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>

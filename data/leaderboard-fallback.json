@@ -1,0 +1,6 @@
+{
+  "season": "Fall 2026",
+  "updated": null,
+  "note": "Last-known-good leaderboard copy. Shown by leaderboard.html whenever the live v_leaderboard view is unreachable (offline, project paused, config unpatched). While `rows` is empty the page keeps its static pre-season placeholder. After nights settle, an admin refreshes this file by exporting v_leaderboard (rank, pseudonym, points, nights_played) and committing it, pseudonyms only, never names.",
+  "rows": []
+}

@@ -1,0 +1,31 @@
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Editors ---
+.vscode/
+.idea/
+*.swp
+
+# --- Secrets & environment ---
+.env
+.env.*
+*.pem
+*.key
+
+# --- Node (there is no build step; nothing here belongs in git) ---
+node_modules/
+package-lock.json
+
+# --- Member data: NOTHING personally identifying is ever committed. ---
+# Legacy paths that previously leaked real names, keep blocked forever:
+pointSystem/Inputs/
+Update_Leaderboard/
+# Any roster/export-shaped file:
+*.csv
+*.xlsx
+*roster*
+*members*
+*real-names*
+*attendance*

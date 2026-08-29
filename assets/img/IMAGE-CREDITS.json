@@ -1,0 +1,150 @@
+{
+  "event": "Store Blindern Poker, Season 2 finale, 10 May 2026",
+  "note": "All selected images verified to contain no identifiable faces. People-photos require consent before publication.",
+  "images": [
+    {
+      "index": 148,
+      "slug": "hero-whiskey-chip",
+      "source": "PXL_20260510_145201659.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 1738685,
+      "outputBytes": 475945,
+      "use": "Hero image. Custom club WHISKEY chip among stacks, shallow depth of field."
+    },
+    {
+      "index": 152,
+      "slug": "whiskey-chip-stacks",
+      "source": "PXL_20260510_145203063.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 1720755,
+      "outputBytes": 459695,
+      "use": "Alt hero / section break. WHISKEY chip with stacks, no hand."
+    },
+    {
+      "index": 71,
+      "slug": "stack-denominations",
+      "source": "PXL_20260510_142632210.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 2155806,
+      "outputBytes": 636973,
+      "use": "Rules page. 50/500/1000/5000 denominations legible: illustrates the 10,000 stack."
+    },
+    {
+      "index": 70,
+      "slug": "stack-denominations-2",
+      "source": "PXL_20260510_142629606.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 2134669,
+      "outputBytes": 603025,
+      "use": "Rules page alt."
+    },
+    {
+      "index": 5,
+      "slug": "chip-macro",
+      "source": "PXL_20260510_141433233.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 1496863,
+      "outputBytes": 384681,
+      "use": "Texture / background. Tight chip stacks on felt."
+    },
+    {
+      "index": 91,
+      "slug": "dealing-deck",
+      "source": "PXL_20260510_144012177.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 1662689,
+      "outputBytes": 353748,
+      "use": "How a night works. Hands squaring the deck on green felt."
+    },
+    {
+      "index": 90,
+      "slug": "dealing-deck-2",
+      "source": "PXL_20260510_144011213.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 1662324,
+      "outputBytes": 345659,
+      "use": "Alt of the above."
+    },
+    {
+      "index": 98,
+      "slug": "card-sweep",
+      "source": "PXL_20260510_144329860.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 1780860,
+      "outputBytes": 413862,
+      "use": "Motion. Dealer sweeping cards across felt."
+    },
+    {
+      "index": 100,
+      "slug": "cards-spread",
+      "source": "PXL_20260510_144332862.MP.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 1975657,
+      "outputBytes": 540683,
+      "use": "Section break. Cards spread face down."
+    },
+    {
+      "index": 116,
+      "slug": "community-cards",
+      "source": "PXL_20260510_144741573.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 2912989,
+      "outputBytes": 775920,
+      "use": "Rules / events. Community cards and chips, clean felt."
+    },
+    {
+      "index": 143,
+      "slug": "stacking-chips",
+      "source": "PXL_20260510_145112746.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 3692923,
+      "outputBytes": 804333,
+      "use": "Reporting / leaderboard. Hand building three stacks."
+    },
+    {
+      "index": 140,
+      "slug": "three-stacks",
+      "source": "PXL_20260510_145111205.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 3305651,
+      "outputBytes": 691757,
+      "use": "Clean three stacks, no hand. Good for cards/tiles."
+    },
+    {
+      "index": 80,
+      "slug": "chip-stacks-wide",
+      "source": "PXL_20260510_142719879.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 1765714,
+      "outputBytes": 498344,
+      "use": "Wide banner. Chip stacks along the table edge."
+    },
+    {
+      "index": 166,
+      "slug": "season-winner-chips",
+      "source": "PXL_20260510_145936936.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 3619260,
+      "outputBytes": 926980,
+      "use": "HALL OF FAME. Club NR.1 / NR.2 / NR.3 season medallions."
+    },
+    {
+      "index": 165,
+      "slug": "season-winner-chips-2",
+      "source": "PXL_20260510_145935349.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 3727547,
+      "outputBytes": 955099,
+      "use": "Hall of fame alt."
+    },
+    {
+      "index": 169,
+      "slug": "prize-table",
+      "source": "PXL_20260510_150105439.jpg",
+      "sourceDims": "4624x3472",
+      "sourceBytes": 3518273,
+      "outputBytes": 865479,
+      "use": "Prizes section. Poker set, book, trophy chips. NOTE: champagne bottle in frame."
+    }
+  ]
+}

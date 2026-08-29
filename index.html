@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Blindern Poker</title>
+  <meta name="description" content="Store Blindern Poker, the student poker association at the University of Oslo. Weekly Texas Hold'em nights, a semester-long points tournament, and no money, ever.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="noise-overlay"></div>
+
+  <div class="page-wrapper">
+
+    <!-- ================= Shared chrome: header (identical on every page) ================= -->
+    <nav class="nav" aria-label="Main navigation">
+      <div class="container nav__inner">
+        <a href="index.html" class="nav__brand">
+          <span class="nav__brand-icon">♠</span>
+          Store Blindern Poker
+        </a>
+        <button class="nav__toggle" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav__links">
+          <a href="index.html" class="nav__link nav__link--active" aria-current="page">Home</a>
+          <a href="events.html" class="nav__link">Events</a>
+          <a href="leaderboard.html" class="nav__link">Leaderboard</a>
+          <a href="rules.html" class="nav__link">Rules</a>
+          <a href="login.html" class="nav__cta">Member login</a>
+        </div>
+      </div>
+    </nav>
+    <!-- =============== End shared chrome: header =============== -->
+
+    <!-- Hero -->
+    <header class="hero">
+      <div class="hero__media" aria-hidden="true">
+        <picture>
+          <source type="image/webp"
+                  srcset="assets/img/hero-whiskey-chip@480.webp 480w,
+                          assets/img/hero-whiskey-chip@960.webp 960w,
+                          assets/img/hero-whiskey-chip.webp 1920w"
+                  sizes="100vw">
+          <img src="assets/img/hero-whiskey-chip@960.jpg"
+               srcset="assets/img/hero-whiskey-chip@480.jpg 480w,
+                       assets/img/hero-whiskey-chip@960.jpg 960w,
+                       assets/img/hero-whiskey-chip.jpg 1920w"
+               sizes="100vw"
+               alt="" fetchpriority="high">
+        </picture>
+      </div>
+      <div class="container hero__inner">
+        <div class="fade-in">
+          <div class="hero__badge">
+            <span class="hero__badge-dot"></span>
+            Fridays at Blindern, Oslo
+          </div>
+        </div>
+        <h1 class="hero__title fade-in fade-in-delay-1">
+          Store Blindern<br><em>Poker</em>
+        </h1>
+        <p class="hero__subtitle fade-in fade-in-delay-2">
+          The student poker association at the University of Oslo. Weekly Texas
+          Hold'em nights, a semester-long points tournament, and a table with
+          room for you, whether you have played for years or never held a hand.
+        </p>
+        <div class="hero__actions fade-in fade-in-delay-3">
+          <a href="events.html" class="btn btn--primary">Upcoming events</a>
+          <a href="rules.html" class="btn btn--secondary">How it works</a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main" class="page-content">
+
+      <!-- Next event countdown (populated from data/events.json by js/app.js;
+           stays hidden if there is no upcoming event or JS fails) -->
+      <section id="countdown-section" class="countdown-section" style="display:none;" aria-label="Next event countdown">
+        <div class="container">
+          <a href="events.html" class="countdown" id="countdown-link">
+            <div class="countdown__info">
+              <div class="countdown__label">Next night</div>
+              <div class="countdown__event-name" id="countdown-name"></div>
+              <div class="countdown__meta">
+                <span id="countdown-date"></span>
+                <span class="countdown__meta-sep">·</span>
+                <span id="countdown-location"></span>
+              </div>
+            </div>
+            <div class="countdown__timer" id="countdown-timer" role="timer">
+              <div class="countdown__unit">
+                <span class="countdown__digit" id="cd-days">00</span>
+                <span class="countdown__unit-label">Days</span>
+              </div>
+              <div class="countdown__sep" aria-hidden="true">:</div>
+              <div class="countdown__unit">
+                <span class="countdown__digit" id="cd-hours">00</span>
+                <span class="countdown__unit-label">Hours</span>
+              </div>
+              <div class="countdown__sep" aria-hidden="true">:</div>
+              <div class="countdown__unit">
+                <span class="countdown__digit" id="cd-mins">00</span>
+                <span class="countdown__unit-label">Min</span>
+              </div>
+              <div class="countdown__sep" aria-hidden="true">:</div>
+              <div class="countdown__unit">
+                <span class="countdown__digit" id="cd-secs">00</span>
+                <span class="countdown__unit-label">Sec</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- What we are -->
+      <section class="section" aria-labelledby="about-title">
+        <div class="container">
+          <div class="section__header reveal">
+            <div class="section__label">What we are</div>
+            <h2 class="section__title" id="about-title">A card game, a leaderboard, and good company</h2>
+            <p class="section__description">
+              Every Friday evening we set up the tables, hand out the chips, and
+              play Texas Hold'em for a couple of hours. Results feed a
+              semester-long leaderboard, and at the end of term the top players
+              meet at the final table.
+            </p>
+          </div>
+
+          <div class="card-grid">
+            <div class="card card--hover reveal">
+              <div class="card__icon" aria-hidden="true">♠</div>
+              <h3 class="card__title">Points, never money</h3>
+              <p class="card__text">
+                We play for points and nothing else. There is no entry fee, no
+                pot to win, and nothing to lose but your place on the
+                leaderboard. Poker here is what it is at its best: a game of
+                skill, patience and reading people.
+              </p>
+            </div>
+            <div class="card card--hover reveal">
+              <div class="card__icon" aria-hidden="true">♦</div>
+              <h3 class="card__title">Weekly Friday nights</h3>
+              <p class="card__text">
+                Our main event is a Texas Hold'em session every Friday during
+                term, roughly 18:00 to 20:30. Drop in when you can: missing a
+                week is never a problem, and turning up is always rewarded
+                with bonus points.
+              </p>
+            </div>
+            <div class="card card--hover reveal">
+              <div class="card__icon" aria-hidden="true">♥</div>
+              <h3 class="card__title">Open to every student</h3>
+              <p class="card__text">
+                Complete beginner? Perfect. We run friendly intros for new
+                players and you will have the rules down before the first blinds
+                go up. Seasoned grinders are just as welcome. Come test
+                yourself against the field.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Photo break -->
+      <div class="photo-break reveal" aria-hidden="true">
+        <picture>
+          <source type="image/webp"
+                  srcset="assets/img/chip-stacks-wide@480.webp 480w,
+                          assets/img/chip-stacks-wide@960.webp 960w,
+                          assets/img/chip-stacks-wide.webp 1920w"
+                  sizes="100vw">
+          <img src="assets/img/chip-stacks-wide@960.jpg"
+               srcset="assets/img/chip-stacks-wide@480.jpg 480w,
+                       assets/img/chip-stacks-wide@960.jpg 960w,
+                       assets/img/chip-stacks-wide.jpg 1920w"
+               sizes="100vw"
+               alt="" loading="lazy">
+        </picture>
+      </div>
+
+      <!-- Our story -->
+      <section class="section" aria-labelledby="story-title">
+        <div class="container container--narrow">
+          <div class="section__header reveal">
+            <div class="section__label">Our story</div>
+            <h2 class="section__title" id="story-title">It started next to a pillar</h2>
+          </div>
+          <div class="prose reveal">
+            <p>
+              Store Blindern Poker was founded in the summer of 2025 by
+              William, known at the tables as Whiskey, together with Mr. X,
+              Mr. House, Mr. Cheng, Mr. P.D. and Wildcard. On association day
+              they had not booked a stand, so they borrowed the poker case
+              from Fysikkforeningen and set up next to a pillar. By the end of
+              that day the Facebook group had 60 members.
+            </p>
+            <p>
+              Two semesters later, more than 100 students have played at our
+              tables across 25 events, at Abelstua, Honningkroken,
+              RF-kjelleren and Abels utsikt. Our members come from every
+              faculty, and from Norway, France, Belgium, Germany, the Czech
+              Republic, Singapore, South Korea and Japan. Today the club is
+              led by Wildcard and the board.
+            </p>
+            <blockquote class="story-quote">
+              <p>"Yes, we play poker - it's a zero-sum game where someone wins and someone loses - but that's not really the point."</p>
+              <cite>William, founder</cite>
+            </blockquote>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats band -->
+      <section class="section" aria-labelledby="stats-title">
+        <div class="container">
+          <div class="section__header reveal">
+            <div class="section__label">The club in numbers</div>
+            <h2 class="section__title" id="stats-title">Two semesters in</h2>
+          </div>
+
+          <!-- TODO(live-stats): these are honest static numbers as of
+               August 2026. Replace with live Supabase queries (member count,
+               settled rounds) once the season views are up. -->
+          <div class="stats stats--4 reveal">
+            <div class="stat">
+              <div class="stat__value">100+</div>
+              <div class="stat__label">students at our tables</div>
+            </div>
+            <div class="stat">
+              <div class="stat__value">25</div>
+              <div class="stat__label">events over two semesters</div>
+            </div>
+            <div class="stat">
+              <div class="stat__value">167</div>
+              <div class="stat__label">members in the Facebook group</div>
+            </div>
+            <div class="stat">
+              <div class="stat__value">8+</div>
+              <div class="stat__label">countries, every faculty</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="container"><div class="divider"></div></div>
+
+      <!-- How a night works, in brief -->
+      <section class="section" aria-labelledby="night-title">
+        <div class="container">
+          <div class="section__header reveal">
+            <div class="section__label">How a night works</div>
+            <h2 class="section__title" id="night-title">From door to final hand</h2>
+            <p class="section__description">
+              The short version. The <a href="rules.html" style="color: var(--gold);">rules page</a>
+              has the full points system with a worked example.
+            </p>
+          </div>
+
+          <div class="card-grid">
+            <div class="card card--hover reveal">
+              <div class="card__icon" aria-hidden="true">1.</div>
+              <h3 class="card__title">Check in</h3>
+              <p class="card__text">
+                Turn up, check in on your phone, and collect your attendance
+                bonus: 5,000 points just for showing up. Your buy-in for the
+                night's chip stack comes off your season points.
+              </p>
+            </div>
+            <div class="card card--hover reveal">
+              <div class="card__icon" aria-hidden="true">2.</div>
+              <h3 class="card__title">Play</h3>
+              <p class="card__text">
+                Two hours or so of Texas Hold'em across several tables. Chips,
+                cards and blinds are all handled. You just play. Bust out?
+                One top-up per night keeps you in the game.
+              </p>
+            </div>
+            <div class="card card--hover reveal">
+              <div class="card__icon" aria-hidden="true">3.</div>
+              <h3 class="card__title">Report &amp; climb</h3>
+              <p class="card__text">
+                At the end of the night you report your final chip stack from
+                your phone. Finish above your buy-in and your season points
+                grow; the leaderboard updates once the night is settled.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Photo break -->
+      <div class="photo-break reveal" aria-hidden="true">
+        <picture>
+          <source type="image/webp"
+                  srcset="assets/img/cards-spread@480.webp 480w,
+                          assets/img/cards-spread@960.webp 960w,
+                          assets/img/cards-spread.webp 1920w"
+                  sizes="100vw">
+          <img src="assets/img/cards-spread@960.jpg"
+               srcset="assets/img/cards-spread@480.jpg 480w,
+                       assets/img/cards-spread@960.jpg 960w,
+                       assets/img/cards-spread.jpg 1920w"
+               sizes="100vw"
+               alt="" loading="lazy">
+        </picture>
+      </div>
+
+      <!-- University + join CTA -->
+      <section class="section" aria-labelledby="join-title">
+        <div class="container container--narrow" style="text-align: center;">
+          <div class="section__label reveal">Join us</div>
+          <h2 class="section__title reveal" id="join-title">Pull up a chair</h2>
+          <p class="section__description reveal" style="margin-left: auto; margin-right: auto;">
+            Store Blindern Poker is a student association at the University of
+            Oslo, and our nights are played on Blindern campus. The Fall 2026
+            season opens on Friday 4 September, and everyone starts on the
+            same 40,000 points, including you.
+          </p>
+          <div class="hero__actions reveal" style="margin-top: var(--space-xl);">
+            <a href="events.html" class="btn btn--primary btn--lg">See the season opener</a>
+            <a href="leaderboard.html" class="btn btn--secondary btn--lg">View the leaderboard</a>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= Shared chrome: footer (identical on every page) ================= -->
+    <footer class="footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">♠ Store Blindern Poker</div>
+        <div class="footer__links">
+          <a href="events.html" class="footer__link">Events</a>
+          <a href="leaderboard.html" class="footer__link">Leaderboard</a>
+          <a href="rules.html" class="footer__link">Rules</a>
+          <a href="login.html" class="footer__link">Member login</a>
+          <a href="privacy.html" class="footer__link">Privacy</a>
+          <a href="mailto:it@storeblindernpoker.org" class="footer__link">it@storeblindernpoker.org</a>
+        </div>
+        <div class="footer__socials">
+          <a href="https://www.facebook.com/groups/1353698180088990/" target="_blank" rel="noopener" class="footer__social" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener" class="footer__social" aria-label="Discord">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+        </div>
+        <p class="footer__nomoney">
+          Store Blindern Poker is a points-only association. No money is
+          wagered, staked or exchanged at our events, and this site never
+          processes payments.
+        </p>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+      </div>
+    </footer>
+    <!-- =============== End shared chrome: footer =============== -->
+
+  </div>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

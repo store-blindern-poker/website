@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy - Store Blindern Poker</title>
+  <meta name="description" content="What Store Blindern Poker stores about its members, and what it never stores. Pseudonyms only in public, always.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="noise-overlay"></div>
+
+  <div class="page-wrapper">
+
+    <!-- ================= Shared chrome: header (identical on every page) ================= -->
+    <nav class="nav" aria-label="Main navigation">
+      <div class="container nav__inner">
+        <a href="index.html" class="nav__brand">
+          <span class="nav__brand-icon">♠</span>
+          Store Blindern Poker
+        </a>
+        <button class="nav__toggle" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav__links">
+          <a href="index.html" class="nav__link">Home</a>
+          <a href="events.html" class="nav__link">Events</a>
+          <a href="leaderboard.html" class="nav__link">Leaderboard</a>
+          <a href="rules.html" class="nav__link">Rules</a>
+          <a href="login.html" class="nav__cta">Member login</a>
+        </div>
+      </div>
+    </nav>
+    <!-- =============== End shared chrome: header =============== -->
+
+    <header class="page-header">
+      <div class="container">
+        <h1 class="page-header__title">Privacy</h1>
+        <p class="page-header__subtitle">
+          What we store, what we show, and what we never touch.
+        </p>
+      </div>
+    </header>
+
+    <main id="main" class="page-content">
+      <div class="container container--narrow prose">
+
+        <h2 id="controller">Who is responsible</h2>
+        <p>
+          This site is run by STORE BLINDERN POKER, org.nr 936 041 973, a
+          registered student association at the University of Oslo
+          (registered with Brønnøysundregistrene on 27 August 2025). Our
+          registered purpose is "Studentforening for pokerinteresserte
+          studenter ved UiO". The association is the data controller for
+          everything described on this page, and you reach us at
+          <a class="link-gold" href="mailto:it@storeblindernpoker.org">it@storeblindernpoker.org</a>.
+        </p>
+
+        <h2 id="public">Pseudonyms are the only public identity</h2>
+        <p>
+          Everything public on this site (the leaderboard, results, the hall
+          of fame) shows <strong>pseudonyms only</strong>. Your real name is
+          never displayed anywhere on the site, and we never publish photos
+          that identify individual players.
+        </p>
+
+        <h2 id="stored">What we store about members</h2>
+        <ul>
+          <li>
+            <strong>Your email address and a password</strong> (or a Google
+            sign-in), used only to sign you in. Passwords are handled by our
+            database provider, Supabase, and are never visible to us.
+          </li>
+          <li>
+            <strong>Your pseudonym</strong> and your night-by-night results:
+            check-ins, chip totals and season points.
+          </li>
+          <li>
+            Organisers can see which email belongs to which pseudonym; they
+            need that to fix reporting mistakes. Nobody else can, and this
+            mapping is never exported or published.
+          </li>
+        </ul>
+
+        <h2 id="not-stored">What we never store</h2>
+        <ul>
+          <li>No payment details of any kind: we are a points-only club and
+            this site never processes payments.</li>
+          <li>No tracking or advertising cookies, and no third-party
+            analytics. The site keeps a little data in your own browser
+            (your session, and an unsent night report so flaky wifi loses
+            nothing), and that data stays on your device.</li>
+          <li>No location data, no contact lists, nothing scraped from your
+            accounts.</li>
+        </ul>
+
+        <h2 id="requests">Your data, your call</h2>
+        <p>
+          Want to see what we hold about you, change your pseudonym, or have
+          your account deleted? Ask any organiser on a Friday night or email
+          <a class="link-gold" href="mailto:it@storeblindernpoker.org">it@storeblindernpoker.org</a>
+          and it will be handled. Deletion removes your account and unlinks
+          your email; past nights stay in the season history under the
+          pseudonym they were played under.
+        </p>
+
+        <div class="notice" style="margin-top: var(--space-xl);">
+          <p>
+            Questions about any of this? Email
+            <a href="mailto:it@storeblindernpoker.org" style="color: var(--gold);">it@storeblindernpoker.org</a>.
+            A human reads it.
+          </p>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================= Shared chrome: footer (identical on every page) ================= -->
+    <footer class="footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">♠ Store Blindern Poker</div>
+        <div class="footer__links">
+          <a href="events.html" class="footer__link">Events</a>
+          <a href="leaderboard.html" class="footer__link">Leaderboard</a>
+          <a href="rules.html" class="footer__link">Rules</a>
+          <a href="login.html" class="footer__link">Member login</a>
+          <a href="privacy.html" class="footer__link">Privacy</a>
+          <a href="mailto:it@storeblindernpoker.org" class="footer__link">it@storeblindernpoker.org</a>
+        </div>
+        <div class="footer__socials">
+          <a href="https://www.facebook.com/groups/1353698180088990/" target="_blank" rel="noopener" class="footer__social" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener" class="footer__social" aria-label="Discord">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+        </div>
+        <p class="footer__nomoney">
+          Store Blindern Poker is a points-only association. No money is
+          wagered, staked or exchanged at our events, and this site never
+          processes payments.
+        </p>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+      </div>
+    </footer>
+    <!-- =============== End shared chrome: footer =============== -->
+
+  </div>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

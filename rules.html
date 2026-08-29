@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rules - Store Blindern Poker</title>
+  <meta name="description" content="How the Store Blindern Poker points system works: the 40,000-point season, the nightly attendance bonus, the one-top-up rule, and why no money is ever involved.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="noise-overlay"></div>
+
+  <div class="page-wrapper">
+
+    <!-- ================= Shared chrome: header (identical on every page) ================= -->
+    <nav class="nav" aria-label="Main navigation">
+      <div class="container nav__inner">
+        <a href="index.html" class="nav__brand">
+          <span class="nav__brand-icon">♠</span>
+          Store Blindern Poker
+        </a>
+        <button class="nav__toggle" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav__links">
+          <a href="index.html" class="nav__link">Home</a>
+          <a href="events.html" class="nav__link">Events</a>
+          <a href="leaderboard.html" class="nav__link">Leaderboard</a>
+          <a href="rules.html" class="nav__link nav__link--active" aria-current="page">Rules</a>
+          <a href="login.html" class="nav__cta">Member login</a>
+        </div>
+      </div>
+    </nav>
+    <!-- =============== End shared chrome: header =============== -->
+
+    <header class="page-header">
+      <div class="container">
+        <h1 class="page-header__title">The Points System</h1>
+        <p class="page-header__subtitle">
+          Everything you need to know before your first Friday night,
+          and the numbers behind every row of the leaderboard.
+        </p>
+      </div>
+    </header>
+
+    <main id="main" class="page-content">
+      <div class="container container--narrow prose">
+
+        <!-- The no-money position, first and loudest -->
+        <section class="no-money" id="no-money" aria-labelledby="no-money-title">
+          <h2 id="no-money-title">We never play for money</h2>
+          <p>
+            Store Blindern Poker is a points-only association. There is no
+            entry fee, no buy-in in kroner, no pot, no prize money and no way
+            to convert points into anything at all. Points cannot be bought,
+            sold, transferred or cashed out. They exist only on our
+            leaderboard, and they reset every semester.
+          </p>
+          <p>
+            That is the whole idea. With money off the table, poker becomes what it is at its best: a game of skill,
+            probability, patience and reading people. Nobody is excluded for
+            lack of funds, nobody goes home lighter than they arrived, and the
+            only thing at stake is bragging rights.
+          </p>
+        </section>
+
+        <h2 id="season">The season in four sentences</h2>
+        <p>
+          A season lasts one semester, and every member starts it with
+          <strong>40,000 points</strong>, including anyone who joins
+          mid-season. Each Friday night you earn an attendance bonus, pay your
+          buy-in in points, play, and bank whatever chips you finish with.
+          Your season total rises and falls with your results, and the
+          leaderboard ranks everyone by points. When the semester ends, the
+          top players meet at the final table, a champion is crowned, and
+          everything resets to 40,000 for the next season.
+        </p>
+
+        <h2 id="night">A night, start to finish</h2>
+        <div class="steps">
+          <div class="step">
+            <div>
+              <h3 class="step__title">Check in and collect 5,000 points</h3>
+              <p>
+                The attendance bonus is credited first, before anything else,
+                just for turning up. It is normally 5,000 points; organisers
+                can adjust it for special nights, and any change is announced
+                on the night.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3 class="step__title">Buy in for the night's stack</h3>
+              <p>
+                Each night has a set chip stack, normally
+                <strong>10,000 chips</strong> (occasionally slightly less when
+                chips run short; the night's number is announced at the door).
+                Your buy-in in points equals the stack size, or your full
+                points balance if you hold less than that. You always get to
+                play, and your points can never go below zero.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3 class="step__title">Play poker</h3>
+              <p>
+                Texas Hold'em across several tables for a couple of hours.
+                Chips move around the room; your job is to finish with more
+                than you started.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3 class="step__title">Top up once, if you need to</h3>
+              <p>
+                Run low? You may exchange points for extra chips
+                <strong>once per night</strong>; the full rule is
+                <a href="#top-up" style="color: var(--gold);">just below</a>.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3 class="step__title">Report your final stack</h3>
+              <p>
+                When the night ends, count your chips and report the total
+                (plus any top-up you took) from your phone. Your final stack
+                goes back onto your season points, the organisers settle the
+                night, and the leaderboard updates.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <figure class="figure">
+          <picture>
+            <source type="image/webp"
+                    srcset="assets/img/stack-denominations@480.webp 480w,
+                            assets/img/stack-denominations@960.webp 960w,
+                            assets/img/stack-denominations.webp 1920w"
+                    sizes="(min-width: 780px) 732px, 100vw">
+            <img src="assets/img/stack-denominations@960.jpg"
+                 srcset="assets/img/stack-denominations@480.jpg 480w,
+                         assets/img/stack-denominations@960.jpg 960w,
+                         assets/img/stack-denominations.jpg 1920w"
+                 sizes="(min-width: 780px) 732px, 100vw"
+                 alt="A starting stack of poker chips sorted into denominations on the felt"
+                 loading="lazy">
+          </picture>
+          <figcaption>
+            A typical 10,000-chip starting stack. The exact mix of chip values
+            varies from night to night, which is why you report one total,
+            not a colour-by-colour count.
+          </figcaption>
+        </figure>
+
+        <h2 id="top-up">The one-top-up rule</h2>
+        <p>Three ways of saying the same thing:</p>
+
+        <h3>In one sentence</h3>
+        <p>
+          Once per night, you may exchange points for extra chips at
+          one-to-one, but only enough to bring your chips back up to the
+          night's stack size, and never more points than you have.
+        </p>
+
+        <h3>As a checklist</h3>
+        <ul>
+          <li><strong>Once per night, maximum.</strong> One top-up. There is no second one.</li>
+          <li><strong>One point buys one chip.</strong> Always 1:1, no exceptions.</li>
+          <li><strong>Up to a full stack, never past it.</strong> After topping up, you can hold at most the night's stack size in chips (normally 10,000).</li>
+          <li><strong>Sitting on more than a full stack?</strong> Then you're doing well, and you cannot top up at all.</li>
+          <li><strong>Only points you actually have.</strong> Your balance can never go below zero, so the top-up is also capped by your remaining points.</li>
+        </ul>
+
+        <h3>In numbers: Kara's Friday</h3>
+        <p>
+          The night's stack size is 10,000 and the attendance bonus is 5,000.
+          Kara arrives with the season-opening balance of 40,000 points.
+        </p>
+        <div class="ledger" role="table" aria-label="Worked example of one night's points">
+          <div class="ledger__row" role="row">
+            <span>Season points before the night</span>
+            <span class="ledger__amount">40,000</span>
+          </div>
+          <div class="ledger__row" role="row">
+            <span>Attendance bonus (credited first)</span>
+            <span class="ledger__amount ledger__amount--plus">+5,000 → 45,000</span>
+          </div>
+          <div class="ledger__row" role="row">
+            <span>Buy-in for a 10,000 stack</span>
+            <span class="ledger__amount ledger__amount--minus">−10,000 → 35,000</span>
+          </div>
+          <div class="ledger__row" role="row">
+            <span>A rough patch: down to 2,200 chips. One top-up back to a
+              full stack (10,000 − 2,200 = 7,800 chips)</span>
+            <span class="ledger__amount ledger__amount--minus">−7,800 → 27,200</span>
+          </div>
+          <div class="ledger__row" role="row">
+            <span>The comeback: finishes the night with 14,650 chips,
+              reported as her final stack</span>
+            <span class="ledger__amount ledger__amount--plus">+14,650</span>
+          </div>
+          <div class="ledger__row ledger__row--total" role="row">
+            <span>Season points after the night</span>
+            <span class="ledger__amount">41,850</span>
+          </div>
+        </div>
+        <p>
+          Kara's night, in poker terms: she paid 17,800 for chips, finished
+          with 14,650, and collected 5,000 for showing up, a net of
+          <strong>+1,850 points</strong>. A losing session at the table can
+          still be a winning night on the leaderboard, which is exactly how a
+          club that rewards showing up should work.
+        </p>
+
+        <h3>Quick top-up examples</h3>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Chips in front of you</th>
+                <th scope="col">Biggest top-up allowed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>0 (busted)</td><td>10,000, a full fresh stack</td></tr>
+              <tr><td>2,200</td><td>7,800</td></tr>
+              <tr><td>9,000</td><td>1,000</td></tr>
+              <tr><td>10,000 or more</td><td>No top-up: you're above a full stack</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="help" style="margin-top: var(--space-sm);">
+          Assuming the usual 10,000 stack size, and that you have the points to spend.
+        </p>
+
+        <h2 id="edge-cases">The edge cases, answered</h2>
+        <ul>
+          <li>
+            <strong>Points never go below zero.</strong> If your balance is
+            smaller than the night's stack size, your buy-in is simply your
+            whole balance, and you still get a full stack and a full night of
+            poker. Nobody is priced out, ever.
+          </li>
+          <li>
+            <strong>Busting out doesn't erase the night.</strong> Your buy-in
+            is booked when you check in, so heading home early changes nothing
+            about the maths. Reporting a zero stack takes two seconds,
+            and staying for the comeback is more fun.
+          </li>
+          <li>
+            <strong>The room's chips have to add up.</strong> At the end of a
+            night the sum of everyone's final stacks should equal the sum of
+            all buy-ins and top-ups. If it doesn't, the difference is recorded
+            openly on the night and resolved by the organisers. It never
+            silently changes anyone's score.
+          </li>
+          <li>
+            <strong>Miss a Friday?</strong> Nothing happens. No penalty, no
+            decay: your points wait for you. The attendance bonus just makes
+            turning up the single most profitable habit in the club.
+          </li>
+        </ul>
+
+        <h2 id="reset">Season reset, and what never resets</h2>
+        <p>
+          When the semester ends, the season is over: the final table is
+          played, the champion is crowned, and every balance goes back to
+          40,000 for the new season. A bad run never follows you into the next
+          semester, and a legendary one has to be defended from scratch.
+        </p>
+        <p>
+          One thing is permanent: <em>the hall of fame</em>. The season
+          champion wins a custom season chip, small prizes, and bragging
+          rights, and keeps the title forever, under the pseudonym it was won
+          under. Points expire; glory does not.
+        </p>
+
+        <figure class="figure">
+          <picture>
+            <source type="image/webp"
+                    srcset="assets/img/season-winner-chips@480.webp 480w,
+                            assets/img/season-winner-chips@960.webp 960w,
+                            assets/img/season-winner-chips.webp 1920w"
+                    sizes="(min-width: 780px) 732px, 100vw">
+            <img src="assets/img/season-winner-chips@960.jpg"
+                 srcset="assets/img/season-winner-chips@480.jpg 480w,
+                         assets/img/season-winner-chips@960.jpg 960w,
+                         assets/img/season-winner-chips.jpg 1920w"
+                 sizes="(min-width: 780px) 732px, 100vw"
+                 alt="Custom season winner chips lined up on the felt"
+                 loading="lazy">
+          </picture>
+          <figcaption>
+            The season chips. One is made for each champion, and it is the
+            only thing you can actually take home from our tables.
+          </figcaption>
+        </figure>
+
+        <h2 id="reporting">How to report your night</h2>
+        <p>
+          Reporting takes under a minute and happens on your own phone, right
+          at the table:
+        </p>
+        <ol>
+          <li>
+            Open this site and tap <strong>Member login</strong>. You sign in
+            with Google or an email and password, and pick your pseudonym the
+            first time.
+          </li>
+          <li>
+            The night's report screen shows your name and tonight's round.
+            Enter your <strong>top-up amount</strong>, or leave it at 0 if
+            you didn't take one.
+          </li>
+          <li>
+            Count your chips and type your <strong>final stack as one total</strong>
+            (say, 14,650). Denominations differ from night to night, so it is
+            always a single number. Busted? There's a one-tap button for that.
+          </li>
+          <li>
+            Check the review screen, which shows exactly what the night does
+            to your season points, and <strong>submit</strong>. Done. If the
+            campus wifi wobbles, your report is kept safely on your phone and
+            sent automatically when the connection returns.
+          </li>
+        </ol>
+        <!-- TODO(screenshots): add phone screenshots of the report flow here
+             once the report screen is final. -->
+        <p>
+          Phone dead, or something not working? Tell an organiser before you
+          leave: they can record your rebuy and final stack on your behalf,
+          and paper sheets are on the organiser's table every single night as
+          the parallel record.
+        </p>
+
+        <div class="notice" style="margin-top: var(--space-xl);">
+          <p>
+            Questions about a rule, a result, or your score? Grab a board
+            member on a Friday, ask on Discord, or email
+            <a href="mailto:it@storeblindernpoker.org" style="color: var(--gold);">it@storeblindernpoker.org</a>.
+          </p>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================= Shared chrome: footer (identical on every page) ================= -->
+    <footer class="footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">♠ Store Blindern Poker</div>
+        <div class="footer__links">
+          <a href="events.html" class="footer__link">Events</a>
+          <a href="leaderboard.html" class="footer__link">Leaderboard</a>
+          <a href="rules.html" class="footer__link">Rules</a>
+          <a href="login.html" class="footer__link">Member login</a>
+          <a href="privacy.html" class="footer__link">Privacy</a>
+          <a href="mailto:it@storeblindernpoker.org" class="footer__link">it@storeblindernpoker.org</a>
+        </div>
+        <div class="footer__socials">
+          <a href="https://www.facebook.com/groups/1353698180088990/" target="_blank" rel="noopener" class="footer__social" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener" class="footer__social" aria-label="Discord">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+        </div>
+        <p class="footer__nomoney">
+          Store Blindern Poker is a points-only association. No money is
+          wagered, staked or exchanged at our events, and this site never
+          processes payments.
+        </p>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+      </div>
+    </footer>
+    <!-- =============== End shared chrome: footer =============== -->
+
+  </div>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

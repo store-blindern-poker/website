@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organisers - Store Blindern Poker</title>
+  <meta name="description" content="Organiser console for Store Blindern Poker nights.">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="noise-overlay"></div>
+
+  <div class="page-wrapper">
+
+    <!-- ================= Shared chrome: header (identical on every page) ================= -->
+    <nav class="nav" aria-label="Main navigation">
+      <div class="container nav__inner">
+        <a href="index.html" class="nav__brand">
+          <span class="nav__brand-icon">♠</span>
+          Store Blindern Poker
+        </a>
+        <button class="nav__toggle" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav__links">
+          <a href="index.html" class="nav__link">Home</a>
+          <a href="events.html" class="nav__link">Events</a>
+          <a href="leaderboard.html" class="nav__link">Leaderboard</a>
+          <a href="rules.html" class="nav__link">Rules</a>
+          <a href="login.html" class="nav__cta">Member login</a>
+        </div>
+      </div>
+    </nav>
+    <!-- =============== End shared chrome: header =============== -->
+
+    <main id="main" class="page-content app-main">
+      <div class="container" style="max-width: 860px;">
+
+        <div class="whoami" style="padding-top: 0;">
+          <div>
+            <h1 class="app-title" style="margin-bottom: 0;">Organiser console</h1>
+            <div class="whoami__label" id="season-line">…</div>
+          </div>
+          <div class="toolbar">
+            <button class="btn btn--secondary" id="refresh-btn" type="button" hidden>Refresh</button>
+          </div>
+        </div>
+
+        <!-- STATE: config placeholders not patched -->
+        <div class="card card--accent" id="state-config" hidden>
+          <h2 class="card__title">Not connected yet</h2>
+          <p class="card__text">
+            js/config.js still holds placeholder values. Patch in the Supabase
+            URL and publishable key, redeploy, and this console comes alive.
+          </p>
+        </div>
+
+        <!-- STATE: loading -->
+        <div class="card" id="state-loading">
+          <p class="card__text">Checking access…</p>
+        </div>
+
+        <!-- STATE: signed in but not an organiser -->
+        <div class="card" id="state-denied" hidden>
+          <h2 class="card__title">Organisers only</h2>
+          <p class="card__text" style="margin-bottom: var(--space-lg);">
+            This account isn't on the organiser list. If it should be, an
+            existing organiser adds you; there is deliberately no self-serve
+            path.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+            <a class="btn btn--primary btn--block" href="report.html">Go to tonight's check-in</a>
+            <button class="btn btn--ghost btn--block" id="denied-signout" type="button">Sign out</button>
+          </div>
+        </div>
+
+        <!-- STATE: the console -->
+        <div id="console" hidden>
+
+          <!-- Nights -->
+          <section aria-labelledby="nights-title" style="margin-bottom: var(--space-xl);">
+            <div class="whoami">
+              <h2 class="section__title" id="nights-title" style="font-size: 1.4rem;">Nights</h2>
+              <button class="btn btn--secondary" id="toggle-create" type="button">+ New night</button>
+            </div>
+
+            <form class="card" id="create-form" hidden style="margin-bottom: var(--space-lg);">
+              <div class="field">
+                <label class="label" for="create-date">Date</label>
+                <input class="input" id="create-date" type="date" required>
+              </div>
+              <div class="field">
+                <label class="label" for="create-title">Title (optional)</label>
+                <input class="input" id="create-title" type="text" maxlength="80" placeholder="Round 3">
+              </div>
+              <div class="field">
+                <label class="label" for="create-kind">Kind</label>
+                <select class="input" id="create-kind">
+                  <option value="tournament" selected>Tournament (counts as a round)</option>
+                  <option value="welcome">Welcome night</option>
+                  <option value="special">Special</option>
+                  <option value="bonus_only">Bonus only (no chips)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="label" for="create-stack">Stack size (chips per buy-in)</label>
+                <input class="input input--numeric" id="create-stack" type="text" inputmode="numeric" value="10000">
+                <p class="help">Lower it on a chip-shortage night (9,700 has happened).</p>
+              </div>
+              <div class="field">
+                <label class="label" for="create-bonus">Attendance bonus (points)</label>
+                <input class="input input--numeric" id="create-bonus" type="text" inputmode="numeric" value="5000">
+              </div>
+              <button class="btn btn--primary btn--block" id="create-submit" type="submit">Create night (as draft)</button>
+              <p class="form-msg" id="create-msg" aria-live="polite"></p>
+            </form>
+
+            <div id="nights-list">
+              <div class="card"><p class="card__text">Loading nights…</p></div>
+            </div>
+          </section>
+
+          <!-- Selected night -->
+          <section id="night-detail" hidden aria-labelledby="detail-title">
+            <div class="divider"></div>
+
+            <div class="whoami">
+              <div>
+                <h2 class="section__title" id="detail-title" style="font-size: 1.4rem;">…</h2>
+                <div class="whoami__label" id="detail-meta">…</div>
+              </div>
+              <span class="status-pill" id="detail-status">…</span>
+            </div>
+
+            <div class="toolbar" id="lifecycle-bar" style="margin-bottom: var(--space-lg);">
+              <button class="btn btn--primary" id="btn-open" type="button" hidden>Open night</button>
+              <button class="btn btn--secondary" id="btn-close" type="button" hidden>Close reporting</button>
+              <button class="btn btn--primary" id="btn-settle" type="button" hidden>Settle night…</button>
+              <button class="btn btn--secondary" id="btn-reopen" type="button" hidden>Reopen for corrections</button>
+              <button class="btn btn--secondary" id="btn-code" type="button" hidden>Display code ⛶</button>
+            </div>
+            <p class="form-msg" id="lifecycle-msg" aria-live="polite"></p>
+
+            <!-- Two-tap settle confirm -->
+            <div class="confirm-strip" id="settle-confirm" hidden>
+              <span id="settle-confirm-text">Settle?</span>
+              <button class="btn btn--danger" id="btn-settle-really" type="button">Settle now</button>
+              <button class="btn btn--ghost" id="btn-settle-cancel" type="button">Cancel</button>
+            </div>
+
+            <!-- Numbers of the night -->
+            <div class="mini-stats" id="mini-stats"></div>
+
+            <!-- WHO HAS NOT REPORTED -->
+            <div class="notreported" id="notreported">
+              <h3 id="notreported-title">Not reported yet</h3>
+              <div class="notreported__names" id="notreported-names"></div>
+            </div>
+
+            <!-- Entries table -->
+            <div class="table-wrapper" style="margin-bottom: var(--space-lg);">
+              <table class="table table--compact">
+                <thead>
+                  <tr>
+                    <th scope="col">Player</th>
+                    <th scope="col" class="num">Buy-in</th>
+                    <th scope="col" class="num">Top-up</th>
+                    <th scope="col" class="num">Final</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="entries-body">
+                  <tr><td colspan="5" style="color: var(--text-tertiary);">No entries yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Check in / report on behalf -->
+            <div class="card-grid" style="margin-bottom: var(--space-lg);">
+              <form class="card" id="proxy-checkin-form">
+                <h3 class="card__title" style="font-size: 1.05rem;">Check someone in</h3>
+                <div class="field">
+                  <label class="label" for="proxy-checkin-name">Pseudonym</label>
+                  <input class="input" id="proxy-checkin-name" list="member-list"
+                         autocomplete="off" autocapitalize="off" placeholder="Start typing…">
+                </div>
+                <button class="btn btn--secondary btn--block" type="submit">Check in</button>
+                <p class="form-msg" id="proxy-checkin-msg" aria-live="polite"></p>
+              </form>
+
+              <form class="card" id="proxy-report-form">
+                <h3 class="card__title" style="font-size: 1.05rem;">Report on behalf</h3>
+                <div class="field">
+                  <label class="label" for="proxy-report-name">Pseudonym</label>
+                  <input class="input" id="proxy-report-name" list="member-list"
+                         autocomplete="off" autocapitalize="off" placeholder="Start typing…">
+                </div>
+                <div class="field">
+                  <label class="label" for="proxy-report-rebuy">Top-up (chips)</label>
+                  <input class="input input--numeric" id="proxy-report-rebuy" type="text"
+                         inputmode="numeric" value="0">
+                </div>
+                <div class="field">
+                  <label class="label" for="proxy-report-final">Final stack (chips)</label>
+                  <input class="input input--numeric" id="proxy-report-final" type="text"
+                         inputmode="numeric" placeholder="0">
+                </div>
+                <button class="btn btn--primary btn--block" type="submit">Save report</button>
+                <p class="form-msg" id="proxy-report-msg" aria-live="polite"></p>
+              </form>
+            </div>
+
+            <datalist id="member-list"></datalist>
+
+            <!-- Bulk paste from the paper sheets -->
+            <div class="card" style="margin-bottom: var(--space-lg);">
+              <h3 class="card__title" style="font-size: 1.05rem;">Bulk paste from the paper sheet</h3>
+              <p class="card__text" style="margin-bottom: var(--space-md);">
+                One player per line: <code>pseudonym, top-up, final&nbsp;stack</code>
+                (two values means top-up 0: <code>pseudonym, final</code>).
+                Commas, semicolons or tabs all work.
+              </p>
+              <div class="field">
+                <label class="label visually-hidden" for="bulk-input">Paste lines</label>
+                <textarea class="input" id="bulk-input" rows="6"
+                          placeholder="FeltWizard, 5000, 12350&#10;NighthawkOslo, 0, 0&#10;CardShark, 8200"></textarea>
+              </div>
+              <div class="toolbar">
+                <button class="btn btn--secondary" id="bulk-preview-btn" type="button">Preview</button>
+                <button class="btn btn--primary" id="bulk-apply-btn" type="button" hidden>Apply <span id="bulk-apply-count"></span></button>
+              </div>
+              <div class="table-wrapper" id="bulk-preview-wrap" hidden style="margin-top: var(--space-md);">
+                <table class="table table--compact">
+                  <thead>
+                    <tr><th>Player</th><th class="num">Top-up</th><th class="num">Final</th><th>Check</th></tr>
+                  </thead>
+                  <tbody id="bulk-preview-body"></tbody>
+                </table>
+              </div>
+              <p class="form-msg" id="bulk-msg" aria-live="polite"></p>
+            </div>
+
+            <!-- Adjustments: admin corrections with a visible reason.
+                 Friday's use: granting the promised 5,000 Welcome Round
+                 points per attendee, reason on the record. -->
+            <div class="card" style="margin-bottom: var(--space-lg);">
+              <h3 class="card__title" style="font-size: 1.05rem;">Adjustments</h3>
+              <p class="card__text" style="margin-bottom: var(--space-md);">
+                Point corrections with a reason, on the record and visible in
+                history. Leave the pseudonym empty (and the amount 0) for a
+                night-level note, e.g. explaining a chip imbalance.
+              </p>
+              <form id="adjust-form">
+                <div class="field">
+                  <label class="label" for="adjust-name">Pseudonym</label>
+                  <input class="input" id="adjust-name" list="member-list"
+                         autocomplete="off" autocapitalize="off" placeholder="Start typing… (empty = night-level note)">
+                </div>
+                <div class="field">
+                  <label class="label" for="adjust-delta">Points (+ / −)</label>
+                  <input class="input input--numeric" id="adjust-delta" type="text"
+                         inputmode="numeric" placeholder="e.g. 5000 or -2500" value="0">
+                </div>
+                <div class="field">
+                  <label class="label" for="adjust-kind">Kind</label>
+                  <select class="input" id="adjust-kind">
+                    <option value="manual" selected>Manual (bonus, grant…)</option>
+                    <option value="correction">Correction (fixing an entry)</option>
+                    <option value="imbalance">Imbalance (chip count explanation)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="label" for="adjust-reason">Reason (required, shown in history)</label>
+                  <input class="input" id="adjust-reason" type="text" maxlength="200"
+                         placeholder="e.g. Welcome Round bonus as promised">
+                </div>
+                <button class="btn btn--primary btn--block" type="submit">Record adjustment</button>
+                <p class="form-msg" id="adjust-msg" aria-live="polite"></p>
+              </form>
+              <div id="adjust-history" style="margin-top: var(--space-md);"></div>
+            </div>
+
+          </section>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================= Shared chrome: footer (identical on every page) ================= -->
+    <footer class="footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">♠ Store Blindern Poker</div>
+        <div class="footer__links">
+          <a href="events.html" class="footer__link">Events</a>
+          <a href="leaderboard.html" class="footer__link">Leaderboard</a>
+          <a href="rules.html" class="footer__link">Rules</a>
+          <a href="login.html" class="footer__link">Member login</a>
+          <a href="privacy.html" class="footer__link">Privacy</a>
+          <a href="mailto:it@storeblindernpoker.org" class="footer__link">it@storeblindernpoker.org</a>
+        </div>
+        <div class="footer__socials">
+          <a href="https://www.facebook.com/groups/1353698180088990/" target="_blank" rel="noopener" class="footer__social" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener" class="footer__social" aria-label="Discord">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+        </div>
+        <p class="footer__nomoney">
+          Store Blindern Poker is a points-only association. No money is
+          wagered, staked or exchanged at our events, and this site never
+          processes payments.
+        </p>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+      </div>
+    </footer>
+    <!-- =============== End shared chrome: footer =============== -->
+
+  </div>
+
+  <!-- Full-screen night-code takeover: point a TV at this. The QR encodes
+       https://storeblindernpoker.org/report?n=CODE and the code itself is
+       readable from the back of the room. -->
+  <div class="code-takeover" id="code-takeover" hidden>
+    <button class="code-takeover__close" id="code-close" type="button" aria-label="Close">✕</button>
+    <div class="code-takeover__inner">
+      <div class="code-takeover__night" id="code-night">…</div>
+      <div class="code-takeover__lead">Check in on your phone: scan, or type the code at</div>
+      <div class="code-takeover__url">storeblindernpoker.org/report</div>
+      <div class="code-takeover__qr" id="code-qr" aria-hidden="true"></div>
+      <div class="code-takeover__code" id="code-big">…</div>
+    </div>
+  </div>
+
+  <!-- Order matters: config → vendored Supabase → shared helpers → page logic -->
+  <script src="js/config.js" defer></script>
+  <script src="js/vendor/supabase.js" defer></script>
+  <script src="js/vendor/qrcode.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/sb.js" defer></script>
+  <script src="js/admin.js" defer></script>
+</body>
+</html>

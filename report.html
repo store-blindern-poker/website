@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tonight - Store Blindern Poker</title>
+  <meta name="description" content="Check in and report your chips for tonight's Store Blindern Poker round.">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="noise-overlay"></div>
+
+  <div class="page-wrapper">
+
+    <!-- ================= Shared chrome: header (identical on every page) ================= -->
+    <nav class="nav" aria-label="Main navigation">
+      <div class="container nav__inner">
+        <a href="index.html" class="nav__brand">
+          <span class="nav__brand-icon">♠</span>
+          Store Blindern Poker
+        </a>
+        <button class="nav__toggle" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav__links">
+          <a href="index.html" class="nav__link">Home</a>
+          <a href="events.html" class="nav__link">Events</a>
+          <a href="leaderboard.html" class="nav__link">Leaderboard</a>
+          <a href="rules.html" class="nav__link">Rules</a>
+          <a href="login.html" class="nav__cta">Member login</a>
+        </div>
+      </div>
+    </nav>
+    <!-- =============== End shared chrome: header =============== -->
+
+    <main id="main" class="page-content app-main">
+      <div class="container container--narrow" style="max-width: 520px;">
+
+        <div class="whoami" style="padding-top: 0;">
+          <div>
+            <h1 class="app-title" style="margin-bottom: 0;">Tonight</h1>
+            <div class="whoami__label" id="whoami-line" hidden>
+              Signed in as <strong id="whoami-name"></strong>
+            </div>
+          </div>
+          <span class="sync-pill" id="sync-pill" hidden>
+            <span class="sync-pill__dot"></span>
+            <span id="sync-pill-text">…</span>
+          </span>
+        </div>
+
+        <!-- Night banner: which night all of this refers to -->
+        <div class="night-banner" id="night-banner" hidden>
+          <div>
+            <div class="night-banner__title" id="night-title">…</div>
+            <div class="night-banner__meta" id="night-meta">…</div>
+          </div>
+          <span class="status-pill" id="night-status">…</span>
+        </div>
+
+        <!-- STATE: config placeholders not patched -->
+        <div class="card card--accent" id="state-config" hidden>
+          <h2 class="card__title">Not connected yet</h2>
+          <p class="card__text">
+            The member system is being connected and opens before the first
+            night of the season. On the night itself, the paper sheet on your
+            table always works too.
+          </p>
+        </div>
+
+        <!-- STATE: loading -->
+        <div class="card" id="state-loading">
+          <p class="card__text">Loading tonight's round…</p>
+        </div>
+
+        <!-- STATE: signed in but no pseudonym claimed -->
+        <div class="card card--accent" id="state-nopseudonym" hidden>
+          <h2 class="card__title">One step left: pick your pseudonym</h2>
+          <p class="card__text" style="margin-bottom: var(--space-lg);">
+            You're signed in, but you need a pseudonym before you can check
+            in; it's the only name ever shown in public.
+          </p>
+          <a class="btn btn--primary btn--block btn--lg" href="login.html?next=report.html">Choose my pseudonym</a>
+        </div>
+
+        <!-- STATE: no open night -->
+        <div class="card" id="state-nonight" hidden>
+          <div class="card__icon" aria-hidden="true">♠</div>
+          <h2 class="card__title">No round is open right now</h2>
+          <p class="card__text" style="margin-bottom: var(--space-lg);">
+            Check-in opens when the organisers open the night, usually just
+            before 18:00 on Fridays. If you're in the room and this looks
+            wrong, wave at an organiser.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+            <a class="btn btn--secondary btn--block" href="events.html">See upcoming nights</a>
+            <a class="btn btn--secondary btn--block" href="leaderboard.html">Leaderboard</a>
+          </div>
+        </div>
+
+        <!-- STATE: open night, not checked in -->
+        <div id="state-checkin" hidden>
+          <div class="card card--accent">
+            <h2 class="card__title">Check in to tonight's round</h2>
+            <p class="card__text">
+              Checking in credits your attendance bonus and books your buy-in
+              for tonight's chip stack from your season points. Do it once,
+              when you arrive.
+            </p>
+            <dl class="kv">
+              <dt>Your season points</dt><dd id="checkin-points">…</dd>
+              <dt>Attendance bonus (credited first)</dt><dd id="checkin-bonus">…</dd>
+              <dt>Tonight's chip stack</dt><dd id="checkin-stack">…</dd>
+            </dl>
+            <div class="field" style="margin-bottom: var(--space-md);">
+              <label class="label" for="code-input">Tonight's code (on the screen at the front)</label>
+              <input class="input input--code" id="code-input" type="text"
+                     inputmode="text" autocomplete="one-time-code"
+                     autocapitalize="characters" autocorrect="off" spellcheck="false"
+                     maxlength="5" placeholder="ABCDE" aria-describedby="code-help">
+              <p class="help" id="code-help" style="margin-top: var(--space-sm);">
+                5 characters, shown big next to the QR. Scanned the QR with
+                your camera? It's already filled in. Capitals don't matter.
+              </p>
+            </div>
+            <button class="btn btn--primary btn--block btn--lg" id="checkin-btn" type="button">Check in ♠</button>
+            <p class="form-msg" id="checkin-msg" role="status" aria-live="polite"></p>
+            <p class="help">
+              Points only, never money. Short on points? You still play:
+              the buy-in simply adjusts, and nobody sits out.
+            </p>
+          </div>
+        </div>
+
+        <!-- STATE: checked in, the report form -->
+        <div id="state-report" hidden>
+          <div class="card" style="margin-bottom: var(--space-lg);">
+            <h2 class="card__title" style="font-size: 1.05rem;">You're checked in ✓</h2>
+            <dl class="kv" style="margin-bottom: 0;">
+              <dt>Attendance bonus</dt><dd id="report-bonus">…</dd>
+              <dt>Buy-in booked</dt><dd id="report-buyin">…</dd>
+              <dt>Top-up allowance left</dt><dd id="report-cap">…</dd>
+            </dl>
+          </div>
+
+          <form id="report-form" novalidate>
+            <div class="card" style="margin-bottom: var(--space-lg);">
+              <h2 class="card__title" style="font-size: 1.05rem;">1 · Did you top up tonight?</h2>
+              <p class="card__text" style="margin-bottom: var(--space-md);">
+                One top-up per night, points for chips 1:1. If you're already
+                holding more than tonight's stack in chips, the answer is 0.
+              </p>
+              <div class="field" style="margin-bottom: var(--space-sm);">
+                <label class="label" for="rebuy-input">Top-up amount (chips)</label>
+                <input class="input input--numeric" id="rebuy-input" type="text"
+                       inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                       placeholder="0" value="0">
+              </div>
+              <div class="quickpicks" id="rebuy-quickpicks">
+                <button type="button" class="quickpick" data-rebuy="0">None</button>
+                <button type="button" class="quickpick" data-rebuy="2500">2,500</button>
+                <button type="button" class="quickpick" data-rebuy="5000">5,000</button>
+                <button type="button" class="quickpick" data-rebuy="max" id="rebuy-max">Full top-up</button>
+              </div>
+              <p class="form-msg" id="rebuy-msg" aria-live="polite"></p>
+            </div>
+
+            <div class="card" style="margin-bottom: var(--space-lg);">
+              <h2 class="card__title" style="font-size: 1.05rem;">2 · Your final chip stack</h2>
+              <p class="card__text" style="margin-bottom: var(--space-md);">
+                Count everything in front of you and type the total.
+              </p>
+              <div class="field" style="margin-bottom: var(--space-sm);">
+                <label class="label" for="final-input">Final stack (total chips)</label>
+                <input class="input input--numeric" id="final-input" type="text"
+                       inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                       placeholder="e.g. 12 350">
+              </div>
+              <button type="button" class="btn--bust" id="bust-btn">I busted: 0 chips</button>
+              <p class="form-msg" id="final-msg" aria-live="polite"></p>
+            </div>
+
+            <button class="btn btn--primary btn--block btn--lg" id="review-btn" type="submit">Review my report</button>
+          </form>
+
+          <!-- Review sheet -->
+          <div id="review-panel" hidden style="margin-top: var(--space-lg);">
+            <div class="card card--accent">
+              <h2 class="card__title">Check the maths, then send</h2>
+              <div class="ledger" id="review-ledger"></div>
+              <p class="help" id="review-balance-note" hidden></p>
+              <div style="display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-md);">
+                <button class="btn btn--primary btn--block btn--lg" id="submit-btn" type="button">Send my report</button>
+                <button class="btn btn--ghost btn--block" id="edit-btn" type="button">Go back and edit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATE: receipt (sent, or saved-on-phone while sending) -->
+        <div id="state-receipt" hidden>
+          <div class="card card--accent" style="text-align: center;">
+            <div class="receipt__icon" id="receipt-icon">✓</div>
+            <h2 class="card__title" id="receipt-title">Report received</h2>
+            <p class="card__text" id="receipt-sub">…</p>
+            <div class="ledger" id="receipt-ledger" style="text-align: left;"></div>
+            <div style="display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-md);">
+              <button class="btn btn--secondary btn--block" id="change-btn" type="button">Change my report</button>
+              <a class="btn btn--ghost btn--block" href="leaderboard.html">Leaderboard</a>
+            </div>
+          </div>
+
+          <!-- Persistent failure: the payload, readable across a table -->
+          <div class="organiser-card" id="organiser-card" hidden>
+            <h3>Couldn't send. Show this to an organiser</h3>
+            <div class="organiser-payload" id="organiser-payload"></div>
+            <p class="card__text" style="margin-top: var(--space-md);" id="organiser-why"></p>
+            <button class="btn btn--secondary btn--block" id="retry-btn" type="button"
+                    style="margin-top: var(--space-md);">Try sending again</button>
+          </div>
+        </div>
+
+        <!-- STATE: night settled -->
+        <div class="card" id="state-settled" hidden>
+          <div class="card__icon" aria-hidden="true">♠</div>
+          <h2 class="card__title">Tonight is settled</h2>
+          <p class="card__text" id="settled-text" style="margin-bottom: var(--space-lg);">
+            The organisers have settled the night. Spot a mistake in your
+            numbers? Tell an organiser: settled nights can be corrected and
+            re-settled.
+          </p>
+          <div class="ledger" id="settled-ledger" hidden></div>
+          <a class="btn btn--primary btn--block btn--lg" href="leaderboard.html" style="margin-top: var(--space-md);">See the leaderboard</a>
+        </div>
+
+        <p class="help" style="margin-top: var(--space-xl); text-align: center;">
+          How the points work (buy-ins, top-ups, the bonus) is on the
+          <a class="link-gold" href="rules.html">rules page</a>. If anything
+          here misbehaves, the paper sheet on your table is always enough.
+        </p>
+
+      </div>
+    </main>
+
+    <!-- ================= Shared chrome: footer (identical on every page) ================= -->
+    <footer class="footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">♠ Store Blindern Poker</div>
+        <div class="footer__links">
+          <a href="events.html" class="footer__link">Events</a>
+          <a href="leaderboard.html" class="footer__link">Leaderboard</a>
+          <a href="rules.html" class="footer__link">Rules</a>
+          <a href="login.html" class="footer__link">Member login</a>
+          <a href="privacy.html" class="footer__link">Privacy</a>
+          <a href="mailto:it@storeblindernpoker.org" class="footer__link">it@storeblindernpoker.org</a>
+        </div>
+        <div class="footer__socials">
+          <a href="https://www.facebook.com/groups/1353698180088990/" target="_blank" rel="noopener" class="footer__social" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener" class="footer__social" aria-label="Discord">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+        </div>
+        <p class="footer__nomoney">
+          Store Blindern Poker is a points-only association. No money is
+          wagered, staked or exchanged at our events, and this site never
+          processes payments.
+        </p>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+      </div>
+    </footer>
+    <!-- =============== End shared chrome: footer =============== -->
+
+  </div>
+
+  <!-- Order matters: config → vendored Supabase → shared helpers → page logic -->
+  <script src="js/config.js" defer></script>
+  <script src="js/vendor/supabase.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/sb.js" defer></script>
+  <script src="js/outbox.js" defer></script>
+  <script src="js/report.js" defer></script>
+</body>
+</html>
