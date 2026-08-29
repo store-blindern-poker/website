@@ -421,7 +421,7 @@ begin
   loop
     -- Snapshot "before this night" for everyone: after the loop these hold
     -- the state before the most recent settled night (drives previous_rank).
-    update pg_temp._bal set prev_bal = bal, prev_played = played;
+    update pg_temp._bal set prev_bal = bal, prev_played = played where true;
 
     -- Entry deltas and same-night adjustments, applied together, clamped
     -- at zero as one step. (Points can never go below zero.)
@@ -448,7 +448,7 @@ begin
       from deltas d
      where d.member_id = b.member_id;
 
-    update pg_temp._bal set high = greatest(high, bal), low = least(low, bal);
+    update pg_temp._bal set high = greatest(high, bal), low = least(low, bal) where true;
 
     -- Write the per-entry audit trail.
     update public.entries e
