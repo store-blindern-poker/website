@@ -1,6 +1,187 @@
 {
   "season": "Fall 2026",
-  "updated": null,
-  "note": "Last-known-good leaderboard copy. Shown by leaderboard.html whenever the live v_leaderboard view is unreachable (offline, project paused, config unpatched). While `rows` is empty the page keeps its static pre-season placeholder. After nights settle, an admin refreshes this file by exporting v_leaderboard (rank, pseudonym, points, nights_played) and committing it, pseudonyms only, never names.",
-  "rows": []
+  "updated": "2026-08-30",
+  "note": "Last-known-good leaderboard copy. Shown by leaderboard.html whenever the live v_leaderboard view is unreachable (offline, project paused, config unpatched). Refresh it after each settled night: export v_leaderboard (rank, pseudonym, points, nights_played) and commit. Pseudonyms only, never names.",
+  "rows": [
+    {
+      "rank": 1,
+      "pseudonym": "Akki",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 2,
+      "pseudonym": "Asian Tiger",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 3,
+      "pseudonym": "Big Bear",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 4,
+      "pseudonym": "BobiT",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 5,
+      "pseudonym": "Chonkles420",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 6,
+      "pseudonym": "Dianamyte",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 7,
+      "pseudonym": "Erlynator",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 8,
+      "pseudonym": "Fish N Chips",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 9,
+      "pseudonym": "Forsaken",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 10,
+      "pseudonym": "Forte",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 11,
+      "pseudonym": "Galilei",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 12,
+      "pseudonym": "Galileo",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 13,
+      "pseudonym": "Gjenferdet",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 14,
+      "pseudonym": "Imposter",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 15,
+      "pseudonym": "Jagoda",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 16,
+      "pseudonym": "Jena",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 17,
+      "pseudonym": "Kelp",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 18,
+      "pseudonym": "Kingpin",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 19,
+      "pseudonym": "Mr. Nobody",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 20,
+      "pseudonym": "Qvalinator",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 21,
+      "pseudonym": "Reven",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 22,
+      "pseudonym": "Sanehqa",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 23,
+      "pseudonym": "SMartinG",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 24,
+      "pseudonym": "Sveinungswag",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 25,
+      "pseudonym": "The Artist",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 26,
+      "pseudonym": "The Cube",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 27,
+      "pseudonym": "Tikkamosalah",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 28,
+      "pseudonym": "Tung tung tung sahur",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 29,
+      "pseudonym": "Walrus",
+      "points": 45000,
+      "nights_played": 1
+    },
+    {
+      "rank": 30,
+      "pseudonym": "Will Ivey",
+      "points": 45000,
+      "nights_played": 1
+    }
+  ]
 }

@@ -890,7 +890,11 @@
     } else {
       S.show($('organiser-card'), false);
     }
-    renderSync();
+    // No renderSync() here. renderSync() calls this function back when the
+    // receipt is on screen, so calling it from the tail was mutual recursion:
+    // opening the report page with any pending outbox job blew the stack and
+    // showed "Could not load tonight" instead of the receipt. renderSync()
+    // always runs after this returns anyway.
   }
 
   $('retry-btn').addEventListener('click', function () {

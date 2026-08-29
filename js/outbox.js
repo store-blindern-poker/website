@@ -200,9 +200,28 @@
     });
   }
 
-  /* Wire the retry triggers once a sender exists. */
+  /* Wire the retry triggers once a sender exists.
+   *
+   * First, rescue orphans. kick() marks a job 'sending' before the request
+   * leaves, so a force quit, a killed tab or a dead battery mid submit strands
+   * it in that state forever: nextDue() only ever returns 'queued'. On a poker
+   * night that is a player's whole result, lost in silence while their screen
+   * still says it is sending. Anything still 'sending' when we boot cannot be
+   * in flight, because the page that owned it is gone, so put it back in the
+   * queue and let the normal retry path have it. Sending twice is safe: the
+   * server upsert is idempotent on (night_id, member_id). */
   function start(sendFn) {
     sender = sendFn;
+    var store = load();
+    var revived = 0;
+    Object.keys(store).forEach(function (k) {
+      if (store[k].status === 'sending') {
+        store[k].status = 'queued';
+        store[k].next_attempt_at = 0;
+        revived += 1;
+      }
+    });
+    if (revived) { save(store); }
     window.addEventListener('online', kick);
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) { kick(); }

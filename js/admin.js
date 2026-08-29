@@ -137,6 +137,12 @@
   function refreshAll() {
     return Promise.all([
       loadNights(),
+      // Members MUST refresh too. People claim pseudonyms during the night,
+      // especially the first one. Without this they stay invisible to the
+      // console until a full page reload: the entries table calls them
+      // "(unknown member)", and neither the proxy forms nor bulk paste can
+      // find them, which is exactly when an organiser needs them most.
+      loadMembers().catch(function () { /* keep the last good roster */ }),
       ctx.night ? loadEntries() : Promise.resolve(),
       ctx.night ? loadAdjustments() : Promise.resolve(),
       // loadRsvps() swallows its own failures, so a headcount that will not
