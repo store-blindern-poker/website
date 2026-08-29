@@ -52,24 +52,18 @@
         </picture>
       </div>
       <div class="container hero__inner">
-        <div class="fade-in">
-          <div class="hero__badge">
-            <span class="hero__badge-dot"></span>
-            Fridays at Blindern, Oslo
-          </div>
-        </div>
-        <h1 class="hero__title fade-in fade-in-delay-1">
+        <h1 class="hero__title fade-in">
           Store Blindern<br><em>Poker</em>
         </h1>
+        <div class="hero__actions fade-in fade-in-delay-1">
+          <a href="events.html" class="btn btn--primary">Upcoming events</a>
+          <a href="rules.html" class="btn btn--secondary">How it works</a>
+        </div>
         <p class="hero__subtitle fade-in fade-in-delay-2">
           The student poker association at the University of Oslo. Weekly Texas
           Hold'em nights, a semester-long points tournament, and a table with
           room for you, whether you have played for years or never held a hand.
         </p>
-        <div class="hero__actions fade-in fade-in-delay-3">
-          <a href="events.html" class="btn btn--primary">Upcoming events</a>
-          <a href="rules.html" class="btn btn--secondary">How it works</a>
-        </div>
       </div>
     </header>
 
@@ -88,6 +82,10 @@
                 <span class="countdown__meta-sep">·</span>
                 <span id="countdown-location"></span>
               </div>
+              <!-- Headcount for this night, filled by js/rsvp.js from the
+                   anon-readable count. It keeps its line height whether or
+                   not the fetch lands, so the countdown never shifts. -->
+              <p class="countdown__going" id="countdown-going" aria-live="polite"></p>
             </div>
             <div class="countdown__timer" id="countdown-timer" role="timer">
               <div class="countdown__unit">
@@ -368,6 +366,13 @@
 
   </div>
 
+  <!-- js/app.js owns the countdown. js/rsvp.js only adds a headcount to it
+       and can never stop it: it waits for the countdown to fill, and gives
+       up quietly if it never does. -->
+  <script src="js/config.js" defer></script>
+  <script src="js/vendor/supabase.js" defer></script>
   <script src="js/app.js" defer></script>
+  <script src="js/sb.js" defer></script>
+  <script src="js/rsvp.js" defer></script>
 </body>
 </html>

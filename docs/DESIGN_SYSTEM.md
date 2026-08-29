@@ -35,8 +35,8 @@ re-litigate them per page. If you change one, change it here first and then ever
 
 ## Palette: warm earth tones, dark by default
 
-Dark is not a style choice here, it is functional: the site is read on phones in a dim room
-at 23:00.
+Dark is not a style choice here, it is functional: the site is read on phones in a dimly lit
+room across a table, at the end of a night that runs 18:00 to 20:30.
 
 ```
 --bg          #0c0c0d   near-black, warm

@@ -12,7 +12,7 @@
  * Reads: v_seasons, nights (named columns, never *), entries, adjustments,
  * members (admin RLS).
  *
- * The screen that matters at 22:30 is WHO HAS NOT REPORTED, it is the
+ * The screen that matters as the night winds up is WHO HAS NOT REPORTED, it is the
  * loudest block on the page. The balance indicator (chips in vs out) is
  * informational and never blocks settling: imbalances are recorded, the
  * night settles anyway, corrections happen during the week.
@@ -30,6 +30,8 @@
     nights: [],       // nights rows, newest first
     night: null,      // selected night
     entries: [],      // entries for the selected night
+    rsvps: [],        // v_night_rsvps rows for the selected night
+    rsvpState: 'idle',// idle | loading | ready | failed
     members: [],      // [{id, pseudonym, key}]
     membersByKey: {}, // normalised pseudonym -> member
     membersById: {},  // id -> member
@@ -129,7 +131,10 @@
     return Promise.all([
       loadNights(),
       ctx.night ? loadEntries() : Promise.resolve(),
-      ctx.night ? loadAdjustments() : Promise.resolve()
+      ctx.night ? loadAdjustments() : Promise.resolve(),
+      // loadRsvps() swallows its own failures, so a headcount that will not
+      // load can never fail this Promise.all and stop the rest refreshing.
+      ctx.night ? loadRsvps() : Promise.resolve()
     ]).then(function () { if (ctx.night) { renderDetail(); } });
   }
 
@@ -169,6 +174,9 @@
   function selectNight(night) {
     ctx.night = night;
     ctx.entries = [];
+    ctx.rsvps = [];
+    ctx.rsvpState = 'idle';
+    rsvpMsg('', '');
     ctx.bulkPlan = null;
     S.show($('bulk-preview-wrap'), false);
     S.show($('bulk-apply-btn'), false);
@@ -181,16 +189,20 @@
     renderDetail();
     loadEntries();
     loadAdjustments();
+    loadRsvps();
     armPolling();
     $('night-detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  /* Live-ish while a night is running: refresh entries every 45 s. */
+  /* Live-ish while a night is running: refresh entries every 45 s, and the
+   * RSVPs with them. People do answer late ("on my way"), and a roll call
+   * that compares fresh check-ins against a stale list of who was coming
+   * would name the wrong people to go looking for. */
   function armPolling() {
     if (ctx.pollTimer) { clearInterval(ctx.pollTimer); ctx.pollTimer = null; }
     if (ctx.night && (ctx.night.status === 'open' || ctx.night.status === 'reconciling')) {
       ctx.pollTimer = setInterval(function () {
-        if (!document.hidden) { loadEntries(); }
+        if (!document.hidden) { loadEntries(); loadRsvps(); }
       }, 45000);
     }
   }
@@ -293,12 +305,228 @@
         '</tr>';
       }).join('');
     }
+
+    // The headcount block reads ctx.entries too (the roll call compares who
+    // said yes against who is actually here), so it redraws whenever the
+    // entries do. Wrapped: it is an addition to this page, and nothing in it
+    // is allowed to take the entries table or the lifecycle bar with it.
+    try { renderRsvp(); } catch (e) { /* the rest of the console stands */ }
   }
 
   function stat(value, label, tone) {
     return '<div class="mini-stat' + (tone ? ' mini-stat--' + tone : '') + '">' +
       '<div class="mini-stat__value">' + S.fmt(value) + '</div>' +
       '<div class="mini-stat__label">' + S.escapeHtml(label) + '</div></div>';
+  }
+
+  /* ------------------------------------------------------------------
+   * Who said they are coming
+   *
+   * The decision this serves is taken in advance: the headcount decides
+   * how many tables go up, and whether stack_size has to come down because
+   * there are not enough chips for that many opening buy-ins. So the block
+   * renders for a draft night as well, and is hidden once the night is
+   * settled or void, when the entries are the record and an intention is
+   * only history.
+   *
+   * Read: v_night_rsvps, authenticated only, one row per answer with the
+   * member's pseudonym. The two counts are summed from those same rows
+   * rather than read from v_upcoming_nights, which carries the identical
+   * pair but only for nights whose played_on is still in the future: an
+   * organiser reconciling on Saturday morning would get nothing from it.
+   * One query covers every unsettled night, and a count summed from the
+   * rows underneath it can never disagree with the list it heads.
+   *
+   * Nothing here writes. set_rsvp() always acts on the caller, so there is
+   * no answer-on-behalf path in the database and there is deliberately no
+   * control here that would pretend otherwise. Getting a player into a
+   * night is the proxy check-in's job.
+   *
+   * Names: only the people who said yes are ever listed. A decline is a
+   * number, here as on the public page. Nobody needs a roll of who said no.
+   * ------------------------------------------------------------------ */
+
+  var RSVP_SKELETON =
+    '<p class="visually-hidden" role="status">Loading the headcount.</p>' +
+    '<div class="skeleton-table" aria-hidden="true">' +
+      '<div class="skeleton-table__row">' +
+        '<span class="skeleton skeleton--name"></span>' +
+        '<span class="skeleton skeleton--num"></span></div>' +
+      '<div class="skeleton-table__row">' +
+        '<span class="skeleton skeleton--name"></span>' +
+        '<span class="skeleton skeleton--num"></span></div>' +
+    '</div>';
+
+  function rsvpMsg(text, kind) {
+    var el = $('rsvp-admin-msg');
+    if (!el) { return; }
+    el.textContent = text || '';
+    el.className = 'rsvp__msg' + (kind === 'error' ? ' rsvp__msg--error' : '');
+  }
+
+  /* Settled and void nights are done: the entries below are the truth by
+   * then, and who once meant to come adds nothing. */
+  function rsvpTracked(night) {
+    return !!night && night.status !== 'settled' && night.status !== 'void';
+  }
+
+  function rsvpEmpty(text) {
+    return '<div class="empty-state">' +
+      '<div class="empty-state__icon">&#9824;</div>' +
+      '<p class="empty-state__text">' + S.escapeHtml(text) + '</p></div>';
+  }
+
+  function loadRsvps() {
+    var n = ctx.night;
+    if (!n) { return Promise.resolve(); }
+    if (!rsvpTracked(n)) {
+      ctx.rsvps = [];
+      ctx.rsvpState = 'idle';
+      renderRsvp();
+      return Promise.resolve();
+    }
+    var id = n.id;
+    // A poll keeps the numbers on screen while it runs: only a first load
+    // shows the skeleton, so the block does not flash every 45 seconds.
+    if (ctx.rsvpState !== 'ready') { ctx.rsvpState = 'loading'; renderRsvp(); }
+
+    return S.client().from('v_night_rsvps').select('pseudonym,response')
+      .eq('night_id', id)
+      .then(function (r) {
+        if (r.error) { throw r.error; }
+        if (!ctx.night || ctx.night.id !== id) { return; }  // switched nights
+        ctx.rsvps = r.data || [];
+        ctx.rsvpState = 'ready';
+        rsvpMsg('', '');
+        renderRsvp();
+      })
+      .catch(function (err) {
+        if (!ctx.night || ctx.night.id !== id) { return; }
+        // Keep the last good roll call on screen if there is one: a poll
+        // that fails on room wifi must not blank the list at 19:00.
+        if (ctx.rsvpState === 'ready') {
+          rsvpMsg('That last refresh failed, so this headcount may be out of ' +
+            'date: ' + S.friendlyError(err), 'error');
+          return;
+        }
+        ctx.rsvps = [];
+        ctx.rsvpState = 'failed';
+        rsvpMsg(S.friendlyError(err), 'error');
+        renderRsvp();
+      });
+  }
+
+  function renderRsvp() {
+    var n = ctx.night;
+    var sec = $('rsvp-admin');
+    var box = $('rsvp-admin-body');
+    if (!sec || !box) { return; }
+
+    if (!rsvpTracked(n)) {
+      S.show(sec, false);
+      rsvpMsg('', '');
+      return;
+    }
+    S.show(sec, true);
+
+    if (ctx.rsvpState === 'idle' || ctx.rsvpState === 'loading') {
+      box.innerHTML = RSVP_SKELETON;
+      return;
+    }
+    if (ctx.rsvpState === 'failed') {
+      box.innerHTML = rsvpEmpty('No headcount right now. Refresh to try again: ' +
+        'everything else on this page works without it.');
+      return;
+    }
+
+    var going = [];
+    var notGoing = 0;
+    ctx.rsvps.forEach(function (r) {
+      if (r.response === 'going' && r.pseudonym) { going.push(r.pseudonym); }
+      else if (r.response === 'not_going') { notGoing += 1; }
+    });
+    going.sort(function (a, b) { return String(a).localeCompare(String(b)); });
+
+    if (!going.length && !notGoing) {
+      box.innerHTML = rsvpEmpty('Nobody has answered yet. Members answer on the ' +
+        'events page, and only for themselves.');
+      return;
+    }
+
+    // Who is actually in the room, by normalised pseudonym, from the entries
+    // this console already holds. No second query: one member, one entry.
+    // A member who has since been deactivated is not in membersById, so an
+    // entry of theirs cannot be matched and they stay on the "not here yet"
+    // list. Rare, and it errs towards looking for somebody who is already in.
+    var hereKeys = {};
+    ctx.entries.forEach(function (e) {
+      var m = ctx.membersById[e.member_id];
+      if (m) { hereKeys[m.key] = true; }
+    });
+    var goingKeys = {};
+    going.forEach(function (p) { goingKeys[S.normPseudonym(p)] = true; });
+
+    var missing = going.filter(function (p) { return !hereKeys[S.normPseudonym(p)]; });
+    var walkins = ctx.entries.filter(function (e) {
+      var m = ctx.membersById[e.member_id];
+      return !m || !goingKeys[m.key];
+    }).length;
+
+    // Two modes, one shape. Before the doors open the last two numbers are
+    // the chip question; from "Open night" onwards they are the roll call.
+    var live = n.status === 'open' || n.status === 'reconciling';
+    var stack = Number(n.stack_size) || 0;
+    var html = '<div class="mini-stats">' +
+      stat(going.length, 'coming', '') +
+      stat(notGoing, 'cannot make it', '') +
+      (live
+        ? stat(going.length - missing.length, 'here already',
+            (going.length && !missing.length) ? 'ok' : '') +
+          stat(missing.length, 'not here yet', missing.length ? 'alert' : 'ok')
+        : stat(stack, 'chips per buy-in', '') +
+          stat(going.length * stack, 'chips to seat them', '')) +
+      '</div>';
+
+    // The line an organiser reads at 19:00: who said they were coming and is
+    // not in the room. Same brass block as "not reported", because it asks
+    // for the same thing, somebody to go and find a person.
+    if (n.status === 'open' && going.length) {
+      if (missing.length) {
+        html += '<div class="notreported">' +
+          '<h3>Said yes, not here yet (<span class="mono">' + missing.length +
+            '</span>): the ones to look for</h3>' +
+          '<div class="notreported__names">' +
+            missing.map(function (p) {
+              return '<span class="notreported__name">' + S.escapeHtml(p) + '</span>';
+            }).join('') +
+          '</div></div>';
+      } else {
+        html += '<div class="notreported notreported--clear">' +
+          '<h3>Everyone who said yes is here ✓</h3></div>';
+      }
+    }
+
+    if (going.length) {
+      html += '<p class="help">Coming, alphabetically:</p>' +
+        '<ul class="rsvp__list">' +
+          going.map(function (p) {
+            return '<li class="rsvp__who">' + S.escapeHtml(p) + '</li>';
+          }).join('') +
+        '</ul>';
+    } else {
+      html += '<p class="help">Nobody has said yes yet.</p>';
+    }
+
+    if (live && walkins) {
+      html += '<p class="help"><span class="mono">' + walkins +
+        '</span> checked in without answering, so the headcount reads low.</p>';
+    }
+
+    html += '<p class="rsvp__hint">Members answer for themselves and only for ' +
+      'themselves; there is no way to set this for somebody else. To put a ' +
+      'player into the night, use Check someone in below.</p>';
+
+    box.innerHTML = html;
   }
 
   /* ------------------------------------------------------------------

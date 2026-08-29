@@ -65,6 +65,48 @@
      .lede                   One-off larger intro paragraph, display face.
      .rule                   A plain 1px horizontal rule, no gradient.
 
+   RSVP (section 23). js/rsvp.js clones the whole block from the
+   `#rsvp-template` in events.html and appends it inside
+   `.event-card__info`, so no page hand-writes these except that template.
+
+     .rsvp                   The block. Sits under an event card's meta,
+                             separated by a 1px rule, never its own card.
+     .rsvp__head             Count row. Wraps at 360px.
+     .rsvp__count            "14 going". Always rendered, to everybody.
+     .rsvp__count-num        The numeral. Mono, tabular.
+     .rsvp__count--empty     Nobody has answered yet: dimmer, no numeral.
+     .rsvp__aside            The declined count. Never a list of names.
+     .rsvp__aside-num        That numeral. Mono, tabular.
+
+     .rsvp__control          The two-state control. One bordered box split by
+                             a 1px rule, stacked below 420px, side by side
+                             above. Deliberately not a pill and not a form.
+     .rsvp__choice           One half of it. 48px minimum, `aria-pressed`
+                             carries the state. `--in` is Going (felt),
+                             `--out` is Can't make it (clay). Busy is
+                             `aria-busy="true"` (spinner, keeps its width),
+                             off is `aria-disabled="true"`. Do not put the
+                             global `.is-disabled` on it: that class repaints
+                             the whole control. Switching the control off
+                             greys the half you did NOT pick; your own answer
+                             keeps its colour, because it is a record and not
+                             a dead button. Press feedback is an inset line,
+                             never a translate: the halves share one box.
+     .rsvp__tick             Selection mark. Space is reserved when hidden so
+                             the label never jumps.
+     .rsvp__choice-label     The word.
+
+     .rsvp__signin           Sign in / claim a pseudonym link. Full tap height.
+     .rsvp__hint             One quiet line under the control.
+     .rsvp__msg              Status line. `--error` for a rolled-back save.
+     .rsvp__list             Pseudonyms going. Signed-in members only.
+     .rsvp__who              One pseudonym. `--me` marks your own.
+     .rsvp__you              The "you" tag inside `.rsvp__who--me`.
+
+     .countdown__going       Headcount line inside the home page countdown.
+     .countdown__going-num   Its numeral. Mono, tabular. The line keeps its
+                             height while empty, so filling it shifts nothing.
+
    Legacy token names (--gold, --text-primary, --space-*, --radius-lg, ...) are
    aliased to the new palette at the bottom of the token block, so the inline
    styles still in the HTML keep rendering correctly. Prefer the new names.
@@ -1303,39 +1345,14 @@ select.input {
 
 .hero__inner { width: 100%; }
 
-.hero__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-height: 34px;
-  padding: 6px 14px;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.75rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  color: var(--cream-dim);
-  margin-bottom: var(--space-xl);
-}
-
-.hero__badge-dot {
-  width: 6px;
-  height: 6px;
-  background-color: var(--brass);
-  flex-shrink: 0;
-}
-
 .hero__title {
   font-family: var(--font-display);
   font-size: clamp(2.6rem, 7vw, 4.5rem);
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.05;
   letter-spacing: -0.03em;
   color: var(--cream);
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
 }
 
 .hero__title em {
@@ -1344,12 +1361,14 @@ select.input {
   color: var(--brass);
 }
 
+/* Sits BELOW the actions: the title and the two buttons carry the hero, and
+   this reads as the quieter explanation underneath rather than competing. */
 .hero__subtitle {
   font-size: clamp(1.05rem, 2vw, 1.15rem);
   font-weight: 400;
   color: var(--cream-dim);
   max-width: 52ch;
-  margin: 0 auto var(--space-2xl);
+  margin: var(--space-2xl) auto 0;
   line-height: 1.55;
 }
 
@@ -2995,7 +3014,302 @@ select.input {
 }
 
 /* ==========================================================================
-   23. REDUCED MOTION
+   23. RSVP
+   Tapped on a phone, in a corridor, between lectures. So: two targets at the
+   full 48px, one tap, no form, and no pill. The control is a single bordered
+   box split by a 1px rule; the chosen half fills with a semantic colour and
+   shows a mono tick, so the answer reads by shape as well as by colour.
+
+   Felt for going, clay for not going. That is the semantic use the palette
+   reserves them for (positive and negative), not decoration.
+
+   The privacy split lives in the queries in js/rsvp.js, not here: the count
+   is anon-readable, the pseudonym list is not, and nobody's decline is ever
+   listed by name.
+   ========================================================================== */
+
+.rsvp {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+}
+
+.rsvp__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px var(--space-md);
+}
+
+.rsvp__count {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--cream);
+}
+
+.rsvp__count--empty { color: var(--cream-dim); }
+
+.rsvp__count-num,
+.rsvp__aside-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+}
+
+.rsvp__count-num { color: var(--cream); }
+
+.rsvp__aside {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--cream-mute);
+}
+
+/* ---- The control ------------------------------------------------------
+   Stacked on a phone: at 360px the card's info column is about 230px wide,
+   and two halves of that cannot hold "Can't make it" without wrapping.
+   Full-width rows are also the easier thumb target. ---------------------- */
+.rsvp__control {
+  display: grid;
+  grid-template-columns: 1fr;
+  max-width: 420px;
+  margin-top: var(--space-md);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;              /* the fills stop at the one 4px radius */
+}
+
+@media (min-width: 420px) {
+  .rsvp__control { grid-template-columns: 1fr 1fr; }
+}
+
+.rsvp__choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: var(--tap-target);
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--cream-dim);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease);
+}
+
+.rsvp__choice:first-child { border-top: 0; }
+
+@media (min-width: 420px) {
+  .rsvp__choice { border-top: 0; }
+  .rsvp__choice + .rsvp__choice { border-left: 1px solid var(--border); }
+}
+
+@media (hover: hover) {
+  .rsvp__choice:hover {
+    background-color: var(--surface);
+    color: var(--cream);
+  }
+}
+
+/* The press. This control is tapped far more often than it is hovered, and
+   the hover above is gated behind a pointer a phone does not have. With the
+   tap highlight suppressed and the answer only landing on the next render, a
+   thumb otherwise got no acknowledgement at all.
+
+   Border intensification, not a translate: the two halves are welded into
+   one bordered box and sliding one of them would break the box. Every rule
+   below is guarded on `:not([aria-disabled])` so a switched-off control
+   never pretends to respond, and each one only intensifies the line the
+   half already has, so pressing never changes what the answer looks like. */
+.rsvp__choice:not([aria-disabled="true"]):active {
+  box-shadow: inset 0 0 0 1px var(--border-loud);
+}
+
+.rsvp__choice--in[aria-pressed="true"]:not([aria-disabled="true"]):active {
+  box-shadow: inset 0 0 0 1px var(--felt-lift);
+}
+
+.rsvp__choice--out[aria-pressed="true"]:not([aria-disabled="true"]):active {
+  box-shadow: inset 0 0 0 1px var(--clay-lift);
+}
+
+/* The half you have not chosen also takes the surface lift, which is the
+   feedback the hover gives on a desktop. The chosen half keeps its fill. */
+.rsvp__choice:not([aria-pressed="true"]):not([aria-disabled="true"]):active {
+  background-color: var(--surface);
+}
+
+/* The control is clipped to its radius, so the ring goes inside it. Same
+   2px brass, same intent as the global focus ring. */
+.rsvp__choice:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: -4px;
+  border-radius: 0;
+}
+
+/* Selected. Colour plus a tick, never colour alone. */
+.rsvp__choice--in[aria-pressed="true"] {
+  background-color: var(--felt-fill);
+  color: var(--felt-lift);
+  box-shadow: inset 0 0 0 1px var(--felt-line);
+}
+
+.rsvp__choice--out[aria-pressed="true"] {
+  background-color: var(--clay-fill);
+  color: var(--clay-lift);
+  box-shadow: inset 0 0 0 1px var(--clay-line);
+}
+
+.rsvp__tick {
+  width: 1ch;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: 1;
+  visibility: hidden;            /* space reserved, so the label never moves */
+}
+
+.rsvp__choice[aria-pressed="true"] .rsvp__tick { visibility: visible; }
+
+/* Off on purpose, not broken: no opacity trick, the label just goes quiet.
+   Scoped to the half you did NOT pick, and that scoping is the whole point.
+   Your own answer is not a disabled control you can ignore, it is the record
+   of what you said, and it has to stay readable in exactly the states that
+   switch the control off: a save in flight, and a night that has closed.
+   Greying it there dropped it to 3.6:1 on the felt fill. Left alone it keeps
+   its semantic colour at 5.1:1, which is what the tick beside it implies. */
+.rsvp__choice[aria-disabled="true"] { cursor: not-allowed; }
+
+.rsvp__choice[aria-disabled="true"]:not([aria-pressed="true"]) {
+  color: var(--cream-mute);
+}
+
+/* In flight. Keeps its own width, so the row never jumps. */
+.rsvp__choice[aria-busy="true"],
+.rsvp__choice[aria-busy="true"][aria-disabled="true"] {
+  color: transparent;
+  cursor: progress;
+}
+
+.rsvp__choice[aria-busy="true"]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid var(--cream-dim);
+  border-radius: 50%;            /* a ring, not a corner */
+  border-top-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ---- Supporting lines ------------------------------------------------- */
+.rsvp__signin {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  margin-top: var(--space-xs);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--brass);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--brass-line);
+  transition: color var(--dur) var(--ease),
+              text-decoration-color var(--dur) var(--ease);
+}
+
+.rsvp__signin:hover {
+  color: var(--brass-lift);
+  text-decoration-color: var(--brass-lift);
+}
+
+.rsvp__hint {
+  margin-top: var(--space-sm);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--cream-mute);
+}
+
+.rsvp__msg {
+  margin-top: var(--space-sm);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--cream-dim);
+}
+
+.rsvp__msg--error { color: var(--clay-lift); }
+
+/* ---- Who is going. Signed-in members only. ---------------------------- */
+.rsvp__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-sm);
+  margin-top: var(--space-md);
+  padding: 0;
+  list-style: none;
+}
+
+.rsvp__who {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface-2);
+  font-size: 0.8rem;
+  color: var(--cream-dim);
+}
+
+.rsvp__who--me {
+  border-color: var(--brass-line);
+  background-color: var(--brass-fill);
+  color: var(--brass);
+}
+
+.rsvp__you {
+  margin-left: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--brass);
+}
+
+/* ---- Headcount on the home page countdown -----------------------------
+   Part of the countdown to look at, part of the RSVP feature to maintain,
+   so it lives here with the rest of it. The line holds its height while
+   empty: the fetch lands late and must not push the timer around. */
+.countdown__going {
+  margin-top: var(--space-sm);
+  min-height: 1.4em;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--cream-dim);
+}
+
+.countdown__going-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  color: var(--cream);
+}
+
+/* ==========================================================================
+   24. REDUCED MOTION
    Cut the duration, never the state. Everything still changes, it just
    arrives immediately.
    ========================================================================== */
@@ -3023,7 +3337,8 @@ select.input {
   }
 
   .btn.is-busy::after,
-  .btn[aria-busy="true"]::after {
+  .btn[aria-busy="true"]::after,
+  .rsvp__choice[aria-busy="true"]::after {
     animation: spin 1.4s linear infinite !important;
   }
 }

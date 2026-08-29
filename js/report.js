@@ -1,6 +1,7 @@
 /* Store Blindern Poker: report.html behaviour. THE critical screen.
  *
- * A member on a phone, on flaky campus wifi, at 22:30, must be able to:
+ * A member on a phone, on flaky campus wifi, as the night winds up around
+ * 20:30, must be able to:
  *   check in → enter top-up → enter final stack → review → send → receipt.
  *
  * Resilience contract:

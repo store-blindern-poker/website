@@ -188,14 +188,51 @@
             </div>
 
             <!-- WHO HAS NOT REPORTED. This sits directly under the lifecycle
-                 controls, above the numbers and the table, because at 22:30
-                 it is the only block that decides what an organiser does
-                 next. js/admin.js rewrites its class, so it carries no other
+                 controls, above the numbers and the table, because as the
+                 night winds up it is the only block that decides what an
+                 organiser does next. js/admin.js rewrites its class, so it carries no other
                  class than .notreported here. -->
             <div class="notreported" id="notreported" style="margin-top: var(--space-lg);">
               <h3 id="notreported-title">Not reported yet</h3>
               <div class="notreported__names" id="notreported-names"></div>
             </div>
+
+            <!-- WHO SAID THEY ARE COMING. The planning block, and the only
+                 one read days ahead of the night: the headcount decides how
+                 many tables go up, and whether the stack has to come down
+                 because there are not enough chips for that many opening
+                 buy-ins. So it renders for a draft night too, and disappears
+                 once the night is settled, when the entries are the record
+                 and an intention is history.
+
+                 There is deliberately no control in here. set_rsvp() always
+                 acts on the caller, so no organiser can answer for anybody,
+                 in this console or anywhere else. The tool for putting a
+                 player into a night is "Check someone in" further down.
+
+                 js/admin.js replaces the whole of #rsvp-admin-body, so the
+                 skeleton and everything that follows it go together. The
+                 message line sits outside it, so a failed refresh can speak
+                 without the block being rewritten under it. -->
+            <section class="rsvp" id="rsvp-admin" hidden
+                     aria-labelledby="rsvp-admin-title"
+                     style="margin-bottom: var(--space-lg);">
+              <h3 class="card__title" id="rsvp-admin-title">Who said they are coming</h3>
+              <div id="rsvp-admin-body">
+                <p class="visually-hidden" role="status">Loading the headcount.</p>
+                <div class="skeleton-table" aria-hidden="true">
+                  <div class="skeleton-table__row">
+                    <span class="skeleton skeleton--name"></span>
+                    <span class="skeleton skeleton--num"></span>
+                  </div>
+                  <div class="skeleton-table__row">
+                    <span class="skeleton skeleton--name"></span>
+                    <span class="skeleton skeleton--num"></span>
+                  </div>
+                </div>
+              </div>
+              <p class="rsvp__msg" id="rsvp-admin-msg" role="status" aria-live="polite"></p>
+            </section>
 
             <!-- Numbers of the night -->
             <div class="mini-stats" id="mini-stats"></div>

@@ -66,7 +66,7 @@
                 <div class="event-card__info">
                   <h3 class="event-card__title">Fall 2026: Season Opener, Round 1</h3>
                   <div class="event-card__meta">
-                    <span>18:00 (time TBC)</span>
+                    <span>18:00 to 20:30</span>
                     <span>Blindern Campus, Nils Henrik Abels Hus, Abelstua</span>
                   </div>
                   <div class="event-card__links">
@@ -77,6 +77,47 @@
               </article>
             </noscript>
           </div>
+
+          <!-- RSVP block, cloned once per upcoming card by js/rsvp.js and
+               appended inside .event-card__info. A <template> renders
+               nothing on its own, so a page without the database (or
+               without JS) is unaffected.
+
+               Privacy: .rsvp__count is the only part anonymous visitors
+               ever see filled in. The pseudonym list is populated from
+               v_night_rsvps, which anon cannot read.
+
+               aria-live="off" is deliberate and load-bearing. This block is
+               appended INSIDE #events-upcoming, which is aria-live="polite"
+               so that the list itself announces once when js/app.js fills
+               it. js/rsvp.js then rewrites this subtree up to three times on
+               one page load (checking, then identity, then the attendee
+               list), and without this a screen reader would read the whole
+               event card out again on each pass. The status line below
+               keeps its own role="status", so the one thing worth
+               interrupting for still speaks. -->
+          <template id="rsvp-template">
+            <div class="rsvp fade-in" aria-live="off">
+              <div class="rsvp__head">
+                <p class="rsvp__count" data-rsvp="count"></p>
+                <p class="rsvp__aside" data-rsvp="aside" hidden></p>
+              </div>
+              <div class="rsvp__control" role="group" aria-label="Your answer for this night" data-rsvp="control" hidden>
+                <button type="button" class="rsvp__choice rsvp__choice--in" data-response="going" aria-pressed="false">
+                  <span class="rsvp__tick" aria-hidden="true">&#10003;</span>
+                  <span class="rsvp__choice-label">Going</span>
+                </button>
+                <button type="button" class="rsvp__choice rsvp__choice--out" data-response="not_going" aria-pressed="false">
+                  <span class="rsvp__tick" aria-hidden="true">&#10003;</span>
+                  <span class="rsvp__choice-label">Can't make it</span>
+                </button>
+              </div>
+              <a class="rsvp__signin" data-rsvp="signin" href="login.html?next=events.html" hidden>Sign in to RSVP</a>
+              <p class="rsvp__hint" data-rsvp="hint" hidden></p>
+              <p class="rsvp__msg" data-rsvp="msg" role="status" hidden></p>
+              <ul class="rsvp__list" data-rsvp="list" hidden></ul>
+            </div>
+          </template>
         </div>
       </section>
 
@@ -168,6 +209,13 @@
 
   </div>
 
+  <!-- js/app.js renders the event list from data/events.json and is the
+       baseline: everything below is an enhancement that fails silently.
+       Load order is the dependency graph, there is no build step. -->
+  <script src="js/config.js" defer></script>
+  <script src="js/vendor/supabase.js" defer></script>
   <script src="js/app.js" defer></script>
+  <script src="js/sb.js" defer></script>
+  <script src="js/rsvp.js" defer></script>
 </body>
 </html>

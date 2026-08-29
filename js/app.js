@@ -95,6 +95,12 @@
            MONTHS_LONG[d.getMonth()] + ' ' + d.getFullYear();
   }
 
+  // "18:00 to 20:30" when an event declares an end, otherwise just the start.
+  function timeRange(ev) {
+    if (!ev.time) { return ''; }
+    return ev.endTime ? ev.time + ' to ' + ev.endTime : ev.time;
+  }
+
   /* ------------------------------------------------------------------
    * Countdown (index.html)
    * ------------------------------------------------------------------ */
@@ -109,7 +115,7 @@
 
       document.getElementById('countdown-name').textContent = ev.title;
       document.getElementById('countdown-date').textContent =
-        formatDateLong(ev) + ', ' + (ev.time || '') +
+        formatDateLong(ev) + ', ' + timeRange(ev) +
         (ev.timeNote ? ' (' + ev.timeNote + ')' : '');
       document.getElementById('countdown-location').textContent = ev.location || '';
       countdownSection.style.display = '';
@@ -169,7 +175,7 @@
       links += '<a class="event-link" href="' + escapeHtml(ev.registrationUrl) +
         '" target="_blank" rel="noopener">Sign up &#8599;</a>';
     }
-    var timeStr = escapeHtml(ev.time || '') +
+    var timeStr = escapeHtml(timeRange(ev)) +
       (ev.timeNote ? ' <span class="badge badge--muted">' + escapeHtml(ev.timeNote) + '</span>' : '');
     return (
       '<article class="event-card">' +
