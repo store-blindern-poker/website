@@ -17,8 +17,7 @@ so nothing has to be finished in the room.
 2. Find tonight in the **Nights** list. Check the status pill.
 3. Press **Open night**. The pill must change to **OPEN**.
    **If you forget this, nobody can check in and the night stops before it starts.**
-4. Press **Display code**. A full-screen QR and a 5-character code appear. That is what goes
-   on the TV.
+4. Press **Show the code on the TV**. A full-screen QR and a 5-character code appear.
 5. Glance at **stack size** and **attendance bonus** in the night row. Normally
    `10,000` and `5,000`. Lower the stack only if there are not enough chips, and do it now,
    not after people have checked in.
