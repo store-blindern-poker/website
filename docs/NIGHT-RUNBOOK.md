@@ -1,5 +1,8 @@
 # Running a night
 
+**A printable illustrated version of this page is at [SBP-Running-A-Night.pdf](SBP-Running-A-Night.pdf).**
+Print that one for the chip box; this file is the text source.
+
 Print this. Keep it in the chip box. It assumes nothing except that you can sign in.
 
 Nights run Fridays, 18:00 to 20:30. Reporting stays open until 09:00 the next morning,
