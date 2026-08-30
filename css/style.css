@@ -3018,8 +3018,15 @@ select.input {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 16vmin;
+  /* Sized off the WIDTH, not vmin, and never allowed to wrap. At 16vmin on a
+     900px-wide screen the five characters broke onto two lines, which is the
+     one thing this element must never do: it is read across a room, off a TV
+     nobody controls the resolution of. min() keeps it large on a big display
+     and shrinks it to fit a narrow one instead of breaking. */
+  font-size: min(16vmin, 15vw);
   line-height: 1;
+  white-space: nowrap;
+  max-width: 100%;
   letter-spacing: 0.08em;          /* deliberate positive tracking: a code,
                                       not a headline. Separates the glyphs. */
   text-indent: 0.08em;
