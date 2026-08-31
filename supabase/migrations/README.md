@@ -13,6 +13,9 @@ so the two should never drift.
 | `0005_pseudonym_change_deadline.sql` | `change_pseudonym()` and the per-season lock |
 | `0006_reporting_closes_next_morning.sql` | `reports_close_at`, defaults to 09:00 the next day |
 | `0007_live_rebuy.sql` | Top-ups as a live transaction at the bank |
+| `0008_roles_directory_names.sql` | Super admins, the member directory, names |
+| `0009_split_first_last_name.sql` | First and last name as separate fields |
+| `0010_grant_norm_pseudonym.sql` | Fixes the directory: a view needs EXECUTE on the functions it calls |
 
 ## The rule that matters
 
