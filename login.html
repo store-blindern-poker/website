@@ -98,18 +98,9 @@
                        autocomplete="email" inputmode="email" required
                        placeholder="you@example.com">
               </div>
-              <!-- Signup only; js/login.js shows this on the Create account tab. -->
-              <div class="field" id="fullname-field" hidden>
-                <label class="label" for="auth-fullname">Full name</label>
-                <input class="input" id="auth-fullname" name="name" type="text"
-                       autocomplete="name" maxlength="80" spellcheck="false"
-                       placeholder="Your real name">
-                <p class="help" id="fullname-help">
-                  Only organisers ever see this. We keep it for membership
-                  records: student association funding is counted in real
-                  members. Your pseudonym is the name everyone else sees.
-                </p>
-              </div>
+              <!-- No name field here on purpose: the name is asked for on its
+                   own step, after the pseudonym is claimed. Two name boxes on
+                   one screen is how a pseudonym ends up in the records. -->
               <div class="field">
                 <label class="label" for="auth-password">Password</label>
                 <input class="input" id="auth-password" name="password" type="password"
@@ -163,19 +154,6 @@
                 <p class="help">Unclaimed pseudonyms from past seasons that match:</p>
                 <div class="chip-suggestions" id="claim-suggestions"></div>
               </div>
-              <!-- Shown by js/login.js only when the full name was not already
-                   collected at signup (e.g. Google sign-in). -->
-              <div class="field" id="claim-fullname-field" hidden>
-                <label class="label" for="claim-fullname">Full name</label>
-                <input class="input" id="claim-fullname" type="text"
-                       autocomplete="name" maxlength="80" spellcheck="false"
-                       placeholder="Your real name">
-                <p class="help" id="claim-fullname-help">
-                  Only organisers ever see this. We keep it for membership
-                  records: student association funding is counted in real
-                  members. Your pseudonym is the name everyone else sees.
-                </p>
-              </div>
               <button class="btn btn--primary btn--block btn--lg" id="claim-submit" type="submit"
                       style="margin-top: var(--space-lg);">Claim pseudonym</button>
               <p class="form-msg" id="claim-msg" role="status" aria-live="polite"></p>
@@ -183,6 +161,62 @@
           </div>
           <div class="toolbar toolbar--right" style="margin-top: var(--space-md);">
             <button class="btn btn--ghost" id="claim-signout" type="button">Sign out</button>
+          </div>
+        </div>
+
+        <!-- STATE: pseudonym claimed, name not recorded yet.
+             Its own step on purpose: the pseudonym is settled and visible
+             above the fields, so "name" can only mean the other one. -->
+        <div id="state-name" hidden>
+          <div class="card card--accent">
+            <h2 class="card__title">One last thing: your name</h2>
+            <div class="whoami">
+              <div>
+                <div class="whoami__label">Your pseudonym</div>
+                <div class="whoami__name" id="name-pseudonym">…</div>
+              </div>
+              <span class="badge badge--ok">claimed</span>
+            </div>
+            <p class="card__text" style="margin-bottom: var(--space-lg);">
+              That is your name at the tables, and the only one anyone else
+              ever sees. This part is just for the records: only organisers
+              read it, and we keep it because student association funding is
+              counted in real members.
+            </p>
+            <form id="name-form" novalidate>
+              <div class="field-row">
+                <div class="field">
+                  <label class="label" for="name-first">First name</label>
+                  <input class="input" id="name-first" type="text"
+                         autocomplete="given-name" maxlength="40" spellcheck="false" required>
+                </div>
+                <div class="field">
+                  <label class="label" for="name-last">Last name</label>
+                  <input class="input" id="name-last" type="text"
+                         autocomplete="family-name" maxlength="40" spellcheck="false" required>
+                </div>
+                <p class="help" id="name-help">
+                  Your real name, the one on your student card.
+                </p>
+              </div>
+              <button class="btn btn--primary btn--block btn--lg" id="name-submit" type="submit">Save my name</button>
+              <p class="form-msg" id="name-msg" role="status" aria-live="polite"></p>
+            </form>
+            <!-- Revealed by js/login.js only after a save has actually failed.
+                 Nobody may be stranded on this step: a bad signal at the venue,
+                 or a real name the server reads as the pseudonym, must never
+                 stand between a member and checking in. -->
+            <div id="name-later-wrap" hidden style="margin-top: var(--space-md);">
+              <p class="help" style="margin-bottom: var(--space-sm);">
+                Still not going through? Carry on without it. An organiser will
+                take your name at the door, and we will ask again next time you
+                sign in.
+              </p>
+              <button class="btn btn--ghost btn--block" id="name-later" type="button">Carry on without it</button>
+            </div>
+          </div>
+          <div class="toolbar toolbar--right" style="margin-top: var(--space-md);">
+            <button class="btn btn--ghost" id="name-signout" type="button">Sign out</button>
           </div>
         </div>
 
@@ -196,13 +230,6 @@
               </div>
               <span class="badge badge--gold mono">Fall 2026</span>
             </div>
-            <!-- Quiet note when set_my_name could not be reached. Shown by
-                 js/login.js; the queued name retries by itself. -->
-            <p class="help" id="name-note" role="status" hidden>
-              We could not save your full name just now. Nothing else is
-              affected: it will retry on its own next time you open this
-              page, and an organiser can also add it for you.
-            </p>
             <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
               <a class="btn btn--primary btn--lg btn--block" href="report.html">Tonight: check in &amp; report</a>
               <a class="btn btn--secondary btn--block" href="leaderboard.html">Leaderboard</a>

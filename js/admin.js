@@ -1082,7 +1082,8 @@
    * above works fine with no directory at all.
    * ------------------------------------------------------------------ */
 
-  var DIR_COLS = 'member_id,pseudonym,real_name,email,joined_on,is_active,claimed,is_admin,is_super';
+  var DIR_COLS = 'member_id,pseudonym,real_name,first_name,last_name,' +
+    'name_looks_like_pseudonym,email,joined_on,is_active,claimed,is_admin,is_super';
 
   function isSuperAdmin() {
     var c = S.client();
@@ -1121,6 +1122,36 @@
       });
   }
 
+  /* The name cell. Members now give a first name and a last name on their own
+   * step, so where the split exists it is spelled out under the full name: an
+   * organiser checking a record against a student card should not have to
+   * guess which half is which. Rows the database flagged
+   * (name_looks_like_pseudonym) are the ones stored before that step existed,
+   * where somebody typed their pseudonym into the name box. They need a human
+   * to ask and fix, so they are badged, not hidden. */
+  function nameCell(m) {
+    var full = String(m.real_name || '').trim();
+    var first = String(m.first_name || '').trim();
+    var last = String(m.last_name || '').trim();
+    var out = '';
+
+    if (full) {
+      out += '<div>' + S.escapeHtml(full) + '</div>';
+    } else {
+      out += '<div style="color: var(--cream-mute);">no name yet</div>';
+    }
+    if (first || last) {
+      out += '<div class="mono" style="font-size: 0.75rem; color: var(--cream-mute);">' +
+        'first: ' + S.escapeHtml(first || '?') +
+        ' · last: ' + S.escapeHtml(last || '?') + '</div>';
+    }
+    if (m.name_looks_like_pseudonym) {
+      out += '<span class="badge badge--warn" style="margin-top: 4px;">' +
+        'looks like their pseudonym</span>';
+    }
+    return out;
+  }
+
   function renderDirectory() {
     if (ctx.dirState !== 'ready') { return; }
     var body = $('members-body');
@@ -1129,9 +1160,11 @@
 
     var total = ctx.directory.length;
     var claimed = ctx.directory.filter(function (m) { return m.claimed; }).length;
+    var flagged = ctx.directory.filter(function (m) { return m.name_looks_like_pseudonym; }).length;
     $('members-count').textContent = total
       ? S.fmt(total) + (total === 1 ? ' member, ' : ' members, ') +
-        (claimed === 1 ? '1 with an account' : S.fmt(claimed) + ' with accounts')
+        (claimed === 1 ? '1 with an account' : S.fmt(claimed) + ' with accounts') +
+        (flagged ? ', ' + S.fmt(flagged) + (flagged === 1 ? ' name to check' : ' names to check') : '')
       : 'No members yet';
 
     if (!total) {
@@ -1143,7 +1176,9 @@
     var q = String($('members-search').value || '').trim().toLowerCase();
     var rows = !q ? ctx.directory : ctx.directory.filter(function (m) {
       return String(m.pseudonym || '').toLowerCase().indexOf(q) !== -1 ||
-             String(m.real_name || '').toLowerCase().indexOf(q) !== -1;
+             String(m.real_name || '').toLowerCase().indexOf(q) !== -1 ||
+             String(m.first_name || '').toLowerCase().indexOf(q) !== -1 ||
+             String(m.last_name || '').toLowerCase().indexOf(q) !== -1;
     });
 
     if (!rows.length) {
@@ -1182,7 +1217,7 @@
 
       return '<tr>' +
         '<td>' + S.escapeHtml(m.pseudonym || '(no pseudonym)') + '</td>' +
-        '<td>' + S.escapeHtml(m.real_name || '') + '</td>' +
+        '<td>' + nameCell(m) + '</td>' +
         '<td>' + S.escapeHtml(m.email || '') + '</td>' +
         '<td><span class="mono" style="font-size: 0.85rem;">' +
           S.escapeHtml(m.joined_on || '') + '</span></td>' +

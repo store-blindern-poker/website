@@ -780,6 +780,28 @@ code, kbd, samp {
 
 .field { margin-bottom: var(--space-lg); }
 
+/* Two fields that are one answer: first name and last name. Stacked on a
+   phone, side by side once there is room, and the pair takes the spacing of a
+   single field so a form does not gap open where it splits. A .help inside
+   the row runs the full width and stays close to the inputs it explains. */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.field-row > .field { margin-bottom: 0; }
+
+.field-row > .help {
+  grid-column: 1 / -1;
+  margin-top: calc(var(--space-sm) * -1);
+}
+
+@media (min-width: 420px) {
+  .field-row { grid-template-columns: 1fr 1fr; }
+}
+
 .label {
   display: block;
   font-size: 0.85rem;

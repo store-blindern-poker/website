@@ -231,6 +231,12 @@
     if (code === 'P0003' || /night_settled/i.test(msg)) {
       return 'Tonight has already been settled. Show your numbers to an organiser instead.';
     }
+    // Raised with the default P0001 by set_my_name() and
+    // admin_set_member_details(). Checked BEFORE the P0001 line below, or a
+    // long name would be answered with "the night is not open".
+    if (/name is too long/i.test(msg)) {
+      return 'That name is too long. Use the name on your student card, nothing extra.';
+    }
     if (code === 'P0001' || /night is not open/i.test(msg)) {
       return 'The night is not open for reporting right now. An organiser can enter it for you.';
     }
@@ -239,6 +245,12 @@
     }
     if (code === 'P0011') {
       return 'That code doesn\'t match tonight. Check the screen at the front, or ask an organiser to check you in.';
+    }
+    if (code === 'P0040') {
+      return 'That is your pseudonym, not your name. Put the name on your student card here: only organisers see it.';
+    }
+    if (code === 'P0041') {
+      return 'We need both a first and a last name.';
     }
     if (code === '42501' || /admin only/i.test(msg)) {
       return 'That action is for organisers only.';
