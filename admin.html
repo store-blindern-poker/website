@@ -475,10 +475,26 @@
               has a pseudonym stored where the real name should be, from before
               that step existed. Worth asking them at the next night.
             </p>
-            <div class="field">
-              <label class="label visually-hidden" for="members-search">Search by pseudonym or name</label>
-              <input class="input" id="members-search" type="search" autocomplete="off"
-                     autocapitalize="off" placeholder="Search by pseudonym or name…">
+            <!-- Removing a member is a soft delete. This paragraph is the
+                 promise the confirmation dialog repeats: an organiser who
+                 thinks the button destroys results will keep a wrong roster
+                 instead of fixing it. -->
+            <p class="help" id="members-remove-help" style="margin-bottom: var(--space-md);">
+              Removing a member hides them from this list, the leaderboard and
+              the pickers. Nothing is deleted: their nights stay in the database
+              and Restore brings all of it back. The one catch is the pseudonym,
+              which is released when they go, so somebody else can claim it.
+            </p>
+            <!-- Unhidden by js/admin.js only when somebody is removed, and it
+                 carries the count either way it is pointing. -->
+            <div class="members-toolbar">
+              <div class="field" style="margin-bottom: 0; flex: 1 1 16rem;">
+                <label class="label visually-hidden" for="members-search">Search by pseudonym or name</label>
+                <input class="input" id="members-search" type="search" autocomplete="off"
+                       autocapitalize="off" placeholder="Search by pseudonym or name…">
+              </div>
+              <button type="button" class="btn btn--secondary" id="members-removed-toggle"
+                      aria-pressed="false" hidden>Show removed</button>
             </div>
             <div class="table-wrapper">
               <table class="table table--compact">

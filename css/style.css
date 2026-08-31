@@ -2940,6 +2940,41 @@ select.input {
 .table--compact th,
 .table--compact td { padding: var(--space-sm) var(--space-md); }
 
+/* ---- Member directory: search, the removed toggle, removed rows --------
+   Search and the "Show removed" toggle sit on one line, and wrap onto two on
+   a phone rather than shrinking the search box to nothing.
+
+   A removed member is muted, never struck through and never clay red:
+   removing is reversible, the row is out of the way, not damaged. The muting
+   is reinforcement only. The word on the badge carries the meaning, so the
+   row still reads as removed in a screenshot, in sunlight, or to somebody who
+   does not see the contrast step at all. */
+.members-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.members-toolbar .btn { flex: 0 0 auto; }
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* --cream-dim, not --cream-mute. A removed row still holds the pseudonym,
+   the real name and the email an organiser has to read to be sure they are
+   restoring the right person, so it is secondary text, not a caption.
+   --cream-mute on --surface measures 4.0:1, under the 4.5:1 floor for body
+   text; --cream-dim measures 7.5:1 and is still a clear step down from the
+   --cream of a live row. The captions inside the row keep --cream-mute, the
+   same as on every other row, so the hierarchy inside the cell survives. */
+.table tbody tr.row--removed td { color: var(--cream-dim); }
+
 /* ---- Deviation figure -------------------------------------------------- */
 .deviation--bad { color: var(--brass); font-weight: 600; }
 .deviation--zero { color: var(--felt-lift); }

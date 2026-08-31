@@ -43,7 +43,8 @@
     pollTimer: null,
     isSuper: false,   // is_super_admin(), asked once at boot
     directory: [],    // v_member_directory rows (admin-only names + emails)
-    dirState: 'idle'  // idle | ready | failed (skeleton is the idle look)
+    dirState: 'idle', // idle | ready | failed (skeleton is the idle look)
+    dirShowRemoved: false  // false = current members (the default), true = removed only
   };
 
   function msg(el, text, kind) {
@@ -1080,10 +1081,19 @@
    * the server refuses to touch them anyway, so their action cell is just
    * a muted note. Every failure stays inside this section: the console
    * above works fine with no directory at all.
+   *
+   * Removing a member is a SOFT delete (delete_member), so this list has two
+   * views: the current members, which is the default, and the removed ones,
+   * reached by the toggle above the table. Both come out of the same single
+   * fetch, filtered on deleted_at here, so switching costs no query. The
+   * removed count sits on the toggle whichever view you are in: a removed
+   * member is still a member of the club's records, and forgetting they are
+   * there is the failure this design is trying to avoid.
    * ------------------------------------------------------------------ */
 
   var DIR_COLS = 'member_id,pseudonym,real_name,first_name,last_name,' +
-    'name_looks_like_pseudonym,email,joined_on,is_active,claimed,is_admin,is_super';
+    'name_looks_like_pseudonym,email,joined_on,is_active,deleted_at,' +
+    'nights_recorded,claimed,is_admin,is_super';
 
   function isSuperAdmin() {
     var c = S.client();
@@ -1152,29 +1162,65 @@
     return out;
   }
 
+  function isRemoved(m) { return !!m.deleted_at; }
+  function liveMembers() { return ctx.directory.filter(function (m) { return !isRemoved(m); }); }
+  function removedMembers() { return ctx.directory.filter(isRemoved); }
+
+  /* deleted_at is a timestamptz. The day is all an organiser needs here, and
+   * the ISO prefix is the same shape as joined_on in the column beside it. */
+  function removedOn(m) { return String(m.deleted_at || '').slice(0, 10); }
+
+  function nightsPhrase(n) {
+    var v = Number(n) || 0;
+    return S.fmt(v) + (v === 1 ? ' night' : ' nights');
+  }
+
   function renderDirectory() {
     if (ctx.dirState !== 'ready') { return; }
     var body = $('members-body');
 
     S.show($('members-actions-th'), !!ctx.isSuper);
 
-    var total = ctx.directory.length;
-    var claimed = ctx.directory.filter(function (m) { return m.claimed; }).length;
-    var flagged = ctx.directory.filter(function (m) { return m.name_looks_like_pseudonym; }).length;
+    var live = liveMembers();
+    var removed = removedMembers();
+
+    // Nothing removed means nothing to switch to. If the last removed member
+    // was just restored, fall back to the current list rather than showing an
+    // empty view with no way out.
+    if (!removed.length) { ctx.dirShowRemoved = false; }
+
+    var toggle = $('members-removed-toggle');
+    S.show(toggle, removed.length > 0);
+    toggle.setAttribute('aria-pressed', ctx.dirShowRemoved ? 'true' : 'false');
+    toggle.textContent = ctx.dirShowRemoved
+      ? 'Back to current members (' + S.fmt(live.length) + ')'
+      : 'Show removed (' + S.fmt(removed.length) + ')';
+
+    var total = live.length;
+    var claimed = live.filter(function (m) { return m.claimed; }).length;
+    var flagged = live.filter(function (m) { return m.name_looks_like_pseudonym; }).length;
+    var removedNote = removed.length ? ', ' + S.fmt(removed.length) + ' removed' : '';
     $('members-count').textContent = total
       ? S.fmt(total) + (total === 1 ? ' member, ' : ' members, ') +
         (claimed === 1 ? '1 with an account' : S.fmt(claimed) + ' with accounts') +
-        (flagged ? ', ' + S.fmt(flagged) + (flagged === 1 ? ' name to check' : ' names to check') : '')
-      : 'No members yet';
+        (flagged ? ', ' + S.fmt(flagged) + (flagged === 1 ? ' name to check' : ' names to check') : '') +
+        removedNote
+      : (removed.length ? 'No current members' + removedNote : 'No members yet');
 
-    if (!total) {
+    var pool = ctx.dirShowRemoved ? removed : live;
+
+    if (!pool.length) {
       body.innerHTML = '<tr><td colspan="' + dirColspan() +
-        '" style="color: var(--text-tertiary);">The directory came back empty.</td></tr>';
+        '" style="color: var(--text-tertiary);">' +
+        (removed.length
+          ? 'Every member on the roster has been removed. "Show removed" lists them, and Restore puts one back.'
+          : 'The directory came back empty.') +
+        '</td></tr>';
       return;
     }
 
     var q = String($('members-search').value || '').trim().toLowerCase();
-    var rows = !q ? ctx.directory : ctx.directory.filter(function (m) {
+    var rows = !q ? pool : pool.filter(function (m) {
       return String(m.pseudonym || '').toLowerCase().indexOf(q) !== -1 ||
              String(m.real_name || '').toLowerCase().indexOf(q) !== -1 ||
              String(m.first_name || '').toLowerCase().indexOf(q) !== -1 ||
@@ -1183,51 +1229,91 @@
 
     if (!rows.length) {
       body.innerHTML = '<tr><td colspan="' + dirColspan() +
-        '" style="color: var(--text-tertiary);">No member matches "' +
+        '" style="color: var(--text-tertiary);">No ' +
+        (ctx.dirShowRemoved ? 'removed member' : 'current member') + ' matches "' +
         S.escapeHtml(q) + '".</td></tr>';
       return;
     }
 
     body.innerHTML = rows.map(function (m) {
+      var gone = isRemoved(m);
       var badges = [];
+      // "removed" leads, and it is a word, not a colour: the muted row alone
+      // would not survive a screenshot, a colour-blind reader, or a phone in
+      // sunlight across the table.
+      if (gone) { badges.push('<span class="badge badge--muted">removed</span>'); }
       if (m.is_super) { badges.push('<span class="badge badge--gold">super admin</span>'); }
       else if (m.is_admin) { badges.push('<span class="badge badge--gold">admin</span>'); }
       if (!m.claimed) { badges.push('<span class="badge badge--muted">no account yet</span>'); }
-      if (!m.is_active) { badges.push('<span class="badge badge--muted">inactive</span>'); }
+      // Removal sets is_active false itself, so on a removed row "inactive"
+      // would only repeat the badge above it.
+      if (!m.is_active && !gone) { badges.push('<span class="badge badge--muted">inactive</span>'); }
+
+      var status = badges.join(' ');
+      // Reads on from the badge above it: "removed / since 2026-08-30". The
+      // word itself is not repeated, because the badge and this line are one
+      // sentence to anyone reading the cell, screen reader included.
+      if (gone) {
+        status += '<div class="mono" style="font-size: 0.75rem; color: var(--cream-mute); margin-top: 4px;">' +
+          'since ' + S.escapeHtml(removedOn(m)) +
+          (Number(m.nights_recorded) > 0
+            ? ' · ' + S.escapeHtml(nightsPhrase(m.nights_recorded)) + ' on record'
+            : '') + '</div>';
+      }
 
       var action = '';
       if (ctx.isSuper) {
-        var cell = '';
-        if (m.is_super) {
+        var bits = [];
+        if (gone) {
+          bits.push('<button type="button" class="btn btn--secondary" style="padding: 6px 12px;"' +
+            ' data-member-act="restore" data-member="' + S.escapeHtml(m.member_id) +
+            '">Restore</button>');
+        } else if (m.is_super) {
           // Managed in the SQL editor only; the server refuses anyway.
-          cell = '<span style="color: var(--cream-mute); font-size: 0.85rem;">super admin</span>';
+          bits.push('<span style="color: var(--cream-mute); font-size: 0.85rem;">super admin</span>');
         } else if (m.is_admin) {
-          cell = '<button type="button" class="btn btn--danger" style="padding: 6px 12px;"' +
+          bits.push('<button type="button" class="btn btn--danger" style="padding: 6px 12px;"' +
             ' data-role-act="revoke" data-member="' + S.escapeHtml(m.member_id) +
-            '">Remove organiser</button>';
+            '">Remove organiser</button>');
         } else if (m.claimed) {
-          cell = '<button type="button" class="btn btn--secondary" style="padding: 6px 12px;"' +
+          bits.push('<button type="button" class="btn btn--secondary" style="padding: 6px 12px;"' +
             ' data-role-act="grant" data-member="' + S.escapeHtml(m.member_id) +
-            '">Make organiser</button>';
+            '">Make organiser</button>');
         }
-        // Unclaimed non-admins get an empty cell: grant_admin refuses
-        // unclaimed members, so the button would only ever be a dead end.
-        action = '<td>' + cell + '</td>';
+        // Organisers get no Remove button: delete_member refuses them (P0051)
+        // until their organiser access is taken away, and the same rule keeps
+        // the button off your own row, since everyone reading this page is an
+        // organiser. Unclaimed non-admins still get Remove, unlike the role
+        // button: a roster row entered by mistake is exactly what it is for.
+        // "Remove member", not "Remove". The column already carries a clay
+        // "Remove organiser" on other rows, and of the two this is the bigger
+        // step, so it must not be the one with the shorter, vaguer label.
+        if (!gone && !m.is_admin && !m.is_super) {
+          bits.push('<button type="button" class="btn btn--danger" style="padding: 6px 12px;"' +
+            ' data-member-act="remove" data-member="' + S.escapeHtml(m.member_id) +
+            '">Remove member</button>');
+        }
+        action = '<td><div class="row-actions">' + bits.join('') + '</div></td>';
       }
 
-      return '<tr>' +
+      return '<tr' + (gone ? ' class="row--removed"' : '') + '>' +
         '<td>' + S.escapeHtml(m.pseudonym || '(no pseudonym)') + '</td>' +
         '<td>' + nameCell(m) + '</td>' +
         '<td>' + S.escapeHtml(m.email || '') + '</td>' +
         '<td><span class="mono" style="font-size: 0.85rem;">' +
           S.escapeHtml(m.joined_on || '') + '</span></td>' +
-        '<td>' + badges.join(' ') + '</td>' +
+        '<td>' + status + '</td>' +
         action +
       '</tr>';
     }).join('');
   }
 
   $('members-search').addEventListener('input', renderDirectory);
+
+  $('members-removed-toggle').addEventListener('click', function () {
+    ctx.dirShowRemoved = !ctx.dirShowRemoved;
+    renderDirectory();
+  });
 
   /* 42501 (not a super admin) and the unclaimed-member refusal both carry a
    * server-written sentence that says exactly what happened; friendlyError's
@@ -1275,6 +1361,136 @@
   });
 
   /* ------------------------------------------------------------------
+   * Remove and restore a member (super admins only)
+   *
+   * delete_member() is a soft delete: deleted_at is stamped, is_active goes
+   * false, and not one row is erased. The confirmation says so, because an
+   * organiser who believes the button destroys results will never press it,
+   * and will keep a wrong roster instead.
+   *
+   * Two consequences are not obvious from the word "remove", so both are
+   * spelled out before anything happens:
+   *   - the pseudonym is released, and somebody else can take it. That is
+   *     the one part restore cannot promise to undo.
+   *   - a member with results drops off the leaderboard until restored. The
+   *     confirmation quotes the number of nights, from nights_recorded, so
+   *     the size of the change is on screen rather than in someone's head.
+   * ------------------------------------------------------------------ */
+
+  /* Pseudonym, and the real name after it when there is one worth adding.
+   * Rows flagged name_looks_like_pseudonym hold the pseudonym in the name
+   * field, from before the name step existed, and those are exactly the rows
+   * an organiser removes, so "Remove Nine High (Nine High)?" would be the
+   * common case rather than a corner one. Same comparison the database uses
+   * for the flag. */
+  function whoLabel(m) {
+    var real = String(m.real_name || '').trim();
+    if (!real || S.normPseudonym(real) === S.normPseudonym(m.pseudonym)) {
+      return m.pseudonym;
+    }
+    return m.pseudonym + ' (' + real + ')';
+  }
+
+  function removeConfirmText(m) {
+    var nights = Number(m.nights_recorded) || 0;
+    var t = 'Remove ' + whoLabel(m) + ' from the club?\n\n' +
+      'Nothing is deleted. Their record stays in the database and you can put ' +
+      'them back from this same list, under "Show removed".\n\n' +
+      'Their pseudonym "' + m.pseudonym + '" is released, so somebody else can ' +
+      'claim it. That is the one part you cannot simply undo.';
+    if (nights > 0) {
+      t += '\n\nThey have ' + nightsPhrase(nights) + ' on record. Those results stay ' +
+        'in the database, but they drop off the leaderboard until you restore them.';
+    }
+    return t;
+  }
+
+  function restoreConfirmText(m) {
+    var nights = Number(m.nights_recorded) || 0;
+    return 'Restore ' + whoLabel(m) + '?\n\n' +
+      'They go back on the directory' +
+      (nights > 0
+        ? ' and back on the leaderboard with ' +
+          (nights === 1 ? 'the night' : 'all ' + nightsPhrase(nights)) +
+          ' they have on record.'
+        : '. They have no nights on record yet.') +
+      '\n\nThis fails if somebody else has taken their pseudonym in the meantime.';
+  }
+
+  /* P0050, P0051 and P0053 are answered by friendlyError with the server's
+   * own sentence. 42501 is the exception that has to stay here: the generic
+   * line ("for organisers only") is wrong when the caller IS an organiser,
+   * just not a super admin, and delete_member says exactly that itself. */
+  function memberErrorText(err) {
+    var code = String((err && err.code) || '');
+    if (code === '42501') {
+      var said = String((err && err.message) || 'The server refused.');
+      said = said.charAt(0).toUpperCase() + said.slice(1);
+      return /[.!?]$/.test(said) ? said : said + '.';
+    }
+    return S.friendlyError(err);
+  }
+
+  /* P0053 means the pseudonym has a new holder. The server cannot name them
+   * without leaking a member id, but this list already has every row, so
+   * look the holder up and say who it is. Admin page only, so a real name
+   * may render here. */
+  function restoreErrorText(err, m) {
+    if (String((err && err.code) || '') !== 'P0053') { return memberErrorText(err); }
+    var key = S.normPseudonym(m.pseudonym);
+    var holder = ctx.directory.filter(function (x) {
+      return !isRemoved(x) && x.member_id !== m.member_id &&
+        S.normPseudonym(x.pseudonym) === key;
+    })[0];
+    if (!holder) { return memberErrorText(err); }
+    return 'The pseudonym "' + m.pseudonym + '" is taken now: it belongs to ' +
+      (holder.real_name ? holder.real_name : 'another member') +
+      '. Rename one of them first, then restore.';
+  }
+
+  $('members-body').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-member-act]');
+    if (!btn) { return; }
+    var id = btn.getAttribute('data-member');
+    var m = ctx.directory.filter(function (x) { return x.member_id === id; })[0];
+    if (!m) { return; }
+    var act = btn.getAttribute('data-member-act');
+    if (!window.confirm(act === 'remove' ? removeConfirmText(m) : restoreConfirmText(m))) { return; }
+    btn.disabled = true;
+    msg($('members-msg'), (act === 'remove' ? 'Removing ' : 'Restoring ') +
+      m.pseudonym + '…', 'busy');
+    // delete_member returns void, so PostgREST answers 204 with no body and
+    // rpc() resolves with undefined. That is success, not a failure.
+    rpc(act === 'remove' ? 'delete_member' : 'restore_member', { p_member_id: id })
+      .then(function () {
+        // The ROSTER has to be reloaded too, not just the directory. ctx.members
+        // feeds the pickers: the member-list datalist, proxy check-in, proxy
+        // report and bulk paste. Without this a removed member stays offerable
+        // there until somebody presses Refresh, and check_in() does not filter
+        // on is_active, so they can be seated into tonight's night and then
+        // never appear on the leaderboard. The restore direction is the one
+        // that bites at the door: a member you just put back would stay
+        // unfindable in the check-in box.
+        //
+        // Refresh first: loadDirectory() clears the message line on success,
+        // so the confirmation has to land after it.
+        return Promise.all([
+          loadDirectory(),
+          loadMembers().catch(function () { /* keep the last good roster */ })
+        ]).then(function () {
+          msg($('members-msg'), act === 'remove'
+            ? m.pseudonym + ' removed. Nothing was deleted: "Show removed" puts them back ✓'
+            : m.pseudonym + ' is back on the directory and the leaderboard ✓', 'ok');
+        });
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        msg($('members-msg'), act === 'remove'
+          ? memberErrorText(err) : restoreErrorText(err, m), 'error');
+      });
+  });
+
+  /* ------------------------------------------------------------------
    * Refresh + boot
    * ------------------------------------------------------------------ */
 
@@ -1290,13 +1506,26 @@
     S.signOut().then(function () { window.location.replace('login.html'); });
   });
 
+  /* S.isAdmin() answers false on ANY failure, which is right for the pages
+   * that only use it to decide whether to show an organiser link. Here it is
+   * the gate for the whole console, and "the database is unreachable" must
+   * not be rendered as "this account isn't on the organiser list": an
+   * organiser told that at 18:00 on a Friday goes hunting for the wrong
+   * problem. is_admin() returns a plain boolean and never raises for a
+   * non-organiser, so a rejection here really does mean the call failed, and
+   * it falls through to boot's catch, which says the console could not load
+   * and to refresh. */
+  function amIAdmin() {
+    return rpc('is_admin').then(function (v) { return v === true; });
+  }
+
   function boot() {
     if (!S.configured()) {
       showState('state-config');
       return;
     }
     S.requireAuth('admin.html').then(function () {
-      return S.isAdmin();
+      return amIAdmin();
     }).then(function (admin) {
       if (!admin) {
         showState('state-denied');

@@ -252,6 +252,17 @@
     if (code === 'P0041') {
       return 'We need both a first and a last name.';
     }
+    /* Removing and restoring a member (delete_member, restore_member).
+     * P0050 you cannot remove your own account
+     * P0051 that member is an organiser, remove their access first
+     * P0053 somebody else now uses that pseudonym
+     * All three are written server-side for the one person who sees them, an
+     * organiser mid-task, and each names the fix. Rewriting them here would
+     * only make them vaguer, so they pass through with a capital letter. */
+    if (code === 'P0050' || code === 'P0051' || code === 'P0053') {
+      var said = msg.charAt(0).toUpperCase() + msg.slice(1);
+      return /[.!?]$/.test(said) ? said : said + '.';
+    }
     if (code === '42501' || /admin only/i.test(msg)) {
       return 'That action is for organisers only.';
     }
