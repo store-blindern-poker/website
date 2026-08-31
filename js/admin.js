@@ -4,7 +4,9 @@
  * server-side anyway (SECURITY DEFINER RPCs self-check), the client gate
  * only decides what to render.
  *
- * RPCs used here: create_night, open_night, close_reporting, settle_night,
+ * RPCs used here: create_night (TEN arguments since migration 0012, the
+ * 8-argument version was dropped), update_night (NULL means "leave this
+ * field alone", '' clears a text field), open_night, close_reporting, settle_night,
  * check_in(p_night_id, p_member_id), admin proxy path, no p_code needed,
  * report_entry(p_night_id, p_final_stack, p_rebuy_chips, p_member_id,
  * p_note), add_adjustment(p_night_id, p_member_id, p_delta_points, p_kind,
@@ -198,6 +200,9 @@
     msg($('lifecycle-msg'), '', '');
     msg($('adjust-msg'), '', '');
     S.show($('settle-confirm'), false);
+    // Whatever was typed belonged to the night you just left. The form
+    // refills from the new one when it is opened again.
+    closeEdit();
     renderNights();
     S.show($('night-detail'), true);
     renderDetail();
@@ -242,6 +247,13 @@
     var pill = $('detail-status');
     pill.textContent = n.status;
     pill.className = 'status-pill status-pill--' + n.status;
+
+    renderVenue(n);
+    // The edit controls follow the same rule the server does: everything
+    // except a settled or void night can be edited (P0060 is the refusal).
+    S.show($('toggle-edit'), editableNight(n));
+    if (!editableNight(n)) { closeEdit(); }
+    syncEditFrozen();
 
     // Lifecycle buttons by status. Draft → open. Open → close/settle.
     // Reconciling → settle (or reopen). Settled → reopen for corrections.
@@ -342,6 +354,243 @@
       '<div class="mini-stat__value">' + S.fmt(value) + '</div>' +
       '<div class="mini-stat__label">' + S.escapeHtml(label) + '</div></div>';
   }
+
+  /* ------------------------------------------------------------------
+   * The venue, and editing a night
+   *
+   * Until migration 0012 the room lived in data/events.json, so changing it
+   * meant a git commit and a deploy: impossible for a non-technical
+   * successor, and impossible for anybody standing in a corridor at 17:40
+   * when the room has just moved. It is a database field now, and the public
+   * events page reads it from v_upcoming_nights, so confirming a room is a
+   * form on this page.
+   *
+   * update_night() reads NULL as "leave this alone", so only changed fields
+   * are sent, and an EMPTY STRING as "clear this field". Two refusals are
+   * handled by name (both via S.friendlyError, which passes the server's own
+   * sentence through):
+   *   P0060 the night is settled or void, reopen it first
+   *   P0061 somebody has checked in, so the date, stack size, attendance
+   *         bonus and the two scoring switches are frozen
+   *
+   * The frozen fields are DISABLED here rather than left open to be rejected
+   * on save. The freeze is a fact about the night, not an error to discover
+   * afterwards: entries were booked against those numbers at check-in, and
+   * moving them now would score the early players by one rule and the late
+   * ones by another. Title, location, map link and notes never freeze, which
+   * is right, because they are the fields that change late.
+   * ------------------------------------------------------------------ */
+
+  function venueOf(n) { return String((n && n.location) || '').trim(); }
+
+  /* An empty venue and a literal "TBD" mean the same thing to everybody who
+   * reads this site, so they read the same here. */
+  function venueSet(n) {
+    var v = venueOf(n);
+    return !!v && v.toLowerCase() !== 'tbd';
+  }
+
+  /* Only a real web link becomes a link. The field is admin-typed, so this is
+   * about a typo rendering as a dead or dangerous href, not about defence. */
+  function mapHref(url) {
+    var u = String(url == null ? '' : url).trim();
+    return /^https?:\/\//i.test(u) ? u : '';
+  }
+
+  function renderVenue(n) {
+    var el = $('detail-location');
+    if (!el) { return; }
+    if (!venueSet(n)) {
+      // Brass, not silence. A night with no room is a job somebody has to do
+      // before Friday, and it has to be readable at a glance in this header.
+      el.className = 'night-venue night-venue--unset';
+      el.textContent = venueOf(n)
+        ? 'Venue still says "' + venueOf(n) + '": set the room here'
+        : 'No venue set yet: set the room here';
+      return;
+    }
+    var href = mapHref(n.location_url);
+    el.className = 'night-venue';
+    el.innerHTML = S.escapeHtml(venueOf(n)) +
+      (href
+        ? ' <a class="night-venue__map" href="' + S.escapeHtml(href) +
+          '" target="_blank" rel="noopener">map &#8599;</a>'
+        : '');
+  }
+
+  function editableNight(n) {
+    return !!n && n.status !== 'settled' && n.status !== 'void';
+  }
+
+  /* How many people are in the night, for the freeze. entry_count is written
+   * by recompute_season and can lag a check-in that happened 10 seconds ago,
+   * so the live rows count too and the larger number wins: erring towards
+   * "frozen" only ever costs an organiser a reopen, while erring the other
+   * way offers an edit the server is going to refuse. */
+  function checkedInCount() {
+    var fromRow = Number(ctx.night && ctx.night.entry_count) || 0;
+    return Math.max(fromRow, ctx.entries.length);
+  }
+
+  /* kind is deliberately NOT in this list: update_night does not freeze it. */
+  var FROZEN_IDS = ['edit-date', 'edit-stack', 'edit-bonus', 'edit-counts', 'edit-affects'];
+
+  function syncEditFrozen() {
+    var frozen = checkedInCount();
+    var note = $('edit-frozen');
+    FROZEN_IDS.forEach(function (id) {
+      var el = $(id);
+      if (el) { el.disabled = frozen > 0; }
+    });
+    if (!note) { return; }
+    if (frozen > 0) {
+      note.textContent = frozen + (frozen === 1 ? ' player has' : ' players have') +
+        ' checked in, so the date, stack size, attendance bonus and the two ' +
+        'scoring switches are locked: they were used to book those entries. ' +
+        'Title, location, map link and notes still change.';
+      S.show(note, true);
+    } else {
+      note.textContent = '';
+      S.show(note, false);
+    }
+  }
+
+  function fillEdit() {
+    var n = ctx.night;
+    if (!n) { return; }
+    $('edit-title').value = n.title || '';
+    $('edit-location').value = n.location || '';
+    $('edit-location-url').value = n.location_url || '';
+    $('edit-notes').value = n.notes || '';
+    $('edit-date').value = String(n.played_on || '').slice(0, 10);
+    $('edit-kind').value = n.kind || 'tournament';
+    $('edit-stack').value = n.stack_size == null ? '' : String(n.stack_size);
+    $('edit-bonus').value = n.attendance_bonus == null ? '' : String(n.attendance_bonus);
+    $('edit-counts').checked = !!n.counts_as_round;
+    $('edit-affects').checked = !!n.affects_points;
+    syncEditFrozen();
+  }
+
+  function editIsOpen() {
+    var f = $('edit-form');
+    return !!f && !f.hidden;
+  }
+
+  function openEdit() {
+    if (!editableNight(ctx.night)) { return; }
+    // Filled on OPEN only, never on the 45-second poll: refilling under a
+    // typing organiser would eat the room they were halfway through entering.
+    fillEdit();
+    msg($('edit-msg'), '', '');
+    S.show($('edit-form'), true);
+    $('toggle-edit').setAttribute('aria-expanded', 'true');
+    $('toggle-edit').textContent = 'Close editor';
+    $('edit-location').focus();
+  }
+
+  function closeEdit() {
+    var f = $('edit-form');
+    if (!f) { return; }
+    S.show(f, false);
+    msg($('edit-msg'), '', '');
+    $('toggle-edit').setAttribute('aria-expanded', 'false');
+    $('toggle-edit').textContent = 'Edit details';
+  }
+
+  $('toggle-edit').addEventListener('click', function () {
+    if (editIsOpen()) { closeEdit(); } else { openEdit(); }
+  });
+  $('edit-cancel').addEventListener('click', closeEdit);
+
+  /* A trimmed text field, or null when it did not change. An emptied box
+   * returns '', which is how update_night clears the column. */
+  function textChange(id, current) {
+    var typed = String($(id).value || '').trim();
+    var now = String(current == null ? '' : current).trim();
+    return typed === now ? null : typed;
+  }
+
+  $('edit-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var n = ctx.night;
+    if (!n) { return; }
+    var frozen = checkedInCount() > 0;
+    var args = { p_night_id: n.id };
+    var changed = 0;
+
+    function put(key, value) {
+      if (value === null || value === undefined) { return; }
+      args[key] = value;
+      changed += 1;
+    }
+
+    put('p_title', textChange('edit-title', n.title));
+    put('p_location', textChange('edit-location', n.location));
+    put('p_location_url', textChange('edit-location-url', n.location_url));
+    put('p_notes', textChange('edit-notes', n.notes));
+
+    if ($('edit-kind').value !== n.kind) { put('p_kind', $('edit-kind').value); }
+
+    // The frozen five are not read at all when the night has entries: the
+    // inputs are disabled, so whatever they hold is stale by definition.
+    if (!frozen) {
+      var date = $('edit-date').value;
+      if (!date) {
+        msg($('edit-msg'), 'A night needs a date.', 'error');
+        return;
+      }
+      if (date !== String(n.played_on || '').slice(0, 10)) { put('p_played_on', date); }
+
+      var stack = S.parseChips($('edit-stack').value);
+      if (stack === null) {
+        msg($('edit-msg'), 'Stack size must be a whole number of chips, e.g. 10000.', 'error');
+        return;
+      }
+      if (stack !== Number(n.stack_size)) { put('p_stack_size', stack); }
+
+      var bonus = S.parseChips($('edit-bonus').value);
+      if (bonus === null) {
+        msg($('edit-msg'), 'Attendance bonus must be a whole number, e.g. 5000.', 'error');
+        return;
+      }
+      if (bonus !== Number(n.attendance_bonus)) { put('p_attendance_bonus', bonus); }
+
+      if ($('edit-counts').checked !== !!n.counts_as_round) {
+        put('p_counts_as_round', $('edit-counts').checked);
+      }
+      if ($('edit-affects').checked !== !!n.affects_points) {
+        put('p_affects_points', $('edit-affects').checked);
+      }
+    }
+
+    if (!changed) {
+      msg($('edit-msg'), 'Nothing changed, so nothing was sent.', 'ok');
+      return;
+    }
+
+    var wasVenue = venueSet(n);
+    msg($('edit-msg'), 'Saving…', 'busy');
+    rpc('update_night', args)
+      .then(function (night) {
+        if (night) { ctx.night = night; }
+        msg($('edit-msg'), args.p_location !== undefined && !wasVenue && venueSet(ctx.night)
+          ? 'Saved ✓. The events page shows the room now.'
+          : 'Saved ✓', 'ok');
+        return refreshAll();
+      })
+      .then(function () {
+        // Show what the server actually stored, not what was typed: an empty
+        // box that cleared a field should come back empty, and a trimmed
+        // value should come back trimmed.
+        if (editIsOpen()) { fillEdit(); }
+      })
+      .catch(function (err) {
+        msg($('edit-msg'), S.friendlyError(err), 'error');
+        // If the refusal was the freeze (P0061), somebody checked in while
+        // this form was open. Redraw so the locked fields look locked.
+        loadEntries().catch(function () { syncEditFrozen(); });
+      });
+  });
 
   /* ------------------------------------------------------------------
    * Who said they are coming
@@ -804,6 +1053,9 @@
     var bonus = S.parseChips($('create-bonus').value);
     var kind = $('create-kind').value;
     msg($('create-msg'), 'Creating…', 'busy');
+    // create_night takes ten arguments since migration 0012: the venue is a
+    // database field now, and the 8-argument version was DROPPED, so a call
+    // that leaves p_location and p_location_url off fails outright.
     rpc('create_night', {
       p_season_id: ctx.season.season_id,
       p_played_on: date,
@@ -812,10 +1064,14 @@
       p_stack_size: stack === null ? null : stack,
       p_attendance_bonus: bonus === null ? null : bonus,
       p_counts_as_round: kind === 'tournament',
-      p_affects_points: $('create-affects').checked
+      p_affects_points: $('create-affects').checked,
+      p_location: $('create-location').value.trim() || null,
+      p_location_url: $('create-location-url').value.trim() || null
     }).then(function (night) {
       msg($('create-msg'), 'Created as draft ✓. Open it when doors open.', 'ok');
       $('create-title').value = '';
+      $('create-location').value = '';
+      $('create-location-url').value = '';
       return loadNights().then(function () {
         if (night) { selectNight(night); }
       });

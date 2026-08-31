@@ -1,4 +1,4 @@
-/* Store Blindern Poker: RSVP for upcoming nights.
+/* Store Blindern Poker: RSVP for upcoming nights, and the venue.
  *
  * Loaded (after js/config.js, js/vendor/supabase.js, js/sb.js and js/app.js)
  * by index.html and events.html. Self-contained: it adds behaviour to markup
@@ -8,15 +8,18 @@
  *   1. The page renders from data/events.json with no database at all. That
  *      is the baseline and it must never regress.
  *   2. If Supabase answers, an RSVP block is appended to each upcoming event
- *      card, and the going count is added to the home page countdown.
+ *      card, the going count is added to the home page countdown, and the
+ *      venue on a matched card is replaced by the one in the database, which
+ *      is where the room lives since migration 0012.
  *   3. If any of that fails, times out, or the visitor is offline, we log a
  *      warning and leave the page exactly as js/app.js left it. Every entry
  *      point is wrapped, every promise has a catch, nothing here can blank a
  *      list or stop the countdown.
  *
  * The privacy split is deliberate and lives in the queries, not in the CSS:
- *   - v_upcoming_nights is anon-readable and carries COUNTS only. Signed-out
- *     visitors get a number and nothing else.
+ *   - v_upcoming_nights is anon-readable and carries the night itself: the
+ *     venue, the map link, and RSVP COUNTS. No names. Signed-out visitors get
+ *     a room and a number, never who is coming.
  *   - v_night_rsvps is authenticated-only and carries pseudonyms. It is
  *     queried only when there is a session.
  *   - Only 'going' pseudonyms are ever rendered. A public list of who
@@ -95,7 +98,7 @@
   /* Named columns, never select('*'): the same rule js/sb.js documents for
    * the nights table applies to anything that might grow a column later. */
   var UPCOMING_COLS = 'night_id,season_id,played_on,title,status,' +
-    'going_count,not_going_count';
+    'location,location_url,going_count,not_going_count';
 
   function fetchNights() {
     return S.client().from('v_upcoming_nights').select(UPCOMING_COLS)
@@ -200,6 +203,103 @@
       pairs.push({ card: card, iso: iso });
     }
     return pairs;
+  }
+
+  /* ------------------------------------------------------------------
+   * The venue: where the JSON and the database disagree, the database wins
+   *
+   * data/events.json still renders the card, and that stays the baseline:
+   * with no database, or no match, the page is exactly what js/app.js drew.
+   * But a room is now a field an organiser can change from admin.html in ten
+   * seconds, and the file needs a commit and a deploy, so once a night row
+   * matches this card the database is the newer answer and it replaces the
+   * room and the map link together.
+   *
+   * A night whose location is empty or literally "TBD" is not a missing
+   * answer, it is the answer: the room is not confirmed. Saying so is the
+   * honest render. Falling back to the JSON there would send people to last
+   * term's room with full confidence, which is the exact failure this whole
+   * change exists to stop.
+   * ------------------------------------------------------------------ */
+
+  var TBD_TEXT = 'Venue still to be confirmed';
+
+  function venueText(night) {
+    var v = String((night && night.location) || '').trim();
+    return (!v || v.toLowerCase() === 'tbd') ? '' : v;
+  }
+
+  /* Only a real web link becomes a link. */
+  function mapHref(url) {
+    var u = String(url == null ? '' : url).trim();
+    return /^https?:\/\//i.test(u) ? u : '';
+  }
+
+  function roomLinkIn(box) {
+    if (!box) { return null; }
+    var all = box.querySelectorAll('a.event-link');
+    for (var i = 0; i < all.length; i++) {
+      if (/find the room/i.test(all[i].textContent || '')) { return all[i]; }
+    }
+    return null;
+  }
+
+  function applyVenue(card, night) {
+    var venue = venueText(night);
+    // The room and its map move TOGETHER. An unconfirmed room with a live
+    // "Find the room" button is the worst of both: the card says nothing is
+    // settled while the button sends people somewhere with full confidence.
+    // It is a real state, too, not a hypothetical: clearing a room in the
+    // console and forgetting the map link leaves exactly this row.
+    var href = venue ? mapHref(night.location_url) : '';
+
+    // The second cell of the meta row is the location, in js/app.js and in
+    // the noscript fallback alike. DIRECT children only: the time cell can
+    // carry a nested badge span (a "doors at 17:30" note), and a flat
+    // querySelectorAll would hand back that badge as cell number two.
+    // Text only: no markup goes in here.
+    var meta = card.querySelector('.event-card__meta');
+    if (meta) {
+      var kids = meta.children;
+      var spans = [];
+      for (var i = 0; i < kids.length; i++) {
+        if (kids[i].tagName === 'SPAN') { spans.push(kids[i]); }
+      }
+      var cell = spans.length > 1 ? spans[1] : null;
+      if (!cell) {
+        cell = document.createElement('span');
+        meta.appendChild(cell);
+      }
+      cell.textContent = venue || TBD_TEXT;
+      if (venue) { cell.classList.remove('venue--tbd'); }
+      else { cell.classList.add('venue--tbd'); }
+    }
+
+    // The map link belongs to whichever room the database names. If the
+    // database has no link, the one from the JSON goes: a "Find the room"
+    // button pointing at the wrong room is worse than no button at all.
+    var links = card.querySelector('.event-card__links');
+    var roomLink = roomLinkIn(links);
+
+    if (href) {
+      if (!roomLink) {
+        if (!links) {
+          links = document.createElement('div');
+          links.className = 'event-card__links';
+          (card.querySelector('.event-card__info') || card).appendChild(links);
+        }
+        roomLink = document.createElement('a');
+        roomLink.className = 'event-link';
+        roomLink.setAttribute('target', '_blank');
+        roomLink.setAttribute('rel', 'noopener');
+        roomLink.textContent = 'Find the room ↗';
+        links.appendChild(roomLink);
+      }
+      roomLink.setAttribute('href', href);
+    } else if (roomLink) {
+      roomLink.parentNode.removeChild(roomLink);
+      if (links && !links.querySelector('a')) { links.parentNode.removeChild(links); }
+    }
   }
 
   /* ------------------------------------------------------------------
@@ -441,6 +541,9 @@
       pairs.forEach(function (pair) {
         var night = byDate[pair.iso];
         if (!night) { return; }   // no night row: the card stays as it was
+        // The room, before the RSVP block goes in, and wrapped: a venue that
+        // will not render must never cost the card its RSVP control.
+        try { applyVenue(pair.card, night); } catch (err) { warn('venue not applied', err); }
         var b = newBlock(night, tmpl, session ? 'checking' : 'anon');
         render(b);
         var host = pair.card.querySelector('.event-card__info') || pair.card;
@@ -550,6 +653,15 @@
             setNumLine(out, n, 'going', 'countdown__going-num');
           } else {
             out.textContent = 'Nobody has answered yet.';
+          }
+          // Same rule as the event cards: the database is the newer answer
+          // about the room, including when the answer is "not confirmed".
+          var locEl = document.getElementById('countdown-location');
+          if (locEl) {
+            var venue = venueText(nights[i]);
+            locEl.textContent = venue || TBD_TEXT;
+            if (venue) { locEl.classList.remove('venue--tbd'); }
+            else { locEl.classList.add('venue--tbd'); }
           }
           return;
         }

@@ -55,7 +55,21 @@
             <h2 class="section__title" id="upcoming-title">Upcoming nights</h2>
           </div>
           <div id="events-upcoming" class="events-list" aria-live="polite">
-            <!-- Rendered from data/events.json by js/app.js. Static fallback below. -->
+            <!-- Rendered from data/events.json by js/app.js. Static fallback below.
+
+                 The room is the one thing on these cards that the JSON no
+                 longer owns. js/rsvp.js matches each card to its night in
+                 v_upcoming_nights and replaces the location and the map link
+                 with what the database holds, because an organiser can change
+                 that from admin.html in seconds while this file needs a commit
+                 and a deploy. A night whose location is empty or "TBD" renders
+                 as "Venue still to be confirmed" rather than falling back to
+                 the room below, which by then may be last term's.
+
+                 So the location and the map link in the fallback markup are
+                 the no-JavaScript answer only. If they go stale, fix the room
+                 in the console first; this file is the backstop. -->
+
             <noscript>
               <article class="event-card">
                 <div class="event-card__date">

@@ -126,7 +126,8 @@
   var NIGHT_COLS = 'id,season_id,night_no,played_on,title,kind,status,' +
     'counts_as_round,affects_points,stack_size,attendance_bonus,entry_count,' +
     'unreported_count,chips_in,chips_out,chip_balance,opened_at,closed_at,' +
-    'settled_at,settled_by,revision,created_at,reports_close_at';
+    'settled_at,settled_by,revision,created_at,reports_close_at,' +
+    'location,location_url,notes';
 
   /* Tonight's night, if any: an 'open' night wins, else a 'reconciling' one
    * (members may still report while the organisers reconcile). */
@@ -258,8 +259,18 @@
      * P0053 somebody else now uses that pseudonym
      * All three are written server-side for the one person who sees them, an
      * organiser mid-task, and each names the fix. Rewriting them here would
-     * only make them vaguer, so they pass through with a capital letter. */
-    if (code === 'P0050' || code === 'P0051' || code === 'P0053') {
+     * only make them vaguer, so they pass through with a capital letter.
+     * The two night-edit codes below join them for the same reason. */
+    /* Editing a night (update_night).
+     * P0060 the night is settled or void, reopen it first
+     * P0061 somebody has checked in, so the date, the stack, the bonus and
+     *       the two scoring switches are frozen. The server counts the
+     *       players and says how many, which is the part that makes an
+     *       organiser believe it, so the sentence passes through whole.
+     * Same rule as the block above: the server wrote these for the one
+     * person who reads them, and each names the fix. */
+    if (code === 'P0050' || code === 'P0051' || code === 'P0053' ||
+        code === 'P0060' || code === 'P0061') {
       var said = msg.charAt(0).toUpperCase() + msg.slice(1);
       return /[.!?]$/.test(said) ? said : said + '.';
     }

@@ -100,6 +100,24 @@
                 <label class="label" for="create-title">Title (optional)</label>
                 <input class="input" id="create-title" type="text" maxlength="80" placeholder="Round 3">
               </div>
+              <!-- The venue lives in the database now, not in
+                   data/events.json, so it is set here at creation and can be
+                   changed later without a commit. Leave it empty when the
+                   room is not confirmed: the events page then says the venue
+                   is still to be confirmed instead of showing an old room. -->
+              <div class="field">
+                <label class="label" for="create-location">Location (optional)</label>
+                <input class="input" id="create-location" type="text" maxlength="200"
+                       placeholder="Nils Henrik Abels hus, Abelstua">
+                <p class="help">Where people should turn up. Public: it shows on the events page.</p>
+              </div>
+              <div class="field">
+                <label class="label" for="create-location-url">Map link (optional)</label>
+                <input class="input" id="create-location-url" type="url" maxlength="500"
+                       inputmode="url" autocapitalize="off" spellcheck="false"
+                       placeholder="https://link.mazemap.com/…">
+                <p class="help">A MazeMap link becomes the "Find the room" button.</p>
+              </div>
               <div class="field">
                 <label class="label" for="create-kind">Kind</label>
                 <select class="input" id="create-kind">
@@ -167,6 +185,12 @@
               <div>
                 <h2 class="card__title" id="detail-title">…</h2>
                 <div class="whoami__label" id="detail-meta">…</div>
+                <!-- The venue, straight under the title, because "where is it"
+                     is the question an organiser gets asked all week and the
+                     answer is now a database field, not a JSON commit. When it
+                     is unset the line says so in brass rather than going
+                     quiet: a night with no room is a job, not a blank. -->
+                <div class="night-venue" id="detail-location"></div>
               </div>
               <span class="status-pill" id="detail-status">…</span>
             </div>
@@ -177,6 +201,8 @@
               <button class="btn btn--primary" id="btn-settle" type="button" hidden>Settle night…</button>
               <button class="btn btn--secondary" id="btn-reopen" type="button" hidden>Reopen for corrections</button>
               <button class="btn btn--secondary" id="btn-code" type="button" hidden>Show the code on the TV</button>
+              <button class="btn btn--ghost" id="toggle-edit" type="button" hidden
+                      aria-expanded="false" aria-controls="edit-form">Edit details</button>
             </div>
             <p class="form-msg" id="lifecycle-msg" role="status" aria-live="polite"></p>
 
@@ -186,6 +212,87 @@
               <button class="btn btn--danger" id="btn-settle-really" type="button">Settle now</button>
               <button class="btn btn--ghost" id="btn-settle-cancel" type="button">Cancel</button>
             </div>
+
+            <!-- EDIT THIS NIGHT. Hidden until "Edit details" is pressed, so
+                 the block below it stays the first thing on screen.
+
+                 The scoring fields (date, stack, bonus, and the two switches)
+                 are DISABLED once anybody has checked in, with one line
+                 saying why. The server refuses them anyway (P0061), but an
+                 organiser should not be able to type a number into a box that
+                 is going to be rejected: the freeze is a fact about the
+                 night, not an error to discover after pressing Save.
+
+                 The title, venue, map link and notes never freeze. They are
+                 the fields that actually change late, including on the day. -->
+            <form class="card" id="edit-form" hidden style="margin-bottom: var(--space-lg);">
+              <h3 class="card__title">Edit this night</h3>
+              <p class="help" id="edit-frozen" hidden style="margin-bottom: var(--space-md);"></p>
+
+              <div class="field">
+                <label class="label" for="edit-title">Title</label>
+                <input class="input" id="edit-title" type="text" maxlength="80" placeholder="Round 3">
+              </div>
+              <div class="field">
+                <label class="label" for="edit-location">Location</label>
+                <input class="input" id="edit-location" type="text" maxlength="200"
+                       placeholder="Nils Henrik Abels hus, Abelstua">
+                <p class="help">Public: this is the room shown on the events page. Clear it to go
+                back to "to be confirmed".</p>
+              </div>
+              <div class="field">
+                <label class="label" for="edit-location-url">Map link</label>
+                <input class="input" id="edit-location-url" type="url" maxlength="500"
+                       inputmode="url" autocapitalize="off" spellcheck="false"
+                       placeholder="https://link.mazemap.com/…">
+              </div>
+              <div class="field">
+                <label class="label" for="edit-notes">Notes</label>
+                <textarea class="input" id="edit-notes" rows="3" maxlength="500"
+                          placeholder="Beginner table in the corner from 18:00."></textarea>
+                <p class="help">For the organisers. Not shown on the public events page.</p>
+              </div>
+
+              <div class="field">
+                <label class="label" for="edit-date">Date</label>
+                <input class="input" id="edit-date" type="date">
+              </div>
+              <div class="field">
+                <label class="label" for="edit-kind">Kind</label>
+                <select class="input" id="edit-kind">
+                  <option value="tournament">Tournament</option>
+                  <option value="welcome">Welcome night</option>
+                  <option value="special">Special</option>
+                  <option value="bonus_only">Bonus only (no chips)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="label" for="edit-stack">Stack size (chips per buy-in)</label>
+                <input class="input input--numeric" id="edit-stack" type="text" inputmode="numeric">
+              </div>
+              <div class="field">
+                <label class="label" for="edit-bonus">Attendance bonus (points)</label>
+                <input class="input input--numeric" id="edit-bonus" type="text" inputmode="numeric">
+              </div>
+              <div class="field">
+                <div class="choice-row">
+                  <label class="choice">
+                    <input type="checkbox" id="edit-counts">
+                    <span>Counts as a round</span>
+                  </label>
+                  <label class="choice">
+                    <input type="checkbox" id="edit-affects">
+                    <span>Counts toward season points</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="toolbar">
+                <button class="btn btn--primary" id="edit-submit" type="submit">Save changes</button>
+                <button class="btn btn--ghost" id="edit-cancel" type="button">Cancel</button>
+              </div>
+              <p class="form-msg" id="edit-msg" role="status" aria-live="polite"></p>
+            </form>
 
             <!-- WHO HAS NOT REPORTED. This sits directly under the lifecycle
                  controls, above the numbers and the table, because as the

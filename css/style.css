@@ -855,6 +855,49 @@ input[type="radio"] {
   outline-offset: 2px;
 }
 
+/* Disabled means FROZEN, and it has to look it. admin.html locks the scoring
+   fields of a night once somebody has checked in, and an organiser must be
+   able to see which boxes are shut without trying one: the well goes flat and
+   the cursor says no.
+
+   The VALUE stays readable at --cream-dim, not --cream-mute. A frozen stack
+   size or date is still the number the night is being scored on, and an
+   organiser reads it far more often than they try to change it. Muting it to
+   caption grey drops it under 4:1 on this well, which turns "locked" into
+   "unreadable". The flat well and the cursor carry the disabled signal. */
+.input:disabled,
+select.input:disabled,
+textarea.input:disabled {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--cream-dim);
+  cursor: not-allowed;
+}
+
+.input:disabled:hover { border-color: var(--border); }
+
+/* A locked switch still has to say WHICH WAY it is set. On a night with a
+   check-in, "counts as a round" and "counts toward season points" are frozen,
+   and that is exactly the night where an organiser most needs to read them.
+   No opacity here: dimming both states towards the same grey is how the two
+   pills end up looking identical and the setting becomes unreadable. */
+.choice input:disabled + span {
+  background-color: var(--surface);
+  color: var(--cream-dim);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+/* On, but not touchable. A full brass fill reads as pressable, so a frozen ON
+   drops to the brass surface pair the notices use: brass type on a brass
+   tinted well, unmistakably the accent, clearly not a button. */
+.choice input:disabled:checked + span {
+  background-color: var(--brass-fill);
+  border-color: var(--brass-line);
+  color: var(--brass-lift);
+  font-weight: 600;
+}
+
 .input--error { border-color: var(--clay); }
 
 .input--error:focus,
@@ -1703,6 +1746,15 @@ select.input {
   color: var(--cream);
 }
 
+/* "Venue still to be confirmed", written by js/rsvp.js when the database
+   says the room is not settled. Muted on purpose: it is an honest not-yet,
+   not an alarm, and it must not out-shout the confirmed room on the card
+   above it. Used on the events cards and on the home page countdown. */
+.venue--tbd {
+  color: var(--cream-mute);
+  font-style: italic;
+}
+
 .event-card__desc {
   margin-top: var(--space-sm);
   font-size: 0.9rem;
@@ -2477,6 +2529,29 @@ select.input {
   letter-spacing: 0.12em;
   color: var(--cream-mute);
 }
+
+/* ---- The venue, under the night title on admin.html ------------------- */
+.night-venue {
+  font-size: 0.9rem;
+  color: var(--cream-dim);
+  margin-top: var(--space-xs);
+  line-height: 1.5;
+}
+
+/* Brass, because an unset room is a job with a deadline, not a blank field.
+   The one accent, used where it means "this wants your attention". */
+.night-venue--unset {
+  color: var(--brass);
+  font-weight: 500;
+}
+
+.night-venue__map {
+  color: var(--cream-mute);
+  border-bottom: 1px solid var(--border-loud);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.night-venue__map:hover { color: var(--brass); border-color: var(--brass); }
 
 /* ---- Night banner at the top of the report screen --------------------- */
 .night-banner {
