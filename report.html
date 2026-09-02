@@ -38,9 +38,17 @@
     <main id="main" class="page-content app-main">
       <div class="container container--narrow" style="max-width: 520px;">
 
+        <!-- The standing order. This h1 is not a status, it is the one thing
+             to do next, in the imperative: showState() rewrites it on every
+             state change and moves focus to it, so a screen reader hears the
+             new instruction once and lands at the top of the new screen.
+             tabindex="-1" makes it focusable without putting it in the tab
+             order, and programmatic focus does not fire :focus-visible, so no
+             ring appears for a touch or mouse user. -->
         <div class="whoami" style="padding-top: 0;">
           <div>
-            <h1 class="app-title" style="margin-bottom: 0;">Tonight</h1>
+            <h1 class="app-title" id="standing-order" tabindex="-1" style="margin-bottom: 0;">Tonight</h1>
+            <p class="app-subtitle" id="standing-sub" hidden style="margin: var(--space-xs) 0 0;"></p>
             <div class="whoami__label" id="whoami-line" hidden>
               Signed in as <strong id="whoami-name"></strong>
             </div>
@@ -71,7 +79,10 @@
         </div>
 
         <!-- STATE: loading. Shaped like the check-in card underneath it, so
-             the screen does not jump when the round arrives. -->
+             the screen does not jump when the round arrives. This is the only
+             state div with no hidden attribute, on purpose: it is the first
+             paint, and it stays up on the two paths where boot never resolves
+             (the redirect to login.html, and a missing sb.js or outbox.js). -->
         <div class="card" id="state-loading">
           <p class="visually-hidden" role="status">Loading tonight's round.</p>
           <div aria-hidden="true">
@@ -87,18 +98,20 @@
         <div class="card card--accent" id="state-nopseudonym" hidden>
           <h2 class="card__title">One step left: pick your pseudonym</h2>
           <p class="card__text" style="margin-bottom: var(--space-lg);">
-            You're signed in, but you need a pseudonym before you can check
-            in; it's the only name ever shown in public.
+            You are signed in, but you need a pseudonym before you can check
+            in. Your real name stays with the organisers.
           </p>
           <a class="btn btn--primary btn--block btn--lg" href="login.html?next=report.html">Choose my pseudonym</a>
         </div>
 
-        <!-- STATE: no open night -->
+        <!-- STATE: no open night. Double duty: boot's terminal catch rewrites
+             this card's .card__title and .card__text in place and shows it as
+             the fatal error card, so both classes must stay unique in here. -->
         <div class="card" id="state-nonight" hidden>
           <h2 class="card__title">No round is open right now</h2>
           <p class="card__text" style="margin-bottom: var(--space-lg);">
             Check-in opens when the organisers open the night, usually just
-            before <span class="mono">18:00</span> on Fridays. If you're in
+            before <span class="mono">18:00</span> on Fridays. If you are in
             the room and this looks wrong, wave at an organiser.
           </p>
           <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
@@ -107,20 +120,21 @@
           </div>
         </div>
 
-        <!-- STATE: open night, not checked in -->
+        <!-- STATE: open night, not checked in.
+             ORDER IS LOAD BEARING. The field and the button come FIRST,
+             directly under the title, because this is the one screen a first
+             timer meets standing in the doorway, and the standing order above
+             it reads "Type tonight's code." The three facts and the
+             reassurance used to sit above the field: on a 390x844 phone that
+             put the code field 5px past the fold and the brass Check in
+             button 91px below it, never painted, on a screen whose whole job
+             is one tap. Nothing is wrong with those facts, they are reference,
+             so they read after the act. Add nothing above #code-input without
+             measuring the fold again. -->
         <div id="state-checkin" hidden>
           <div class="card card--accent">
+            <div class="section__label">1 · Check in</div>
             <h2 class="card__title">Check in to tonight's round</h2>
-            <p class="card__text">
-              Checking in credits your attendance bonus and books your buy-in
-              for tonight's chip stack from your season points. Do it once,
-              when you arrive.
-            </p>
-            <dl class="kv">
-              <dt>Your season points</dt><dd id="checkin-points">…</dd>
-              <dt>Attendance bonus (credited first)</dt><dd id="checkin-bonus">…</dd>
-              <dt>Tonight's chip stack</dt><dd id="checkin-stack">…</dd>
-            </dl>
             <div class="field" style="margin-bottom: var(--space-md);">
               <label class="label" for="code-input">Tonight's code (on the screen at the front)</label>
               <input class="input input--code" id="code-input" type="text"
@@ -129,12 +143,34 @@
                      maxlength="5" placeholder="ABCDE" aria-describedby="code-help">
               <p class="help" id="code-help" style="margin-top: var(--space-sm);">
                 <span class="mono">5</span> characters, shown big next to the
-                QR. Scanned the QR with your camera? It's already filled in.
-                Capitals don't matter.
+                QR. Scanned the QR? It is already filled in.
               </p>
             </div>
             <button class="btn btn--primary btn--block btn--lg" id="checkin-btn" type="button">Check in</button>
             <p class="form-msg" id="checkin-msg" role="status" aria-live="polite"></p>
+            <p class="help">
+              Next: your buy-in slip. Show it at the bank and they count out
+              your chips.
+            </p>
+            <!-- Shown only when this phone has never completed a check-in.
+                 The flag is written after check_in succeeds; if localStorage
+                 refuses (private mode) the note simply shows again on a later
+                 first night, which is a redundant sentence and never a
+                 missing one. -->
+            <p class="help" id="first-night-note" hidden>
+              First Friday? Tap Check in, walk to the chip bank, and hold up
+              your phone. The organiser reads one number and counts out your
+              chips. That is the whole thing.
+            </p>
+            <p class="card__text" style="margin-top: var(--space-lg);">
+              Checking in credits your attendance bonus and books your buy-in
+              from your season points.
+            </p>
+            <dl class="kv">
+              <dt>Your season points</dt><dd id="checkin-points">…</dd>
+              <dt>Attendance bonus (credited first)</dt><dd id="checkin-bonus">…</dd>
+              <dt>Tonight's chip stack</dt><dd id="checkin-stack">…</dd>
+            </dl>
             <p class="help">
               Points only. Short on points? You still play: the buy-in simply
               adjusts, and nobody sits out.
@@ -142,42 +178,172 @@
           </div>
         </div>
 
-        <!-- STATE: checked in, the report form.
+        <!-- STATE: the hub, home between the door and the end of the night.
+             THE IDS IN HERE ARE DELIBERATELY WRONG. #state-report is the hub,
+             and #report-form now lives in #state-close further down. Every
+             handler in js/report.js is registered at module scope with an
+             unguarded getElementById, and boot() with OB.start(sender) is the
+             last line of that file, so renaming one id throws before boot
+             runs, the outbox pump never starts, and every queued report on
+             every phone stops retrying with nothing on screen to show it.
+
              Hierarchy, top to bottom: a quiet status card (mono figures, no
              heading weight), the bank card while the bank is open or a top-up
-             is on record, then ONE input card, then one brass primary action.
-             Nothing else on the screen is brass-filled. -->
+             is on record, then the way out. No brass at all while the night is
+             open: a member who has checked in is playing, and this screen must
+             not push them toward the exit. -->
         <div id="state-report" hidden>
           <div class="card" style="margin-bottom: var(--space-lg);">
-            <h2 class="section__label">You are checked in</h2>
+            <div class="section__label">1 · Checked in</div>
             <dl class="kv" style="margin: 0;">
               <dt>Attendance bonus</dt><dd id="report-bonus">…</dd>
               <dt>Buy-in booked</dt><dd id="report-buyin">…</dd>
-              <dt>Top-up allowance left</dt><dd id="report-cap">…</dd>
+              <dt>Top-up</dt><dd id="report-cap">…</dd>
+              <dt>Reported</dt><dd id="report-reported">…</dd>
             </dl>
             <button class="btn btn--secondary btn--block" id="buyin-slip-btn"
                     type="button" style="margin-top: var(--space-md);">Show my buy-in slip</button>
           </div>
 
-          <!-- Bank top-up. Four faces, one visible at a time:
+          <!-- Bank top-up. Six faces live here, one visible at a time:
                #topup-open       the offer, while the night is open and no top-up
-               #topup-flow       count your chips, see the quote, confirm, slip
                #topup-done       the bank's own record + the slip again
-               #topup-organiser  a top-up an organiser recorded by hand -->
+               #topup-organiser  a top-up an organiser recorded by hand
+               #topup-closed     reporting has closed, so the bank has shut
+               #topup-none       no allowance left, so there is nothing to offer
+               #topup-over       the round is over, so the bank has packed up
+
+               Step 2 must never simply VANISH out of a 1-2-3 list. Every
+               reason the offer is gone gets a face saying which reason it
+               was, because a member who watched a button disappear goes
+               hunting for it, and the hunt happens at the bank with a queue
+               behind them.
+
+               The seventh face, #topup-flow, now lives in #state-topup below,
+               so topupFace()'s hardcoded id list spans two state divs.
+               enterTopup() re-shows the flow on purpose and renderTopup()
+               hides it again on the way home. -->
           <div class="card" id="topup-card" hidden style="margin-bottom: var(--space-lg);">
             <div id="topup-open" hidden>
-              <h2 class="card__title">Top up at the bank</h2>
+              <div class="section__label">2 · The top-up</div>
+              <!-- The break time also lives in BREAK_TIME_TEXT in
+                   js/report.js. Change both or neither. It is guidance, never
+                   a gate: nothing here compares it to a clock and no copy
+                   anywhere says early, late, missed or closed. -->
               <p class="card__text" style="margin-bottom: var(--space-md);">
                 One top-up per night, points for chips <span class="mono">1:1</span>,
-                and it can only bring you back to tonight's stack. Count the
-                chips in front of you first, then take your phone to the bank.
+                and it can only bring you back to tonight's stack. Most people
+                take it at the first break, around <span class="mono">19:15</span>,
+                when everybody is at the bank anyway. It stays open for as long
+                as the night is open, so there is nothing to miss.
               </p>
               <button class="btn btn--secondary btn--block" id="topup-start-btn" type="button">Top up at the bank</button>
             </div>
 
+            <div id="topup-done" hidden>
+              <div class="section__label">2 · Top-up done</div>
+              <p class="topup-done">
+                Topped up at the bank: <span class="mono" id="topup-done-amount">…</span> chips
+                at <span class="mono" id="topup-done-time">…</span>.
+                <button class="link-gold" id="topup-reshow-btn" type="button">Show the slip again</button>
+              </p>
+            </div>
+
+            <div id="topup-organiser" hidden>
+              <div class="section__label">2 · Top-up done</div>
+              <p class="topup-done">
+                Top-up recorded by an organiser:
+                <span class="mono" id="topup-organiser-amount">…</span> chips.
+                Chips crossed the table without the app, so there is no slip
+                for this one. If the number is wrong, tell an organiser.
+              </p>
+            </div>
+
+            <!-- Past nights.reports_close_at. The offer is gone because the
+                 server would refuse it, and this face is here so it does not
+                 simply vanish: a member who watched a button disappear goes
+                 hunting for it. The night status can still read 'open' after
+                 the deadline, which is why renderTopup() asks
+                 reportingClosed() before it asks the status. -->
+            <div id="topup-closed" hidden>
+              <div class="section__label">2 · The bank has shut</div>
+              <p class="topup-done">
+                The bank shut when reporting closed, so there is no top-up
+                left to take tonight. An organiser can still sort out
+                anything that is wrong.
+              </p>
+            </div>
+
+            <!-- entries.rebuy_cap_chips is 0: the season points are all in
+                 play, so there is no allowance to offer and never was
+                 tonight. The status strip above states the same fact in two
+                 words; this is the step saying it in a sentence instead of
+                 leaving a hole between 1 and 3. -->
+            <div id="topup-none" hidden>
+              <div class="section__label">2 · No top-up tonight</div>
+              <p class="topup-done">
+                Your season points are all in play already, so there is no
+                top-up allowance left for tonight. Nothing is wrong: play the
+                stack you have. An organiser can talk it through if this looks
+                off.
+              </p>
+            </div>
+
+            <!-- The night has moved off 'open' and the bank has packed up,
+                 while reporting is still running. Distinct from
+                 #topup-closed, which is the deadline, and from #topup-none,
+                 which is the allowance. -->
+            <div id="topup-over" hidden>
+              <div class="section__label">2 · The bank has packed up</div>
+              <p class="topup-done">
+                The round is over, so the bank has stopped issuing top-ups.
+                Reporting is still open: count your chips and close the round
+                below.
+              </p>
+            </div>
+          </div>
+
+          <!-- Two faces, both written by renderCloseCta(). Before the report
+               this card is the way out. After it, the closing slip is the
+               artefact the organiser needs while the chips come back, so it
+               has to be reachable from home and not only from the receipt. -->
+          <div class="card">
+            <div class="section__label" id="close-card-label">3 · Close the round</div>
+            <p class="card__text" id="close-card-text" style="margin-bottom: var(--space-md);">
+              When you are done for the night, count your chips and report the
+              total. You get a closing slip to show an organiser while you hand
+              the chips back. No rush: reporting stays open until the morning
+              after.
+            </p>
+            <!-- Both button classNames are rebuilt wholesale by
+                 renderCloseCta(), so their spacing lives on these wrappers and
+                 never on the buttons themselves. -->
+            <div style="margin-bottom: var(--space-sm);">
+              <button class="btn btn--primary btn--block btn--lg" id="hub-slip-btn" type="button" hidden>Show my closing slip</button>
+            </div>
+            <div>
+              <button class="btn btn--secondary btn--block" id="close-start-btn" type="button">Close my round</button>
+            </div>
+            <p class="help" id="hub-draft-note" hidden></p>
+          </div>
+        </div>
+
+        <!-- STATE: the top-up, moved out of the hub so its brass primary is
+             the only brass on the screen. #topup-msg must stay INSIDE
+             #topup-flow and OUTSIDE both step divs: topupReset() swaps the two
+             steps without touching the message, and topupError's P0001 branch
+             leaves the flow up on purpose so the explanation survives. -->
+        <div id="state-topup" hidden>
+          <div class="card">
+            <div class="section__label">2 · The top-up</div>
+            <h2 class="card__title">Top up at the bank</h2>
+            <p class="card__text" style="margin-bottom: var(--space-md);">
+              Count what is in front of you, then take what you want. One
+              top-up per night.
+            </p>
+
             <div id="topup-flow" hidden>
               <div id="topup-step-count">
-                <h2 class="card__title">Top up at the bank</h2>
                 <div class="field" style="margin-bottom: var(--space-sm);">
                   <label class="label" for="topup-stack-input">Chips in front of you right now</label>
                   <input class="input input--numeric" id="topup-stack-input" type="text"
@@ -187,6 +353,10 @@
                 <button class="btn btn--primary btn--block btn--lg" id="topup-quote-btn" type="button">See what I can take</button>
                 <button class="btn btn--ghost btn--block" id="topup-cancel-btn" type="button"
                         style="margin-top: var(--space-sm);">Never mind</button>
+                <p class="help">
+                  Next: we show your ceiling, then you choose. Nothing is taken
+                  until you confirm.
+                </p>
               </div>
 
               <div id="topup-step-quote" hidden>
@@ -200,34 +370,39 @@
                 <button class="btn btn--primary btn--block btn--lg" id="topup-confirm-btn" type="button">Take it: show the slip</button>
                 <button class="btn btn--ghost btn--block" id="topup-back-btn" type="button"
                         style="margin-top: var(--space-sm);">Back to the chip count</button>
+                <p class="help">
+                  Next: a top-up slip. Show it at the bank and they count out
+                  your chips.
+                </p>
               </div>
 
               <p class="form-msg" id="topup-msg" role="status" aria-live="polite"></p>
             </div>
-
-            <div id="topup-done" hidden>
-              <p class="topup-done">
-                Topped up at the bank: <span class="mono" id="topup-done-amount">…</span> chips
-                at <span class="mono" id="topup-done-time">…</span>.
-                <button class="link-gold" id="topup-reshow-btn" type="button">Show the slip again</button>
-              </p>
-            </div>
-
-            <div id="topup-organiser" hidden>
-              <p class="topup-done">
-                Top-up recorded by an organiser:
-                <span class="mono" id="topup-organiser-amount">…</span> chips.
-                Chips crossed the table without the app, so there is no slip
-                for this one. If the number is wrong, tell an organiser.
-              </p>
-            </div>
           </div>
+        </div>
 
-          <!-- One input. The buy-in and any top-up were recorded when they
-               happened, against a slip, so the only thing left to ask for is
-               the number nobody else can know: what is in front of you. -->
+        <!-- STATE: closing the round. ONE input. The buy-in and any top-up
+             were recorded when they happened, against a slip, so the only
+             thing left to ask for is the number nobody else can know: what is
+             in front of you.
+
+             #review-btn works only by being type="submit" inside #report-form,
+             where the listener is. #bust-btn and #close-back-btn both keep
+             type="button", so tapping them writes the 0, or goes home,
+             instead of jumping to review.
+
+             #close-back-btn sits INSIDE the form ON PURPOSE, so the form
+             hiding takes it with it. It used to sit outside, where the review
+             sheet left it floating on its own between the night banner and
+             the review card, with no card around it: one decision screen with
+             two ghost routes that went to different places. The review sheet
+             has exactly one way back, #edit-btn, and it is inside the
+             sheet's own card. -->
+        <div id="state-close" hidden>
           <form id="report-form" novalidate>
             <div class="card" style="margin-bottom: var(--space-lg);">
+              <div class="section__label">3 · Close the round</div>
+              <p class="help" id="close-intro" style="margin-top: 0; margin-bottom: var(--space-md);"></p>
               <h2 class="card__title">Your final chip stack</h2>
               <p class="card__text" style="margin-bottom: var(--space-md);">
                 Count everything in front of you and type the total. That is the
@@ -247,12 +422,28 @@
             </div>
 
             <button class="btn btn--primary btn--block btn--lg" id="review-btn" type="submit">Review my report</button>
+            <p class="help" id="close-next-help">
+              Next: we show the maths. Nothing is sent until you press Send.
+            </p>
+            <!-- Shown in place of Review once reports_close_at has passed,
+                 including while a member is sitting on this screen and the
+                 deadline goes by under them. renderCloseRoute() writes the
+                 text, because it names the time the deadline actually was.
+                 The route is withdrawn and not merely explained: the server
+                 answers P0021, so Review would lead to a Send that cannot
+                 land. -->
+            <p class="help" id="close-no-send" hidden></p>
+            <div style="margin-top: var(--space-sm);">
+              <button class="btn btn--ghost btn--block" id="close-back-btn" type="button">Not yet, back to tonight</button>
+            </div>
           </form>
 
           <p class="report-deadline" id="deadline-line" hidden></p>
 
           <!-- Review sheet. Every figure in here is mono and tabular via
-               .ledger__amount, so the column reads as a receipt. -->
+               .ledger__amount, so the column reads as a receipt. The form
+               above is hidden while this is up, which is what keeps one brass
+               action on the screen instead of two. -->
           <div id="review-panel" hidden style="margin-top: var(--space-lg);">
             <div class="card card--accent">
               <div class="section__label">Last step</div>
@@ -263,30 +454,58 @@
                 <button class="btn btn--primary btn--block btn--lg" id="submit-btn" type="button">Send my report</button>
                 <button class="btn btn--ghost btn--block" id="edit-btn" type="button">Go back and edit</button>
               </div>
+              <p class="help">
+                Next: your closing slip. Show it as you hand your chips back.
+              </p>
             </div>
           </div>
         </div>
 
         <!-- STATE: receipt (sent, or saved-on-phone while sending) -->
         <div id="state-receipt" hidden>
-          <div class="card card--accent" style="text-align: center;">
-            <div class="receipt__icon" id="receipt-icon">✓</div>
-            <h2 class="card__title" id="receipt-title">Report received</h2>
-            <p class="card__text" id="receipt-sub">…</p>
-            <div class="ledger" id="receipt-ledger" style="text-align: left;"></div>
-            <div style="display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-md);">
-              <button class="btn btn--secondary btn--block" id="change-btn" type="button">Change my report</button>
-              <a class="btn btn--ghost btn--block" href="leaderboard.html">Leaderboard</a>
-            </div>
-          </div>
+          <!-- Persistent failure: the payload, readable across a table. It
+               lives INSIDE #state-receipt on purpose, so showState hides it
+               and a stale "couldn't send" card can never turn up over the
+               close screen.
 
-          <!-- Persistent failure: the payload, readable across a table -->
+               It sits FIRST, above the receipt card, because whenever it is
+               visible the standing order right above it reads "Show this to
+               an organiser." and "this" has to be the very next thing on the
+               screen. Below the receipt card it landed two screens down,
+               under a ledger and three buttons, so a member at the bank had
+               to scroll past "you can put your phone away" to reach the one
+               thing the heading was pointing at. It is hidden on every other
+               face of this screen, so the normal path pays nothing for it. -->
           <div class="organiser-card" id="organiser-card" hidden>
             <h3>Couldn't send. Show this to an organiser</h3>
             <div class="organiser-payload" id="organiser-payload"></div>
             <p class="card__text" style="margin-top: var(--space-md);" id="organiser-why"></p>
             <button class="btn btn--secondary btn--block" id="retry-btn" type="button"
                     style="margin-top: var(--space-md);">Try sending again</button>
+          </div>
+
+          <div class="card card--accent" style="text-align: center;">
+            <div class="receipt__icon" id="receipt-icon">✓</div>
+            <h2 class="card__title" id="receipt-title">Report received</h2>
+            <p class="card__text" id="receipt-sub">…</p>
+            <div class="ledger" id="receipt-ledger" style="text-align: left;"></div>
+            <!-- #closing-slip-btn's className is rebuilt by renderReceipt().
+                 It is this screen's one brass fill on a healthy receipt, and
+                 it steps down to secondary once the screen has escalated,
+                 because at that point the one thing to do is not a button. -->
+            <div style="display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-md);">
+              <button class="btn btn--primary btn--block btn--lg" id="closing-slip-btn" type="button">Show my closing slip</button>
+              <button class="btn btn--secondary btn--block" id="change-btn" type="button">Change my report</button>
+              <a class="btn btn--ghost btn--block" href="leaderboard.html">Leaderboard</a>
+            </div>
+            <!-- Why #change-btn is gone, once the deadline has passed or the
+                 night has been settled. It is written by renderReceipt() and
+                 lives in an element of its own ON PURPOSE: the explanation
+                 used to be written into #receipt-sub, which every later
+                 render rewrites, so opening the closing slip and closing it
+                 again erased the only sentence saying why the button had
+                 stopped working. -->
+            <p class="help" id="receipt-closed-note" hidden></p>
           </div>
         </div>
 
@@ -345,16 +564,38 @@
 
   <!-- Bank slip takeover. Full screen, read at arm's length across the chip
        case: the organiser reads ONE number and counts chips. The live clock
-       is the freshness proof; a screenshot's clock stands still. -->
+       is the freshness proof; a screenshot's clock stands still.
+
+       Three kinds, one grammar. Buy-in and top-up are chips leaving the bank,
+       so the give line reads GIVE and the unit is "chips". Closing is chips
+       coming back, so it reads COLLECT FROM and the unit is "chips back". The
+       kicker, the verb and the unit all agree, because handing chips out to
+       somebody who came to hand chips back is the most expensive mistake this
+       screen can cause.
+
+       It stays a direct child of body, outside .page-wrapper: openSlip adds
+       .no-scroll to body and assumes body is the scroller. -->
   <div class="slip" id="slip" hidden role="dialog" aria-modal="true" aria-labelledby="slip-give">
+    <!-- Direction first, because it is the one thing that must not be got
+         wrong. Its className is rebuilt wholesale by openSlip, so no layout
+         class may be hung on it here. -->
+    <div class="slip__band" id="slip-band">…</div>
     <div class="slip__kicker" id="slip-kicker">BUY-IN</div>
     <div class="slip__give" id="slip-give">…</div>
     <div class="slip__amount" id="slip-amount">…</div>
-    <div class="slip__unit">chips</div>
-    <p class="slip__note" id="slip-note" hidden></p>
-    <div class="slip__night" id="slip-night">…</div>
+    <div class="slip__unit" id="slip-unit">chips</div>
+    <p class="slip__note" id="slip-note" role="status" aria-live="polite" hidden></p>
+    <!-- The id is historical. This element is the AGE LINE now, not the old
+         re-show stamp: it is visible on every slip and states how old the slip
+         is in words. It is NOT renamed, because every handler in js/report.js
+         is registered at module scope with an unguarded getElementById and
+         boot() with OB.start(sender) is the last line of that file. It is
+         deliberately always --cream-dim: "RE-SHOW, checked in 52 minutes ago"
+         catches an honest double count, and a colour would read as a verdict
+         on a member. -->
+    <p class="slip__age" id="slip-stamp" hidden></p>
     <div class="slip__clock" id="slip-clock" aria-hidden="true">…</div>
-    <p class="slip__stamp" id="slip-stamp" hidden></p>
+    <div class="slip__night" id="slip-night">…</div>
     <button class="slip__close" id="slip-close" type="button">Close</button>
   </div>
 

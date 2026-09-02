@@ -112,12 +112,18 @@
      .slip                   Full-screen takeover, same pattern as the night
                              code: the phone is shown to the organiser at the
                              chip bank. Toggle with [hidden]. Contains, top to
-                             bottom: kicker, give-line, amount, unit, note,
-                             night, clock, stamp, close.
-     .slip--reshow           A re-rendered slip for a top-up already issued.
-                             The kicker goes clay and the stamp (below) shows
-                             the original issue time, so the bank can tell a
+                             bottom: band, kicker, give-line, amount, unit,
+                             note, age, clock, night, close.
+     .slip--reshow           A re-rendered slip for a buy-in or top-up already
+                             issued. The kicker goes clay, which is the only
+                             alarm colour on a slip, so the bank can tell a
                              fresh slip from an old one.
+     .slip--take             The closing slip: chips coming back rather than
+                             going out. It repaints the amount cream.
+     .slip__band             Direction, pinned to the top edge and read before
+                             the number: GIVE CHIPS OUT (brass) or TAKE CHIPS
+                             BACK (felt). The one brass fill on a give slip;
+                             a take slip has none. className is rebuilt by JS.
      .slip__kicker           What the slip is for ("BUY-IN", "TOP-UP"). Mono,
                              uppercase, brass; clay under --reshow.
      .slip__give             "GIVE <pseudonym>". Sans 600, big.
@@ -125,9 +131,12 @@
      .slip__unit             "chips" under the number. Mono, uppercase.
      .slip__note             One quiet sanity line ("Stack becomes 10,000").
                              Wrap numerals in <span class="mono">.
-     .slip__night            Night title. Mono, small caps style.
+     .slip__age              How old the slip is, in words ("checked in 4
+                             minutes ago"). Always cream-dim, every kind, every
+                             age. Its element is #slip-stamp: the id is
+                             historical and is deliberately not renamed.
      .slip__clock            Live clock, ticking seconds. Mono. Freshness proof.
-     .slip__stamp            The RE-SHOW box: original issue time, clay.
+     .slip__night            Night title. Mono, small caps style.
      .slip__close            The one obvious close. Full-width-ish button at
                              the bottom, 56px.
 
@@ -2708,14 +2717,17 @@ select.input {
 }
 
 /* ---- "Could not send, show this to an organiser" ----------------------
-   Read across a table in a dark room. Mono, 24px, high contrast. ------- */
+   Read across a table in a dark room. Mono, 24px, high contrast.
+   The margin is on the BOTTOM, not the top: this card is the first child
+   of #state-receipt so that the heading pointing at it is the line
+   directly above it, and the space it needs is the space under it. ---- */
 .organiser-card {
   border: 1px solid var(--clay);
   border-left: 3px solid var(--clay);
   border-radius: var(--radius);
   background-color: var(--clay-fill);
   padding: var(--space-lg);
-  margin-top: var(--space-lg);
+  margin-bottom: var(--space-lg);
 }
 
 .organiser-card h3 {
@@ -2803,10 +2815,18 @@ select.input {
   background-color: var(--brass-fill);
 }
 
+/* Settled is a fact in the banner, not something to press. A solid brass
+ * fill made it the one brass element on the whole screen, which breaks the
+ * rule that brass marks the primary action: on the escalated receipt, where
+ * the closing slip is deliberately demoted because the only thing left to do
+ * is read the numbers to an organiser, this pill was the single brass thing
+ * on screen, pulling the eye to a status word. Brass type on the same tint
+ * the closing pill uses, told apart by the full strength border and by the
+ * word itself. */
 .status-pill--settled {
-  color: var(--on-brass);
+  color: var(--brass);
   border-color: var(--brass);
-  background-color: var(--brass);
+  background-color: var(--brass-fill);
 }
 
 .status-pill--void {
@@ -3453,8 +3473,38 @@ select.input {
   justify-content: center;
   gap: 2.2vmin;
   padding: 4vmin;
+  padding-top: calc(4vmin + 9vmin);   /* room for the pinned .slip__band */
   text-align: center;
 }
+
+/* Direction, read before the number. Colour is faster than a word at four
+   metres in bad light, and handing chips OUT to somebody who came to hand
+   chips BACK is the most expensive mistake this screen can cause. The words
+   carry the same information independently, so a colour-blind organiser
+   loses nothing. Pinned to the top edge rather than sitting in the centred
+   flow, so it costs the giant numeral nothing: .slip's padding-top above
+   reserves its room, and flex centring works inside the content box, so the
+   two cannot collide. */
+.slip__band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 9vmin;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4vmin;
+  font-family: var(--font-sans);
+  font-size: clamp(0.8rem, 2.6vmin, 1.2rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.slip__band--give { background-color: var(--brass); color: var(--on-brass); }
+.slip__band--take { background-color: var(--felt);  color: var(--cream); }
 
 .slip__kicker {
   font-family: var(--font-mono);
@@ -3508,6 +3558,13 @@ select.input {
 
 .slip__note .mono { color: var(--cream); font-weight: 500; }
 
+/* The closing slip's send verdict. The organiser reads this across a chip
+   case, so colour is doing real work here. Instant, no transition, so
+   prefers-reduced-motion needs nothing. */
+.slip__note--ok      { color: var(--felt-lift); }
+.slip__note--pending { color: var(--brass); }
+.slip__note--alert   { color: var(--clay-lift); }
+
 .slip__night {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -3528,23 +3585,29 @@ select.input {
   color: var(--cream);
 }
 
-/* Clay is semantic danger, and this is exactly that: do not hand over chips
-   for a slip that was already honoured once. */
-.slip__stamp {
+/* How old this slip is, in words, re-rendered on every tick of the clock so
+   it cannot go stale while it is being held up. Always --cream-dim, on every
+   slip kind at every age: the words catch an honest double count, and a
+   colour would invite a tired organiser to refuse an honest slip. This is a
+   trust based club. The clay kicker on a re-show is the only alarm colour
+   here, and that is enough. */
+.slip__age {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: clamp(0.8rem, 2.6vmin, 1rem);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--clay-lift);
-  border: 1px solid var(--clay-line);
-  border-radius: var(--radius);
-  background-color: var(--clay-fill);
-  padding: var(--space-sm) var(--space-md);
+  color: var(--cream-dim);
 }
 
 .slip--reshow .slip__kicker { color: var(--clay-lift); }
+
+/* Brass means the bank pays out tonight; cream means the bank counts in.
+   The happy side effect: cream on --bg is about 18.8:1 against brass's
+   8.5:1, so the closing slip, read at 20:35 in the worst light of the night,
+   gets the highest-contrast numeral on the site. */
+.slip--take .slip__amount { color: var(--cream); }
 
 .slip__close {
   margin-top: 2vmin;
