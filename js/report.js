@@ -2,7 +2,9 @@
  *
  * A member on a phone, on flaky campus wifi, as the night winds up around
  * 20:30, must be able to:
- *   check in → enter top-up → enter final stack → review → send → receipt.
+ *   check in → enter final stack → review → send → receipt.
+ * ONE number is asked for. Everything else on the screen is a fact already
+ * on record.
  *
  * Resilience contract:
  *   - Every keystroke is saved to a localStorage draft; a force-quit loses
@@ -31,11 +33,14 @@
  * THE BANK. Chips only change hands against a SLIP: a full-screen takeover
  * with one giant number, the pseudonym, and a live clock (so a screenshot
  * cannot pass as fresh). Buy-in slip after check-in; top-up slip after
- * take_rebuy. When entry.rebuy_at is set the bank flow was used: the report
- * form locks step 1 to the recorded amount and NEVER sends a manual rebuy
- * value (the payload carries the server's own recorded number, which
- * report_entry ignores anyway). When rebuy_at is null the manual question
- * stays, as the fallback for a night where the bank flow was not used.
+ * take_rebuy. A top-up is therefore always something already on record, so
+ * the report NEVER asks about one, it only ever states it. Two ways it gets
+ * on record: rebuy_at set means the bank issued it and there is a slip to
+ * re-show; rebuy_chips set with rebuy_at null means an organiser handed the
+ * chips over without the app and typed it into admin.html. Both are facts
+ * this screen reports back unchanged. The client sends entry.rebuy_chips,
+ * never a member-typed number and never a bare 0, because a 0 would wipe an
+ * organiser's record (report_entry only protects the bank's own number).
  */
 (function () {
   'use strict';
@@ -67,10 +72,23 @@
    * 5 characters instead. Checked-in players never see the field again. */
   var urlCode = S.normCode(new URLSearchParams(window.location.search).get('n') || '');
 
-  /* Non-null rebuy_at means the live bank flow issued the top-up. That
-   * number is the truth; the manual question disappears. */
+  /* Non-null rebuy_at means the BANK issued the top-up, so there is a slip
+   * to re-show and the server defends the number against this client. */
   function bankMode() {
     return !!(ctx.entry && ctx.entry.rebuy_at);
+  }
+
+  /* The top-up on record, whoever put it there. This is the only top-up
+   * figure this screen ever reads, shows or sends. */
+  function recordedRebuy() {
+    return (ctx.entry && ctx.entry.rebuy_chips) || 0;
+  }
+
+  /* An organiser typed it into admin.html after handing chips across the
+   * table: a real top-up with no slip behind it. Worth stating, and worth
+   * never overwriting. */
+  function organiserRebuy() {
+    return !bankMode() && recordedRebuy() > 0;
   }
 
   /* ------------------------------------------------------------------
@@ -150,23 +168,30 @@
            (ctx.member ? ctx.member.id : 'anon');
   }
 
+  /* A draft is the one number being typed, nothing else. Top-ups live at
+   * the bank, so there is never a top-up worth drafting. */
   function saveDraft() {
     try {
       window.localStorage.setItem(draftKey(), JSON.stringify({
-        // In bank mode the rebuy is the server's record, not a draft: store
-        // null so a stale manual value can never be restored over it.
-        rebuy: bankMode() ? null : $('rebuy-input').value,
         final: $('final-input').value,
-        busted: $('bust-btn').classList.contains('quickpick--active'),
+        busted: $('bust-btn').classList.contains('btn--bust--on'),
         updated: Date.now()
       }));
     } catch (e) { /* private mode: drafts just don't survive a reload */ }
   }
 
+  /* Normalised on the way out, so a draft written by the old two-field
+   * form (which carried a typed `rebuy`) restores its final stack and its
+   * stale top-up is dropped on the floor rather than resurrected. */
   function loadDraft() {
     try {
       var raw = window.localStorage.getItem(draftKey());
-      return raw ? JSON.parse(raw) : null;
+      var d = raw ? JSON.parse(raw) : null;
+      if (!d || typeof d !== 'object') { return null; }
+      return {
+        final: (d.final === null || d.final === undefined) ? '' : String(d.final),
+        busted: !!d.busted
+      };
     } catch (e) { return null; }
   }
 
@@ -331,7 +356,6 @@
 
   $('buyin-slip-btn').addEventListener('click', openBuyinSlip);
   $('topup-reshow-btn').addEventListener('click', function () { openTopupSlip(true); });
-  $('bank-rebuy-slip-btn').addEventListener('click', function () { openTopupSlip(true); });
 
   /* ------------------------------------------------------------------
    * Sync pill + organiser card, driven by the outbox
@@ -437,45 +461,25 @@
 
   function enterReport() {
     var n = ctx.night, e = ctx.entry;
-    var bank = bankMode();
     $('report-bonus').textContent = '+' + S.fmt(n.attendance_bonus);
     $('report-buyin').textContent = S.fmt(e.buyin_chips) + ' chips';
-    $('report-cap').textContent = bank
+    $('report-cap').textContent = bankMode()
       ? 'taken at the bank'
-      : S.fmt(e.rebuy_cap_chips) + ' chips';
-    $('rebuy-max').textContent = 'Full top-up (' + S.fmt(e.rebuy_cap_chips) + ')';
+      : organiserRebuy()
+        ? 'taken, recorded by an organiser'
+        : S.fmt(e.rebuy_cap_chips) + ' chips';
 
-    // Step 1 has two faces. Bank mode: a read-only record, the live number
-    // is the truth. Manual mode: the old question, untouched, the fallback
-    // for a night where the bank flow was not used.
-    S.show($('manual-rebuy'), !bank);
-    S.show($('bank-rebuy-line'), bank);
-    if (bank) {
-      $('step1-label').textContent = 'Recorded at the bank';
-      $('step1-title').textContent = 'Your top-up tonight';
-      $('bank-rebuy-amount').textContent = S.fmt(e.rebuy_chips || 0);
-    } else {
-      $('step1-label').textContent = 'Step 1 of 2';
-      $('step1-title').textContent = 'Did you top up tonight?';
-    }
-
-    // Prefill: server row wins if already reported; else the local draft.
-    // A draft's rebuy is only honoured in manual mode; in bank mode the
-    // input is pinned to the recorded amount below, whatever was drafted.
+    // Prefill the one input: server row wins if already reported, else the
+    // local draft. A top-up, if any, is stated by the bank card above and
+    // is never something this form fills in.
     var draft = loadDraft();
     if (e.reported) {
-      $('rebuy-input').value = String(e.rebuy_chips || 0);
       $('final-input').value = e.final_stack === null ? '' : String(e.final_stack);
     } else if (draft) {
-      if (!bank) { $('rebuy-input').value = draft.rebuy || '0'; }
-      $('final-input').value = draft.final || '';
-      $('bust-btn').classList.toggle('quickpick--active', !!draft.busted);
+      $('final-input').value = draft.final;
+      $('bust-btn').classList.toggle('btn--bust--on', draft.busted);
     }
-    if (bank) { $('rebuy-input').value = String(e.rebuy_chips || 0); }
 
-    // Cap of zero → the only honest answer is "None".
-    disableQuickpicksAboveCap();
-    syncQuickpickHighlight();
     renderTopup();
     renderDeadline();
     S.show($('review-panel'), false);
@@ -505,56 +509,16 @@
     S.show(el, true);
   }
 
-  function disableQuickpicksAboveCap() {
-    var cap = ctx.entry ? ctx.entry.rebuy_cap_chips : 0;
-    Array.prototype.forEach.call(
-      document.querySelectorAll('#rebuy-quickpicks .quickpick'),
-      function (btn) {
-        var v = btn.getAttribute('data-rebuy');
-        if (v === 'max') { btn.disabled = cap <= 0; return; }
-        btn.disabled = Number(v) > cap;
-      });
-  }
-
-  function syncQuickpickHighlight() {
-    var cur = S.parseChips($('rebuy-input').value);
-    var cap = ctx.entry ? ctx.entry.rebuy_cap_chips : 0;
-    Array.prototype.forEach.call(
-      document.querySelectorAll('#rebuy-quickpicks .quickpick'),
-      function (btn) {
-        var v = btn.getAttribute('data-rebuy');
-        var val = v === 'max' ? cap : Number(v);
-        btn.classList.toggle('quickpick--active', cur !== null && cur === val);
-      });
-  }
-
-  $('rebuy-quickpicks').addEventListener('click', function (e) {
-    var btn = e.target.closest('.quickpick');
-    if (!btn || btn.disabled) { return; }
-    var v = btn.getAttribute('data-rebuy');
-    var cap = ctx.entry ? ctx.entry.rebuy_cap_chips : 0;
-    $('rebuy-input').value = String(v === 'max' ? cap : Number(v));
-    msg($('rebuy-msg'), '', '');
-    syncQuickpickHighlight();
-    saveDraft();
-  });
-
-  $('rebuy-input').addEventListener('input', function () {
-    msg($('rebuy-msg'), '', '');
-    syncQuickpickHighlight();
-    saveDraft();
-  });
-
   $('bust-btn').addEventListener('click', function () {
     $('final-input').value = '0';
-    $('bust-btn').classList.add('quickpick--active');
+    $('bust-btn').classList.add('btn--bust--on');
     msg($('final-msg'), 'Busted stack recorded as 0.', 'ok');
     saveDraft();
   });
 
   $('final-input').addEventListener('input', function () {
     var v = S.parseChips($('final-input').value);
-    $('bust-btn').classList.toggle('quickpick--active', v === 0);
+    $('bust-btn').classList.toggle('btn--bust--on', v === 0);
     msg($('final-msg'), '', '');
     saveDraft();
   });
@@ -566,27 +530,31 @@
    * ------------------------------------------------------------------ */
   var topupQuote = null;   // last rebuy_quote result, while step 2 is up
 
+  function topupFace(name) {
+    ['topup-open', 'topup-flow', 'topup-done', 'topup-organiser']
+      .forEach(function (id) { S.show($(id), id === name); });
+    S.show($('topup-card'), !!name);
+  }
+
   function renderTopup() {
-    var card = $('topup-card');
     var e = ctx.entry;
-    if (!e) { S.show(card, false); return; }
+    if (!e) { topupFace(null); return; }
     if (e.rebuy_at) {
-      // Already topped up: a quiet record, and the slip on demand.
-      $('topup-done-amount').textContent = S.fmt(e.rebuy_chips || 0);
+      // The bank issued it: a quiet record, and the slip on demand.
+      $('topup-done-amount').textContent = S.fmt(recordedRebuy());
       var t = new Date(e.rebuy_at);
       $('topup-done-time').textContent = isNaN(t) ? '…' : osloClock(t, false);
-      S.show($('topup-open'), false);
-      S.show($('topup-flow'), false);
-      S.show($('topup-done'), true);
-      S.show(card, true);
+      topupFace('topup-done');
+    } else if (organiserRebuy()) {
+      // Recorded by hand. No slip to show, and no second helping: offering
+      // the bank here would let take_rebuy overwrite the organiser's number.
+      $('topup-organiser-amount').textContent = S.fmt(recordedRebuy());
+      topupFace('topup-organiser');
     } else if (ctx.night && ctx.night.status === 'open') {
-      S.show($('topup-open'), true);
-      S.show($('topup-flow'), false);
-      S.show($('topup-done'), false);
-      S.show(card, true);
+      topupFace('topup-open');
     } else {
       // Night reconciling or beyond: the bank has packed up.
-      S.show(card, false);
+      topupFace(null);
     }
   }
 
@@ -747,7 +715,7 @@
         ctx.entry = Array.isArray(r.data) ? r.data[0] : r.data;
         topupReset();
         S.show($('topup-flow'), false);
-        enterReport();      // re-renders step 1 as the bank record
+        enterReport();      // re-reads the draft, restates the bank fact
         openTopupSlip(false);
       })
       .catch(topupError)
@@ -761,29 +729,18 @@
   $('report-form').addEventListener('submit', function (e) {
     e.preventDefault();
 
-    var rebuy;
-    if (bankMode()) {
-      // The bank issued the top-up; the recorded amount is not editable
-      // and no manual value is ever taken from the field.
-      rebuy = ctx.entry.rebuy_chips || 0;
-    } else {
-      rebuy = S.parseChips($('rebuy-input').value);
-      if (rebuy === null) { rebuy = 0; }
-      var cap = ctx.entry.rebuy_cap_chips;
-      if (rebuy > cap) {
-        rebuy = cap;
-        $('rebuy-input').value = String(cap);
-        msg($('rebuy-msg'), 'Top-ups max out at ' + S.fmt(cap) + ' tonight, adjusted.', 'error');
-        syncQuickpickHighlight();
-      }
-    }
-
     var finalStack = S.parseChips($('final-input').value);
     if (finalStack === null) {
       msg($('final-msg'), 'Type your final stack, or tap “I busted” if it is 0.', 'error');
       $('final-input').focus();
       return;
     }
+
+    // The top-up on record, sent back unchanged. No member ever types this
+    // number, so it cannot disagree with the slip. Sending a bare 0 instead
+    // would be silent destruction: report_entry keeps the bank's number
+    // (rebuy_at set) but happily overwrites an organiser's (rebuy_at null).
+    var rebuy = recordedRebuy();
 
     reviewed = { final: finalStack, rebuy: rebuy };
     var m = mathLedger(finalStack, rebuy);
@@ -806,14 +763,13 @@
 
   $('edit-btn').addEventListener('click', function () {
     S.show($('review-panel'), false);
-    $('rebuy-input').focus();
+    $('final-input').focus();
   });
 
   $('submit-btn').addEventListener('click', function () {
     if (!reviewed) { return; }
-    // In bank mode reviewed.rebuy IS the server's recorded amount, never a
-    // typed one, and report_entry ignores the parameter anyway when
-    // rebuy_at is set. The manual path sends the typed value as before.
+    // reviewed.rebuy is the bank's own recorded amount, or 0. Never typed,
+    // and report_entry ignores the parameter anyway when rebuy_at is set.
     OB.enqueue(ctx.night.id, ctx.member.id, {
       p_night_id: ctx.night.id,
       p_final_stack: reviewed.final,
@@ -826,13 +782,18 @@
 
   /* ---------------- receipt + organiser card ---------------- */
 
+  /* The final stack is this phone's number, so a queued job (not yet sent)
+   * is the freshest version of it. The top-up never is: it belongs to the
+   * server, and a job can be older than the record, which is how a phone
+   * that reported before its owner reached the bank ends up printing a
+   * confident "Top-up (bank) 0" on a receipt. The record always wins. */
   function reportedNumbers() {
     var job = myJob();
     if (job) {
-      return { final: job.payload.p_final_stack, rebuy: job.payload.p_rebuy_chips };
+      return { final: job.payload.p_final_stack, rebuy: recordedRebuy() };
     }
     if (ctx.entry && ctx.entry.reported) {
-      return { final: ctx.entry.final_stack || 0, rebuy: ctx.entry.rebuy_chips || 0 };
+      return { final: ctx.entry.final_stack || 0, rebuy: recordedRebuy() };
     }
     return null;
   }
@@ -904,13 +865,9 @@
 
   $('change-btn').addEventListener('click', function () {
     if (ctx.night.status === 'open' || ctx.night.status === 'reconciling') {
-      // Preload the last numbers so editing starts from what was sent.
-      // (In bank mode enterReport pins the rebuy to the recorded amount.)
+      // Preload the last number so editing starts from what was sent.
       var nums = reportedNumbers();
-      if (nums) {
-        if (!bankMode()) { $('rebuy-input').value = String(nums.rebuy); }
-        $('final-input').value = String(nums.final);
-      }
+      if (nums) { $('final-input').value = String(nums.final); }
       enterReport();
     } else {
       $('receipt-sub').textContent =

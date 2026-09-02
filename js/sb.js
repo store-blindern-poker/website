@@ -270,10 +270,12 @@
      * Same rule as the block above: the server wrote these for the one
      * person who reads them, and each names the fix. */
     /* Two more that carry their own fix and pass through whole:
-     * P0022 that night is full, and it says how full
+     * P0030 that night is full, and it says how full. NOT P0022: take_rebuy
+     *       already uses that one for "check in first", and js/report.js
+     *       branches on it.
      * P0070 that night has been removed */
     if (code === 'P0050' || code === 'P0051' || code === 'P0053' ||
-        code === 'P0060' || code === 'P0061' || code === 'P0022' ||
+        code === 'P0060' || code === 'P0061' || code === 'P0030' ||
         code === 'P0070') {
       var said = msg.charAt(0).toUpperCase() + msg.slice(1);
       return /[.!?]$/.test(said) ? said : said + '.';

@@ -2611,53 +2611,6 @@ select.input {
 
 .kv dt:first-of-type, .kv dd:first-of-type { border-top: 0; }
 
-/* ---- Quick-pick amounts ----------------------------------------------- */
-.quickpicks {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-sm);
-  margin-top: var(--space-sm);
-}
-
-@media (min-width: 480px) {
-  .quickpicks { grid-template-columns: repeat(4, 1fr); }
-}
-
-.quickpick {
-  min-height: var(--tap-target);
-  padding: 10px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background-color: var(--surface);
-  color: var(--cream);
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  transition: border-color var(--dur) var(--ease),
-              background-color var(--dur) var(--ease),
-              color var(--dur) var(--ease);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.quickpick:hover { border-color: var(--border-loud); }
-
-.quickpick--active {
-  background-color: var(--brass);
-  border-color: var(--brass);
-  color: var(--on-brass);
-  font-weight: 700;
-}
-
-.quickpick[disabled] {
-  background-color: var(--surface);
-  color: var(--cream-mute);
-  border-color: var(--border);
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
 /* ---- The one-tap bust button. Impossible to miss, hard to hit by
    accident: it sits apart and reads as a state, not a submit. ---------- */
 .btn--bust {
@@ -2681,7 +2634,9 @@ select.input {
 .btn--bust:hover { border-color: var(--clay); color: var(--cream); }
 .btn--bust:active { transform: translateY(1px); }
 
-.btn--bust.quickpick--active {
+/* Chosen. Sits after .btn--bust:hover on purpose: the two rules agree on
+   border and text, and only this one fills the button. */
+.btn--bust--on {
   background-color: var(--clay);
   border-color: var(--clay);
   color: var(--cream);
@@ -3642,8 +3597,7 @@ select.input {
    chrome, this restores the 48px tap height an inline link button loses.
    inline-flex + min-height grows only its own line box, so the sentence
    above it keeps its rhythm. */
-.topup-done .link-gold,
-#bank-rebuy-line .link-gold {
+.topup-done .link-gold {
   display: inline-flex;
   align-items: center;
   min-height: var(--tap-target);

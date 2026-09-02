@@ -144,9 +144,9 @@
 
         <!-- STATE: checked in, the report form.
              Hierarchy, top to bottom: a quiet status card (mono figures, no
-             heading weight), then two numbered step cards that carry the
-             display face, then one brass primary action. Nothing else on the
-             screen is brass-filled except a quick-pick you have chosen. -->
+             heading weight), the bank card while the bank is open or a top-up
+             is on record, then ONE input card, then one brass primary action.
+             Nothing else on the screen is brass-filled. -->
         <div id="state-report" hidden>
           <div class="card" style="margin-bottom: var(--space-lg);">
             <h2 class="section__label">You are checked in</h2>
@@ -159,10 +159,11 @@
                     type="button" style="margin-top: var(--space-md);">Show my buy-in slip</button>
           </div>
 
-          <!-- Bank top-up. Three faces, one visible at a time:
-               #topup-open   the offer, while the night is open and no top-up
-               #topup-flow   count your chips, see the quote, confirm, slip
-               #topup-done   quiet record of the recorded top-up + re-show -->
+          <!-- Bank top-up. Four faces, one visible at a time:
+               #topup-open       the offer, while the night is open and no top-up
+               #topup-flow       count your chips, see the quote, confirm, slip
+               #topup-done       the bank's own record + the slip again
+               #topup-organiser  a top-up an organiser recorded by hand -->
           <div class="card" id="topup-card" hidden style="margin-bottom: var(--space-lg);">
             <div id="topup-open" hidden>
               <h2 class="card__title">Top up at the bank</h2>
@@ -211,46 +212,27 @@
                 <button class="link-gold" id="topup-reshow-btn" type="button">Show the slip again</button>
               </p>
             </div>
+
+            <div id="topup-organiser" hidden>
+              <p class="topup-done">
+                Top-up recorded by an organiser:
+                <span class="mono" id="topup-organiser-amount">…</span> chips.
+                Chips crossed the table without the app, so there is no slip
+                for this one. If the number is wrong, tell an organiser.
+              </p>
+            </div>
           </div>
 
+          <!-- One input. The buy-in and any top-up were recorded when they
+               happened, against a slip, so the only thing left to ask for is
+               the number nobody else can know: what is in front of you. -->
           <form id="report-form" novalidate>
             <div class="card" style="margin-bottom: var(--space-lg);">
-              <div class="section__label" id="step1-label">Step 1 of 2</div>
-              <h2 class="card__title" id="step1-title">Did you top up tonight?</h2>
-              <div id="manual-rebuy">
-                <p class="card__text" style="margin-bottom: var(--space-md);">
-                  One top-up per night, points for chips <span class="mono">1:1</span>.
-                  If you're already holding more than tonight's stack in chips,
-                  the answer is <span class="mono">0</span>.
-                </p>
-                <div class="field" style="margin-bottom: var(--space-sm);">
-                  <label class="label" for="rebuy-input">Top-up amount (chips)</label>
-                  <input class="input input--numeric" id="rebuy-input" type="text"
-                         inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-                         placeholder="0" value="0">
-                </div>
-                <div class="quickpicks" id="rebuy-quickpicks">
-                  <button type="button" class="quickpick" data-rebuy="0">None</button>
-                  <button type="button" class="quickpick" data-rebuy="2500">2,500</button>
-                  <button type="button" class="quickpick" data-rebuy="5000">5,000</button>
-                  <button type="button" class="quickpick" data-rebuy="max" id="rebuy-max">Full top-up</button>
-                </div>
-              </div>
-              <div id="bank-rebuy-line" hidden>
-                <p class="card__text">
-                  Top-up recorded at the bank: <span class="mono" id="bank-rebuy-amount">…</span> chips.
-                  This number is locked to what the bank issued.
-                  <button class="link-gold" id="bank-rebuy-slip-btn" type="button">Show the slip</button>
-                </p>
-              </div>
-              <p class="form-msg" id="rebuy-msg" role="status" aria-live="polite"></p>
-            </div>
-
-            <div class="card" style="margin-bottom: var(--space-lg);">
-              <div class="section__label">Step 2 of 2</div>
               <h2 class="card__title">Your final chip stack</h2>
               <p class="card__text" style="margin-bottom: var(--space-md);">
-                Count everything in front of you and type the total.
+                Count everything in front of you and type the total. That is the
+                only number we need: your buy-in and any top-up are already on
+                record.
               </p>
               <div class="field" style="margin-bottom: var(--space-sm);">
                 <label class="label" for="final-input">Final stack (total chips)</label>
