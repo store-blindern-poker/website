@@ -36,11 +36,37 @@
 
   /* ---------------- storage ---------------- */
 
+  /* A stored value that is not a plain object is an EMPTY outbox, not a
+   * store to iterate.
+   *
+   * JSON.parse hands back whatever the string held, and the old guard only
+   * tested that the raw TEXT was non-empty. The literal "null" is a truthy
+   * string that parses to null; "hello" parses to a string whose Object.keys
+   * are character indices. Either one reached start(), where
+   * Object.keys(null) throws synchronously, before boot() has a promise
+   * chain to catch it. The page then sat on the loading skeleton forever
+   * with no message, and worse: OB.start() never finished, so every report
+   * already queued on that phone stopped retrying, silently, with nothing
+   * on screen to say so.
+   *
+   * Nothing this app writes can produce that, because save() always
+   * stringifies an object. A shared origin, a half-written value or an
+   * extension can. The cost of being wrong is a member's report never
+   * arriving, so the cheap check wins.
+   *
+   * The bad value is deliberately NOT cleared here: load() is called on
+   * every render and should not have side effects. The next enqueue writes
+   * a proper store over it. */
+  function isStore(v) {
+    return !!v && typeof v === 'object' && !Array.isArray(v);
+  }
+
   function load() {
     if (memoryStore) { return memoryStore; }
     try {
       var raw = window.localStorage.getItem(STORE_KEY);
-      return raw ? JSON.parse(raw) : {};
+      var parsed = raw ? JSON.parse(raw) : {};
+      return isStore(parsed) ? parsed : {};
     } catch (e) {
       memoryStore = memoryStore || {};
       return memoryStore;
