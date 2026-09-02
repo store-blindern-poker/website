@@ -98,7 +98,7 @@
   /* Named columns, never select('*'): the same rule js/sb.js documents for
    * the nights table applies to anything that might grow a column later. */
   var UPCOMING_COLS = 'night_id,season_id,played_on,title,status,' +
-    'location,location_url,going_count,not_going_count';
+    'location,location_url,going_count,not_going_count,capacity';
 
   function fetchNights() {
     return S.client().from('v_upcoming_nights').select(UPCOMING_COLS)
@@ -315,6 +315,16 @@
     el.appendChild(document.createTextNode(' ' + tail));
   }
 
+  /* "9 of 38 going", or plain "9 going" when the night has no cap. */
+  function setCountLine(el, n, cap, numClass) {
+    el.textContent = '';
+    var num = document.createElement('span');
+    num.className = numClass;
+    num.textContent = cap ? (String(n) + ' of ' + String(cap)) : String(n);
+    el.appendChild(num);
+    el.appendChild(document.createTextNode(' going'));
+  }
+
   function newBlock(night, tmpl, identity) {
     var el = tmpl.content.firstElementChild.cloneNode(true);
     var b = {
@@ -334,6 +344,10 @@
       mine: null,                  // 'going' | 'not_going' | null
       going: null,                 // pseudonyms, or null when not loaded
       goingCount: Number(night.going_count) || 0,
+      // Seats. null means the night is uncapped, and the count renders
+      // bare rather than as "9 of nothing".
+      capacity: (night.capacity === null || night.capacity === undefined)
+                  ? null : Number(night.capacity),
       notGoingCount: Number(night.not_going_count) || 0,
       busy: false,
       busyOn: null,
@@ -362,9 +376,14 @@
     var isMember = b.identity === 'member';
     var isChecking = b.identity === 'checking';
 
+    /* A full night still takes walk-ins: the cap is how many chairs we
+     * put out, not a door policy. So this disables the Going button and
+     * says why, and says nothing about whether you may turn up. */
+    var full = b.capacity !== null && b.goingCount >= b.capacity;
+
     /* Headcount. Always shown, to everybody. */
     if (b.goingCount > 0) {
-      setNumLine(b.count, b.goingCount, 'going', 'rsvp__count-num');
+      setCountLine(b.count, b.goingCount, b.capacity, 'rsvp__count-num');
     } else {
       b.count.textContent = isMember
         ? 'Nobody has answered yet. Be the first.'
@@ -392,8 +411,12 @@
         else { btn.removeAttribute('aria-busy'); }
       } else {
         btn.removeAttribute('aria-busy');
-        if (isChecking || b.locked) { btn.setAttribute('aria-disabled', 'true'); }
-        else { btn.removeAttribute('aria-disabled'); }
+        // Somebody who already holds a seat can always change their mind,
+        // so a full night never locks the person who filled it.
+        if (isChecking || b.locked ||
+            (val === 'going' && full && b.mine !== 'going')) {
+          btn.setAttribute('aria-disabled', 'true');
+        } else { btn.removeAttribute('aria-disabled'); }
       }
     }
 
@@ -412,9 +435,14 @@
     if (isChecking) {
       hint = 'Checking your account.';
     } else if (isMember && !b.locked) {
-      hint = b.mine
-        ? 'Tap the same answer again to clear it.'
-        : 'One tap. You can change it later.';
+      if (full && b.mine !== 'going') {
+        hint = 'All ' + b.capacity + ' seats are taken. Check back in case '
+             + 'somebody drops out, or ask an organiser.';
+      } else {
+        hint = b.mine
+          ? 'Tap the same answer again to clear it.'
+          : 'One tap. You can change it later.';
+      }
     }
     b.hint.textContent = hint;
     b.hint.hidden = !hint;
@@ -649,8 +677,10 @@
       for (i = 0; i < nights.length; i++) {
         if (isoOf(nights[i].played_on) === iso) {
           var n = Number(nights[i].going_count) || 0;
+          var cap = (nights[i].capacity === null || nights[i].capacity === undefined)
+                      ? null : Number(nights[i].capacity);
           if (n > 0) {
-            setNumLine(out, n, 'going', 'countdown__going-num');
+            setCountLine(out, n, cap, 'countdown__going-num');
           } else {
             out.textContent = 'Nobody has answered yet.';
           }

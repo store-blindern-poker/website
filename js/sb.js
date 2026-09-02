@@ -127,7 +127,7 @@
     'counts_as_round,affects_points,stack_size,attendance_bonus,entry_count,' +
     'unreported_count,chips_in,chips_out,chip_balance,opened_at,closed_at,' +
     'settled_at,settled_by,revision,created_at,reports_close_at,' +
-    'location,location_url,notes';
+    'location,location_url,notes,capacity,deleted_at';
 
   /* Tonight's night, if any: an 'open' night wins, else a 'reconciling' one
    * (members may still report while the organisers reconcile). */
@@ -269,8 +269,12 @@
      *       organiser believe it, so the sentence passes through whole.
      * Same rule as the block above: the server wrote these for the one
      * person who reads them, and each names the fix. */
+    /* Two more that carry their own fix and pass through whole:
+     * P0022 that night is full, and it says how full
+     * P0070 that night has been removed */
     if (code === 'P0050' || code === 'P0051' || code === 'P0053' ||
-        code === 'P0060' || code === 'P0061') {
+        code === 'P0060' || code === 'P0061' || code === 'P0022' ||
+        code === 'P0070') {
       var said = msg.charAt(0).toUpperCase() + msg.slice(1);
       return /[.!?]$/.test(said) ? said : said + '.';
     }

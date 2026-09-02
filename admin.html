@@ -153,6 +153,13 @@
               <p class="form-msg" id="create-msg" role="status" aria-live="polite"></p>
             </form>
 
+            <!-- Unhidden only when a night has been removed, and it carries
+                 the count either way it is pointing. -->
+            <div class="members-toolbar" style="margin-bottom: var(--space-md);">
+              <button type="button" class="btn btn--secondary" id="nights-removed-toggle"
+                      aria-pressed="false" hidden>Show removed</button>
+            </div>
+
             <!-- Skeleton rows until the first nights query lands. js/admin.js
                  replaces the whole innerHTML, so both children go together. -->
             <div id="nights-list">
@@ -203,6 +210,8 @@
               <button class="btn btn--secondary" id="btn-code" type="button" hidden>Show the code on the TV</button>
               <button class="btn btn--ghost" id="toggle-edit" type="button" hidden
                       aria-expanded="false" aria-controls="edit-form">Edit details</button>
+              <button class="btn btn--ghost" id="btn-remove-night" type="button" hidden>Remove night…</button>
+              <button class="btn btn--primary" id="btn-restore-night" type="button" hidden>Restore night</button>
             </div>
             <p class="form-msg" id="lifecycle-msg" role="status" aria-live="polite"></p>
 
@@ -211,6 +220,15 @@
               <span id="settle-confirm-text">Settle?</span>
               <button class="btn btn--danger" id="btn-settle-really" type="button">Settle now</button>
               <button class="btn btn--ghost" id="btn-settle-cancel" type="button">Cancel</button>
+            </div>
+
+            <!-- Two-tap remove confirm. Soft, like removing a member: the
+                 entries stay, the leaderboard is recomputed without them,
+                 and Restore puts the whole night back. -->
+            <div class="confirm-strip" id="remove-night-confirm" hidden>
+              <span id="remove-night-text">Remove?</span>
+              <button class="btn btn--danger" id="btn-remove-really" type="button">Remove night</button>
+              <button class="btn btn--ghost" id="btn-remove-cancel" type="button">Cancel</button>
             </div>
 
             <!-- EDIT THIS NIGHT. Hidden until "Edit details" is pressed, so
@@ -253,6 +271,15 @@
                 <p class="help">For the organisers. Not shown on the public events page.</p>
               </div>
 
+              <div class="field">
+                <label class="label" for="edit-capacity">Seats</label>
+                <input class="input input--numeric" id="edit-capacity" type="text"
+                       inputmode="numeric" placeholder="38">
+                <p class="help">How many can say they are coming. The events page shows
+                "9 of 38 going" and stops taking answers at the last seat. It never stops
+                anybody checking in on the night: if you find a spare chair, use it. Clear
+                the box for no limit.</p>
+              </div>
               <div class="field">
                 <label class="label" for="edit-date">Date</label>
                 <input class="input" id="edit-date" type="date">

@@ -46,7 +46,8 @@
     isSuper: false,   // is_super_admin(), asked once at boot
     directory: [],    // v_member_directory rows (admin-only names + emails)
     dirState: 'idle', // idle | ready | failed (skeleton is the idle look)
-    dirShowRemoved: false  // false = current members (the default), true = removed only
+    dirShowRemoved: false, // false = current members (the default), true = removed only
+    nightsShowRemoved: false // same switch for the nights list
   };
 
   function msg(el, text, kind) {
@@ -158,26 +159,62 @@
    * Nights list
    * ------------------------------------------------------------------ */
 
+  function nightRemoved(n) { return !!(n && n.deleted_at); }
+
+  /* Removing a night is soft, so this list has the same two views the
+   * member directory has: the live nights, which is the default, and the
+   * removed ones. The count sits on the toggle whichever way it points, so
+   * a removed night is never invisible, only out of the way. */
   function renderNights() {
     var box = $('nights-list');
-    if (!ctx.nights.length) {
-      box.innerHTML = '<div class="card"><p class="card__text">No nights yet: ' +
-        'create the first one above.</p></div>';
+    var live = ctx.nights.filter(function (n) { return !nightRemoved(n); });
+    var gone = ctx.nights.filter(nightRemoved);
+
+    // Nothing removed means nothing to switch to, so the view snaps back.
+    if (!gone.length) { ctx.nightsShowRemoved = false; }
+
+    var toggle = $('nights-removed-toggle');
+    if (toggle) {
+      S.show(toggle, gone.length > 0);
+      toggle.setAttribute('aria-pressed', ctx.nightsShowRemoved ? 'true' : 'false');
+      toggle.textContent = ctx.nightsShowRemoved
+        ? 'Show current (' + S.fmt(live.length) + ')'
+        : 'Show removed (' + S.fmt(gone.length) + ')';
+    }
+
+    var pool = ctx.nightsShowRemoved ? gone : live;
+    if (!pool.length) {
+      box.innerHTML = '<div class="card"><p class="card__text">' +
+        (ctx.nightsShowRemoved
+          ? 'No removed nights.'
+          : (gone.length
+              ? 'Every night has been removed. "Show removed" lists them, and Restore puts one back.'
+              : 'No nights yet: create the first one above.')) +
+        '</p></div>';
       return;
     }
-    box.innerHTML = ctx.nights.map(function (n) {
+    box.innerHTML = pool.map(function (n) {
       var sel = ctx.night && ctx.night.id === n.id;
       return '<button type="button" class="night-row' + (sel ? ' night-row--selected' : '') +
+        (nightRemoved(n) ? ' row--removed' : '') +
         '" data-night="' + n.id + '">' +
         '<span><span class="night-row__title">' +
           S.escapeHtml(n.title || 'Night ' + n.night_no) + '</span><br>' +
           '<span class="night-row__meta">' + S.escapeHtml(n.played_on) +
           ' · stack ' + S.fmt(n.stack_size) + ' · bonus +' + S.fmt(n.attendance_bonus) +
+          (n.capacity ? ' · ' + S.fmt(n.capacity) + ' seats' : '') +
           (n.counts_as_round ? '' : ' · does not count as a round') + '</span></span>' +
-        '<span class="status-pill status-pill--' + n.status + '">' + n.status + '</span>' +
+        (nightRemoved(n)
+          ? '<span class="badge badge--muted">removed</span>'
+          : '<span class="status-pill status-pill--' + n.status + '">' + n.status + '</span>') +
         '</button>';
     }).join('');
   }
+
+  $('nights-removed-toggle').addEventListener('click', function () {
+    ctx.nightsShowRemoved = !ctx.nightsShowRemoved;
+    renderNights();
+  });
 
   $('nights-list').addEventListener('click', function (e) {
     var row = e.target.closest('.night-row');
@@ -198,6 +235,7 @@
     S.show($('bulk-apply-btn'), false);
     msg($('bulk-msg'), '', '');
     msg($('lifecycle-msg'), '', '');
+    S.show($('remove-night-confirm'), false);
     msg($('adjust-msg'), '', '');
     S.show($('settle-confirm'), false);
     // Whatever was typed belonged to the night you just left. The form
@@ -243,29 +281,39 @@
     $('detail-meta').textContent = n.played_on +
       ' · stack ' + S.fmt(n.stack_size) +
       ' · bonus +' + S.fmt(n.attendance_bonus) +
+      (n.capacity ? ' · ' + S.fmt(n.capacity) + ' seats' : '') +
       (n.counts_as_round ? '' : ' · does not count as a round');
+    var removed = nightRemoved(n);
     var pill = $('detail-status');
-    pill.textContent = n.status;
-    pill.className = 'status-pill status-pill--' + n.status;
+    pill.textContent = removed ? 'removed' : n.status;
+    pill.className = removed ? 'badge badge--muted'
+                             : 'status-pill status-pill--' + n.status;
 
     renderVenue(n);
     // The edit controls follow the same rule the server does: everything
     // except a settled or void night can be edited (P0060 is the refusal).
-    S.show($('toggle-edit'), editableNight(n));
+    S.show($('toggle-edit'), editableNight(n) && !nightRemoved(n));
     if (!editableNight(n)) { closeEdit(); }
     syncEditFrozen();
 
+    // A removed night is a record, not a night. Nothing on it can be run,
+    // opened or edited; the only way forward is Restore. Removing and
+    // restoring are super-admin work, same as removing a member.
+    S.show($('btn-remove-night'), ctx.isSuper && !removed);
+    S.show($('btn-restore-night'), ctx.isSuper && removed);
+    if (removed) { closeEdit(); S.show($('settle-confirm'), false); }
+
     // Lifecycle buttons by status. Draft → open. Open → close/settle.
     // Reconciling → settle (or reopen). Settled → reopen for corrections.
-    S.show($('btn-open'), n.status === 'draft');
-    S.show($('btn-close'), n.status === 'open');
-    S.show($('btn-settle'), n.status === 'open' || n.status === 'reconciling');
-    S.show($('btn-reopen'), n.status === 'reconciling' || n.status === 'settled');
+    S.show($('btn-open'), !removed && n.status === 'draft');
+    S.show($('btn-close'), !removed && n.status === 'open');
+    S.show($('btn-settle'), !removed && (n.status === 'open' || n.status === 'reconciling'));
+    S.show($('btn-reopen'), !removed && (n.status === 'reconciling' || n.status === 'settled'));
     $('btn-reopen').textContent = n.status === 'settled'
       ? 'Reopen for corrections' : 'Reopen check-in';
     // The TV takeover: available for any live-ish night (showing it for a
     // draft lets organisers put it on the screen before doors open).
-    S.show($('btn-code'), n.status !== 'void');
+    S.show($('btn-code'), !removed && n.status !== 'void');
 
     // The numbers of the night, computed from live entries the same way
     // recompute_season() will: unreported final stacks count as zero.
@@ -447,7 +495,7 @@
       note.textContent = frozen + (frozen === 1 ? ' player has' : ' players have') +
         ' checked in, so the date, stack size, attendance bonus and the two ' +
         'scoring switches are locked: they were used to book those entries. ' +
-        'Title, location, map link and notes still change.';
+        'Title, location, map link, seats and notes still change.';
       S.show(note, true);
     } else {
       note.textContent = '';
@@ -462,6 +510,7 @@
     $('edit-location').value = n.location || '';
     $('edit-location-url').value = n.location_url || '';
     $('edit-notes').value = n.notes || '';
+    $('edit-capacity').value = n.capacity == null ? '' : String(n.capacity);
     $('edit-date').value = String(n.played_on || '').slice(0, 10);
     $('edit-kind').value = n.kind || 'tournament';
     $('edit-stack').value = n.stack_size == null ? '' : String(n.stack_size);
@@ -528,6 +577,23 @@
     put('p_location', textChange('edit-location', n.location));
     put('p_location_url', textChange('edit-location-url', n.location_url));
     put('p_notes', textChange('edit-notes', n.notes));
+
+    // Seats never freeze: the cap changes nothing already scored, and a
+    // room swap on the day is exactly when it needs changing. An emptied
+    // box means no limit, which update_night is told with a 0.
+    var capRaw = String($('edit-capacity').value || '').trim();
+    var cap;
+    if (capRaw === '') {
+      cap = 0;
+    } else {
+      cap = S.parseChips(capRaw);
+      if (cap === null || cap < 1) {
+        msg($('edit-msg'), 'Seats must be a whole number of players, e.g. 38. ' +
+          'Leave it empty for no limit.', 'error');
+        return;
+      }
+    }
+    if (cap !== (n.capacity == null ? 0 : Number(n.capacity))) { put('p_capacity', cap); }
 
     if ($('edit-kind').value !== n.kind) { put('p_kind', $('edit-kind').value); }
 
@@ -750,7 +816,7 @@
     var live = n.status === 'open' || n.status === 'reconciling';
     var stack = Number(n.stack_size) || 0;
     var html = '<div class="mini-stats">' +
-      stat(going.length, 'coming', '') +
+      stat(going.length, n.capacity ? ('coming of ' + S.fmt(n.capacity)) : 'coming', '') +
       stat(notGoing, 'cannot make it', '') +
       (live
         ? stat(going.length - missing.length, 'here already',
@@ -759,6 +825,14 @@
         : stat(stack, 'chips per buy-in', '') +
           stat(going.length * stack, 'chips to seat them', '')) +
       '</div>';
+
+    // Worth saying out loud: the events page has stopped taking answers
+    // and somebody will ask why. The door is a separate question.
+    if (n.capacity && going.length >= n.capacity) {
+      html += '<p class="help">Every seat is taken, so nobody else can answer on ' +
+        'the events page. That never blocks the door: if somebody turns up, check ' +
+        'them in below as normal, or raise the seats in Edit details.</p>';
+    }
 
     // The line an organiser reads at 19:00: who said they were coming and is
     // not in the room. Same brass block as "not reported", because it asks
@@ -859,6 +933,64 @@
         msg($('lifecycle-msg'), S.friendlyError(err), 'error');
       });
   });
+
+  /* ------------------------------------------------------------------
+   * Removing a night
+   *
+   * Soft, exactly like removing a member: deleted_at is stamped, every
+   * entry and adjustment stays where it is, and the season is recomputed
+   * without the night. Restore reverses all of it. Super admins only.
+   *
+   * This is the tool for a night that should never have existed, a test
+   * fixture or a duplicate. It is NOT the tool for a wrong result: a
+   * number somebody reported wrongly is fixed by reporting it again for
+   * them, which corrects the chips and the points together.
+   * ------------------------------------------------------------------ */
+
+  $('btn-remove-night').addEventListener('click', function () {
+    var n = ctx.night;
+    if (!n) { return; }
+    var count = checkedInCount();
+    $('remove-night-text').textContent =
+      'Remove "' + (n.title || 'Night ' + n.night_no) + '"' +
+      (count ? ', and its ' + count + (count === 1 ? ' entry' : ' entries') : '') +
+      '? Nothing is deleted' +
+      (n.status === 'settled' ? ', and the season is recomputed without it' : '') +
+      '. Restore puts it all back.';
+    S.show($('remove-night-confirm'), true);
+  });
+
+  $('btn-remove-cancel').addEventListener('click', function () {
+    S.show($('remove-night-confirm'), false);
+  });
+
+  $('btn-remove-really').addEventListener('click', function () {
+    S.show($('remove-night-confirm'), false);
+    nightRemoval('delete_night',
+      'Removing the night and recomputing the season…',
+      'Removed ✓. "Show removed" lists it, and Restore puts it back.');
+  });
+
+  $('btn-restore-night').addEventListener('click', function () {
+    nightRemoval('restore_night',
+      'Restoring the night and recomputing the season…',
+      'Restored ✓. The season counts it again.');
+  });
+
+  /* delete_night returns void, so PostgREST answers 204 with no body and
+   * rpc() resolves with null. Neither answer is trusted anyway: refreshAll
+   * re-reads the nights list, and loadNights re-points ctx.night at the
+   * fresh row, so the pill and the buttons follow the server. */
+  function nightRemoval(rpcName, busyText, okText) {
+    if (!ctx.night) { return; }
+    msg($('lifecycle-msg'), busyText, 'busy');
+    rpc(rpcName, { p_night_id: ctx.night.id })
+      .then(refreshAll)
+      .then(function () { msg($('lifecycle-msg'), okText, 'ok'); })
+      .catch(function (err) {
+        msg($('lifecycle-msg'), S.friendlyError(err), 'error');
+      });
+  }
 
   /* ------------------------------------------------------------------
    * Night-code takeover, the QR + giant code, made for a TV across a room.
