@@ -445,14 +445,17 @@
                          autocomplete="off" autocapitalize="off" placeholder="Start typing…">
                 </div>
                 <div class="field">
-                  <label class="label" for="proxy-report-rebuy">Top-up (chips)</label>
+                  <label class="label" for="proxy-report-rebuy">Top-up: chips you handed over</label>
                   <input class="input input--numeric" id="proxy-report-rebuy" type="text"
                          inputmode="numeric" value="0">
+                  <p class="help">The number of chips they received, not the stack they were
+                  holding before. Leave it at 0 if they never topped up.</p>
                 </div>
                 <div class="field">
-                  <label class="label" for="proxy-report-final">Final stack (chips)</label>
+                  <label class="label" for="proxy-report-final">Final stack: chips in front of them at the end</label>
                   <input class="input input--numeric" id="proxy-report-final" type="text"
                          inputmode="numeric" placeholder="0">
+                  <p class="help">Everything they are holding when they finish. 0 if they busted.</p>
                 </div>
                 <button class="btn btn--primary btn--block" type="submit">Save report</button>
                 <p class="form-msg" id="proxy-report-msg" role="status" aria-live="polite"></p>
@@ -465,8 +468,10 @@
             <div class="card" style="margin-bottom: var(--space-lg);">
               <h3 class="card__title">Bulk paste from the paper sheet</h3>
               <p class="card__text" style="margin-bottom: var(--space-md);">
-                One player per line: <code>pseudonym, top-up, final&nbsp;stack</code>
-                (two values means top-up 0: <code>pseudonym, final</code>).
+                One player per line: <code>pseudonym, top-up, final&nbsp;stack</code>,
+                where the top-up is the chips they were handed, not the stack
+                they were holding first (two values means top-up 0:
+                <code>pseudonym, final</code>).
                 Commas, semicolons or tabs all work.
               </p>
               <div class="field">
