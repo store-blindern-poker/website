@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset your password - Store Blindern Poker</title>
+  <meta name="description" content="Set a new password for your Store Blindern Poker account.">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="page-wrapper">
+
+    <!-- ================= Shared chrome: header (identical on every page) ================= -->
+    <nav class="nav" aria-label="Main navigation">
+      <div class="container nav__inner">
+        <a href="index.html" class="nav__brand">
+          <span class="nav__brand-icon">♠</span>
+          Store Blindern Poker
+        </a>
+        <button class="nav__toggle" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav__links">
+          <a href="index.html" class="nav__link">Home</a>
+          <a href="events.html" class="nav__link">Events</a>
+          <a href="leaderboard.html" class="nav__link">Leaderboard</a>
+          <a href="rules.html" class="nav__link">Rules</a>
+          <a href="login.html" class="nav__cta" aria-current="page">Member login</a>
+        </div>
+      </div>
+    </nav>
+    <!-- =============== End shared chrome: header =============== -->
+
+    <main id="main" class="page-content app-main">
+      <div class="container container--narrow" style="max-width: 480px;">
+
+        <h1 class="app-title">Reset your password</h1>
+        <p class="app-subtitle">
+          Your pseudonym, your points and your whole history stay exactly as
+          they are. This only changes how you sign in.
+        </p>
+
+        <!-- In-app webview escape hatch, same as login.html: a reset link
+             opened inside the Facebook or Instagram browser often lands in a
+             different session than the one that asked for it. -->
+        <div class="notice notice--warn" id="webview-card" hidden>
+          <div>
+            <strong>It looks like you're inside an app's built-in browser.</strong><br>
+            Password links often break in there. Open this page in your real
+            browser instead: tap the <strong>&#8942;</strong> or share button
+            and choose <strong>&ldquo;Open in Chrome&rdquo;</strong> /
+            <strong>&ldquo;Open in Safari&rdquo;</strong>, or copy the link:
+            <div style="margin-top: var(--space-sm);">
+              <button class="btn btn--secondary" id="webview-copy" type="button">Copy link</button>
+              <span id="webview-copied" class="form-msg--ok" role="status" hidden>Copied ✓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATE: config placeholders not yet patched -->
+        <div class="card card--accent" id="state-config" hidden>
+          <h2 class="card__title">Sign-in isn't switched on yet</h2>
+          <p class="card__text">
+            The member system is being connected. Until then, everything you
+            need is on the <a class="link-gold" href="events.html">events page</a>
+            and the <a class="link-gold" href="rules.html">rules page</a>.
+          </p>
+        </div>
+
+        <!-- STATE: reading the link, if we arrived from one. Shaped like the
+             card that replaces it so nothing jumps. -->
+        <div class="card" id="state-loading">
+          <p class="visually-hidden" role="status">Checking your link.</p>
+          <div aria-hidden="true">
+            <span class="skeleton skeleton--title" style="margin-bottom: var(--space-xl);"></span>
+            <span class="skeleton skeleton--line" style="margin-bottom: var(--space-md);"></span>
+            <span class="skeleton skeleton--line"></span>
+          </div>
+        </div>
+
+        <!-- STATE: ask for the email. The default landing. -->
+        <div id="state-request" hidden>
+          <div class="card">
+            <h2 class="card__title">Send me a reset link</h2>
+            <p class="card__text" style="margin-bottom: var(--space-lg);">
+              Type the email you signed up with. We send you a link that lets
+              you pick a new password.
+            </p>
+            <form id="request-form" novalidate>
+              <div class="field">
+                <label class="label" for="request-email">Email</label>
+                <input class="input" id="request-email" type="email" required
+                       autocomplete="email" autocapitalize="off"
+                       spellcheck="false" placeholder="you@example.com">
+              </div>
+              <button class="btn btn--primary btn--block btn--lg" id="request-submit" type="submit">Send the link</button>
+              <p class="form-msg" id="request-msg" role="status" aria-live="polite"></p>
+            </form>
+          </div>
+
+          <p class="help" style="margin-top: var(--space-md); text-align: center;">
+            Remembered it? <a class="link-gold" href="login.html">Back to sign in</a>.
+          </p>
+        </div>
+
+        <!-- STATE: the link is on its way. Deliberately says the same thing
+             whether or not that address has an account: a member's email is
+             not something this page should confirm to whoever typed it. -->
+        <div id="state-sent" hidden>
+          <div class="card card--accent">
+            <h2 class="card__title">Check your inbox</h2>
+            <p class="card__text">
+              If <span class="mono" id="sent-email">that address</span> has an
+              account, a reset link is on its way. It is good for one hour and
+              can only be used once.
+            </p>
+            <p class="card__text" style="margin-top: var(--space-md);">
+              Nothing after a few minutes? Look in spam. If it is not there
+              either, grab an organiser at a night and we will sort it out in
+              person, which is often quicker anyway.
+            </p>
+            <div class="toolbar" style="margin-top: var(--space-lg);">
+              <a class="btn btn--secondary" href="login.html">Back to sign in</a>
+              <button class="btn btn--ghost" id="sent-again-btn" type="button">Use a different email</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATE: arrived from a live reset link. The only screen that can
+             set a password, and it is only ever reached from a link. -->
+        <div id="state-set" hidden>
+          <div class="card">
+            <h2 class="card__title">Pick a new password</h2>
+            <p class="card__text" style="margin-bottom: var(--space-lg);">
+              Eight characters or more. Pick something you will still know in
+              three weeks: the club cannot read it back to you.
+            </p>
+            <form id="set-form" novalidate>
+              <div class="field">
+                <label class="label" for="set-password">New password</label>
+                <input class="input" id="set-password" type="password" required
+                       minlength="8" autocomplete="new-password"
+                       placeholder="At least 8 characters">
+              </div>
+              <div class="field">
+                <label class="label" for="set-confirm">Type it again</label>
+                <input class="input" id="set-confirm" type="password" required
+                       minlength="8" autocomplete="new-password">
+              </div>
+              <button class="btn btn--primary btn--block btn--lg" id="set-submit" type="submit">Save my new password</button>
+              <p class="form-msg" id="set-msg" role="status" aria-live="polite"></p>
+            </form>
+          </div>
+        </div>
+
+        <!-- STATE: done. Sent onward to login.html rather than the front
+             page, because that is the screen that knows whether this member
+             still owes us a pseudonym or a name. -->
+        <div id="state-done" hidden>
+          <div class="card card--accent">
+            <h2 class="card__title">Password changed ✓</h2>
+            <p class="card__text" style="margin-bottom: var(--space-lg);">
+              You are signed in on this device. Your pseudonym, your points and
+              every night you have played are untouched.
+            </p>
+            <a class="btn btn--primary btn--block btn--lg" href="login.html">Carry on</a>
+          </div>
+        </div>
+
+        <!-- STATE: the link was stale, already used, or opened in a browser
+             that could not complete it. Says which, then offers the fix. -->
+        <div id="state-expired" hidden>
+          <div class="card card--accent">
+            <h2 class="card__title">That link has expired</h2>
+            <p class="card__text" style="margin-bottom: var(--space-lg);"
+               id="expired-why">
+              Reset links last an hour and work once. Ask for a fresh one and
+              it will work the same way.
+            </p>
+            <button class="btn btn--primary btn--block btn--lg" id="expired-again-btn" type="button">Send me a new link</button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================= Shared chrome: footer (identical on every page) ================= -->
+    <footer class="footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">♠ Store Blindern Poker</div>
+        <div class="footer__links">
+          <a href="events.html" class="footer__link">Events</a>
+          <a href="leaderboard.html" class="footer__link">Leaderboard</a>
+          <a href="rules.html" class="footer__link">Rules</a>
+          <a href="login.html" class="footer__link">Member login</a>
+          <a href="privacy.html" class="footer__link">Privacy</a>
+          <a href="mailto:it@storeblindernpoker.org" class="footer__link">it@storeblindernpoker.org</a>
+        </div>
+        <div class="footer__socials">
+          <a href="https://www.facebook.com/groups/1353698180088990/" target="_blank" rel="noopener" class="footer__social" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener" class="footer__social" aria-label="Discord">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+        </div>
+        <p class="footer__nomoney">
+          Store Blindern Poker is a points-only association. No money is
+          wagered, staked or exchanged at our events, and this site never
+          processes payments.
+        </p>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+      </div>
+    </footer>
+    <!-- =============== End shared chrome: footer =============== -->
+
+  </div>
+
+  <!-- Order matters: config → vendored Supabase → shared helpers → page logic -->
+  <script src="js/config.js" defer></script>
+  <script src="js/vendor/supabase.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/sb.js" defer></script>
+  <script src="js/reset.js" defer></script>
+</body>
+</html>
