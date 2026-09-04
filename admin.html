@@ -329,6 +329,26 @@
             <div class="notreported" id="notreported" style="margin-top: var(--space-lg);">
               <h3 id="notreported-title">Not reported yet</h3>
               <div class="notreported__names" id="notreported-names"></div>
+
+              <!-- Chase them by mail. Hidden unless somebody actually owes a
+                   number and the night can still take one.
+
+                   The button calls an Edge Function rather than an RPC,
+                   because sending mail needs a provider key, and a key in a
+                   browser tab is a key on a table in a room of thirty-eight
+                   people. The function works out who to write to from the
+                   night id on its own, so this console never sees an email
+                   address and cannot be talked into mailing anybody else. -->
+              <div class="toolbar" id="nudge-bar" hidden style="margin-top: var(--space-md);">
+                <button class="btn btn--secondary" id="nudge-btn" type="button">Email them</button>
+                <span class="help" id="nudge-note"></span>
+              </div>
+              <div class="confirm-strip" id="nudge-confirm" hidden>
+                <span id="nudge-confirm-text">Send?</span>
+                <button class="btn btn--primary" id="nudge-really" type="button">Send them</button>
+                <button class="btn btn--ghost" id="nudge-cancel" type="button">Cancel</button>
+              </div>
+              <p class="form-msg" id="nudge-msg" role="status" aria-live="polite"></p>
             </div>
 
             <!-- WHO SAID THEY ARE COMING. The planning block, and the only

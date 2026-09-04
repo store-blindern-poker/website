@@ -355,6 +355,7 @@
       $('notreported-title').textContent = 'Everyone has reported ✓';
       names.innerHTML = '';
     }
+    renderNudge();
 
     // Entries table.
     var body = $('entries-body');
@@ -991,6 +992,104 @@
         msg($('lifecycle-msg'), S.friendlyError(err), 'error');
       });
   }
+
+  /* ------------------------------------------------------------------
+   * Chasing the players who have not reported
+   *
+   * Friday proved the need: six of thirty-eight walked off without a
+   * number, and chasing them meant naming people in a public channel from
+   * memory, which named somebody who had already reported.
+   *
+   * Every mail carries that member's OWN figures, because the useful
+   * sentence is not "you forgot" but "this is what silence costs you".
+   * ------------------------------------------------------------------ */
+
+  var NUDGE_RECENT_MS = 30 * 60 * 1000;
+
+  function nudgeable() {
+    var n = ctx.night;
+    if (!n || nightRemoved(n)) { return []; }
+    // A settled or void night cannot take a report, so asking for one would
+    // be sending people to a screen that refuses them.
+    if (n.status === 'settled' || n.status === 'void') { return []; }
+    return ctx.entries.filter(function (e) { return !e.reported; });
+  }
+
+  function renderNudge() {
+    var list = nudgeable();
+    S.show($('nudge-bar'), list.length > 0);
+    if (!list.length) {
+      S.show($('nudge-confirm'), false);
+      msg($('nudge-msg'), '', '');
+      return;
+    }
+    $('nudge-btn').textContent = 'Email the ' + list.length +
+      (list.length === 1 ? ' player' : ' players') + ' who have not reported';
+    var recent = list.filter(function (e) {
+      return e.reminder_sent_at &&
+        Date.now() - new Date(e.reminder_sent_at).getTime() < NUDGE_RECENT_MS;
+    }).length;
+    $('nudge-note').textContent = recent
+      ? recent + ' of them were emailed in the last half hour and will be left alone.'
+      : '';
+  }
+
+  $('nudge-btn').addEventListener('click', function () {
+    var list = nudgeable();
+    if (!list.length) { return; }
+    $('nudge-confirm-text').textContent =
+      'Email ' + list.length + (list.length === 1 ? ' player' : ' players') +
+      ' their own figures and the deadline? They get one mail each.';
+    S.show($('nudge-confirm'), true);
+  });
+
+  $('nudge-cancel').addEventListener('click', function () {
+    S.show($('nudge-confirm'), false);
+  });
+
+  /* functions.invoke reports any non-2xx as a bare "non-2xx status code" and
+   * leaves the body unread. This function answers refusals with a sentence
+   * worth showing an organiser (no sender set up yet, organisers only), so
+   * dig it out rather than showing the shrug. */
+  function invokeNudge() {
+    return S.client().functions.invoke('notify-unreported', {
+      body: { night_id: ctx.night.id }
+    }).then(function (r) {
+      if (!r.error) { return r.data || {}; }
+      var res = r.error.context;
+      if (res && typeof res.json === 'function') {
+        return res.json().then(function (b) {
+          var e = new Error((b && (b.message || b.error)) || r.error.message);
+          e.body = b;
+          throw e;
+        }, function () { throw r.error; });
+      }
+      throw r.error;
+    });
+  }
+
+  $('nudge-really').addEventListener('click', function () {
+    S.show($('nudge-confirm'), false);
+    msg($('nudge-msg'), 'Sending...', 'busy');
+    invokeNudge().then(function (d) {
+      var parts = [];
+      var bad = (d.failed && d.failed.length) ? d.failed.length : 0;
+      if (d.sent) { parts.push('Emailed ' + d.sent); }
+      if (d.skipped) { parts.push(d.skipped + ' skipped, mailed in the last half hour'); }
+      if (d.no_address) { parts.push(d.no_address + ' with no address on file'); }
+      if (bad) {
+        parts.push(bad + ' failed (' + d.failed.map(function (x) {
+          return x.pseudonym;
+        }).join(', ') + ')');
+      }
+      if (!parts.length) { parts.push(d.message || 'Nobody to email'); }
+      msg($('nudge-msg'), parts.join(' - ') + (bad ? '' : ' OK'), bad ? 'error' : 'ok');
+      // Re-read so reminder_sent_at is current and a second press knows.
+      return loadEntries();
+    }).catch(function (err) {
+      msg($('nudge-msg'), S.friendlyError(err), 'error');
+    });
+  });
 
   /* ------------------------------------------------------------------
    * Night-code takeover, the QR + giant code, made for a TV across a room.
