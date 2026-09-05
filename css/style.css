@@ -513,6 +513,10 @@ code, kbd, samp {
   display: flex;
   align-items: center;
   gap: var(--space-lg);
+  /* Report is a sibling of this panel rather than a child of it, so the
+     panel is what gets pushed right and the CTA follows it. Same bar as
+     before at desktop widths. */
+  margin-left: auto;
 }
 
 .nav__link {
@@ -658,17 +662,19 @@ code, kbd, samp {
   .nav__link--active::after { display: none; }
   .nav__link--active { color: var(--brass); }
 
+  /* Report lives in the BAR at this width, not in the panel, so it is on
+     screen without opening anything. That is the whole point of the move:
+     the club is phone first, and a route hidden behind a hamburger is a
+     route people ask an organiser for instead. The panel is position:fixed
+     and out of flow, so the bar lays out as brand, Report, hamburger with
+     nothing else competing for the width. Measured at 375px: brand 176,
+     Report 78, hamburger 48, leaving 41px of slack.
+     margin-left:auto is what pins it beside the hamburger rather than
+     letting space-between strand it in the middle of the bar. */
   .nav__cta {
-    margin-top: var(--space-md);
-    min-height: var(--tap-target);
-    justify-content: center;
-    /* No order swap here, on purpose. Painting Tonight first while it
-       stays last in the DOM makes a sighted keyboard user tab in an order
-       they can see is wrong, and it is the one mismatch on the site.
-       Nothing is lost by dropping it: the panel is six items of 48px, so
-       Tonight is on screen without scrolling either way, and it is the
-       only brass-filled thing in the list. The fill is what makes it
-       findable on a Friday, not the position. */
+    margin-left: auto;
+    padding: 0 var(--space-sm);
+    font-size: 0.8rem;
   }
 }
 
