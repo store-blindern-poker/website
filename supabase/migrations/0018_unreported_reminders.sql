@@ -16,7 +16,7 @@
 --      time. Nothing accepts a list of people to email from a client, so a
 --      tampered request cannot become a way to mail the whole club.
 --
--- Applied to production as 20260904xxxxxx_unreported_reminders.
+-- Applied to production as 20260904212641_unreported_reminders.
 
 alter table public.entries add column if not exists reminder_sent_at timestamptz;
 comment on column public.entries.reminder_sent_at is

@@ -10,7 +10,7 @@
 -- they can fix. This one is an announcement to the whole room. Announcements
 -- need a way out, so this migration adds one, and both mail paths respect it.
 --
--- Applied to production as 20260905xxxxxx_round_announcements.
+-- Applied to production as 20260905082646_round_announcements.
 
 -- ---------------------------------------------------------------------------
 -- Opting out

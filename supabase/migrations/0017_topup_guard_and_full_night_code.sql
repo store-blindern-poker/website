@@ -17,7 +17,7 @@
 -- take_rebuy also picks up the removed-night guard that 0014 gave check_in
 -- and report_entry.
 --
--- Applied to production as 20260902xxxxxx_topup_guard_and_full_night_code.
+-- Applied to production as 20260902094014_topup_guard_and_full_night_code.
 
 create or replace function public.take_rebuy(p_night_id uuid, p_current_stack integer, p_amount integer)
 returns public.entries
