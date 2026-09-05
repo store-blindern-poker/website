@@ -98,15 +98,31 @@
   /* Named columns, never select('*'): the same rule js/sb.js documents for
    * the nights table applies to anything that might grow a column later. */
   var UPCOMING_COLS = 'night_id,season_id,played_on,title,status,' +
-    'location,location_url,going_count,not_going_count,capacity';
+    'reports_close_at,location,location_url,going_count,not_going_count,capacity';
+
+  /* Memoised for the life of the page load. index.html has three readers of
+   * this view now (the headcount, the venue, and the live-night route) and
+   * they must cost ONE request between them, not three. Every caller has its
+   * own catch, so a rejection shared this way still cannot take a page down. */
+  var nightsPromise = null;
 
   function fetchNights() {
-    return S.client().from('v_upcoming_nights').select(UPCOMING_COLS)
+    if (nightsPromise) { return nightsPromise; }
+    nightsPromise = S.client().from('v_upcoming_nights').select(UPCOMING_COLS)
       .order('played_on', { ascending: true })
       .then(function (r) {
         if (r.error) { throw r.error; }
         return r.data || [];
       });
+    return nightsPromise;
+  }
+
+  /* Ask the server again. Only the live-night route does this, and only when
+   * a tonight face is already on screen: a stale "the round is open" is a
+   * worse artefact than a nine minute old headcount. */
+  function refetchNights() {
+    nightsPromise = null;
+    return fetchNights();
   }
 
   /* Authenticated only. Never called without a session. */
@@ -701,8 +717,217 @@
     });
   }
 
-  /* Two independent entry points. Neither can take the other down, and
-   * neither can take the page down. */
+  /* ------------------------------------------------------------------
+   * index.html: the route to reporting on a live night.
+   *
+   * Until this, nothing on the public site linked to report.html at all. The
+   * shortest route on a Friday at 20:25 was three taps, the word "report"
+   * appeared on the third screen, and the one element that knew it was a live
+   * night, the countdown, pointed at a calendar.
+   *
+   * The nav's "Tonight" is the PERMANENT route and it cannot fail. This is
+   * the loud one, and it is the opposite of the rest of this file: everything
+   * else here fails soft toward a page that is complete without it, which is
+   * right for a headcount. An element that fails soft toward nothing is wrong
+   * for the only loud route to reporting, so every path below ends either in
+   * a visible route or in exactly today's page, never in a half state.
+   *
+   * The source is v_upcoming_nights, which index.html already reads once for
+   * the headcount and the venue, and which already carries status. It is
+   * anon-readable, so a first timer at the door gets it too. Cost: zero extra
+   * requests. It deliberately does NOT reuse initIndex's countdown-title
+   * matching: the only route to reporting must not inherit a dependency on
+   * somebody having committed the Friday to data/events.json with a title
+   * that still matches.
+   * ------------------------------------------------------------------ */
+
+  var TONIGHT_KEY = 'sbp.tonight';
+  var SIGN_IN_NOTE = ' You sign in first if you are not already.';
+
+  function osloHm(date) {
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hour12: false
+      }).format(date);
+    } catch (err) {
+      // Ancient browser with no timeZone support: local time, honestly.
+      return date.toTimeString().slice(0, 5);
+    }
+  }
+
+  function osloDayKey(date) {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(date);
+    } catch (err) {
+      return date.toISOString().slice(0, 10);
+    }
+  }
+
+  /* "until 09:00 tomorrow", or no number at all rather than a guessed one.
+   * lead is the sentence up to the time. */
+  function closesSentence(lead, closesAt) {
+    var t = closesAt ? new Date(closesAt) : null;
+    if (!t || isNaN(t)) { return lead + ' the morning.'; }
+    var word = (osloDayKey(t) === osloDayKey(new Date())) ? '' : ' tomorrow';
+    return lead + ' ' + osloHm(t) + word + '.';
+  }
+
+  function readTonightNote() {
+    try {
+      var raw = window.localStorage.getItem(TONIGHT_KEY);
+      if (!raw) { return null; }
+      var v = JSON.parse(raw);
+      if (!v || !v.closes_at) { return null; }
+      var t = new Date(v.closes_at);
+      if (isNaN(t)) { return null; }
+      return { closes_at: v.closes_at, ms: t.getTime() };
+    } catch (err) { return null; }
+  }
+
+  function writeTonightNote(night) {
+    try {
+      if (!night.reports_close_at) { return; }
+      window.localStorage.setItem(TONIGHT_KEY, JSON.stringify({
+        night_id: night.night_id,
+        closes_at: night.reports_close_at
+      }));
+    } catch (err) { /* private mode: the note is a bonus, never the route */ }
+  }
+
+  function clearTonightNote() {
+    try { window.localStorage.removeItem(TONIGHT_KEY); } catch (err) { /* as above */ }
+  }
+
+  /* Back to exactly today's page: the block down, the hero primary brass
+   * again, the countdown pointing at the calendar. Called when the read
+   * fails, when no night qualifies, and when a night is settled under a tab
+   * that has been open since 19:00. */
+  function hideTonight() {
+    var root = document.getElementById('hero-tonight');
+    var events = document.getElementById('hero-events-btn');
+    var cd = document.getElementById('countdown-link');
+    if (root) { root.style.display = 'none'; }
+    if (events) { events.className = 'btn btn--primary'; }
+    if (cd) { cd.setAttribute('href', 'events.html'); }
+  }
+
+  function showTonight(face) {
+    var root = document.getElementById('hero-tonight');
+    if (!root) { return; }
+    document.getElementById('hero-tonight-label').textContent = face.label;
+    document.getElementById('hero-tonight-btn').textContent = face.button;
+    document.getElementById('hero-tonight-note').textContent = face.note;
+    root.style.display = '';
+    // The screen's one brass fill moves to the route that matters tonight.
+    var events = document.getElementById('hero-events-btn');
+    if (events) { events.className = 'btn btn--secondary'; }
+    // The countdown already says "Happening now" off a clock in js/app.js. We
+    // do not touch that label, because that clock knows nothing about whether
+    // the organisers opened the night and would race us for the text. Only
+    // the destination changes, and only when the database says it is open.
+    var cd = document.getElementById('countdown-link');
+    if (cd) { cd.setAttribute('href', 'report.html'); }
+  }
+
+  function tonightFace(night) {
+    if (night.status === 'reconciling') {
+      // The bank has packed up but reporting is still running, so the copy
+      // does not offer a check-in that would be refused.
+      return {
+        label: 'Tonight',
+        button: 'Report my stack',
+        note: 'The round is over. ' +
+          closesSentence('Reporting stays open until', night.reports_close_at) +
+          SIGN_IN_NOTE
+      };
+    }
+    return {
+      label: 'Tonight',
+      button: 'Check in and report',
+      note: closesSentence('Reporting stays open until', night.reports_close_at) +
+        SIGN_IN_NOTE
+    };
+  }
+
+  var tonightShown = false;
+  var tonightReadAt = 0;
+
+  function initTonight(refetch) {
+    if (!document.getElementById('hero-tonight')) { return; }
+    tonightReadAt = Date.now();
+    var p = refetch ? refetchNights() : fetchNights();
+    p.then(function (nights) {
+      var live = null;
+      var i;
+      // The view applies deleted_at is null and played_on >= current_date and
+      // excludes settled and void, so it holds FUTURE nights too, not just
+      // tonight's. Status alone said yes to a night open three days out and
+      // lit the whole live face on the landing page. played_on comes back in
+      // the same row, so compare it against today in Europe/Oslo: it is a
+      // plain calendar date, the phone can be anywhere, and the club's day is
+      // Oslo's. After midnight this stops matching, which is right: the row
+      // is last night's, and the localStorage note below is what covers the
+      // hours to 09:00 with the correct "Last night" wording.
+      var today = osloDayKey(new Date());
+      for (i = 0; i < nights.length; i++) {
+        if (isoOf(nights[i].played_on) !== today) { continue; }
+        if (nights[i].status === 'open' || nights[i].status === 'reconciling') {
+          live = nights[i];
+          break;
+        }
+      }
+      if (live) {
+        showTonight(tonightFace(live));
+        tonightShown = true;
+        writeTonightNote(live);
+        return;
+      }
+      // No qualifying row. Either there is no night, or it is past midnight
+      // Oslo and the view has dropped a night whose reporting runs to 09:00.
+      // The phone that was in the room can tell the difference, because it
+      // wrote down when reporting closes while the night was still open. A
+      // phone that was not in the room gets the nav item and an honest
+      // report.html, which is the stated limit of this route.
+      var note = readTonightNote();
+      if (note && Date.now() < note.ms) {
+        showTonight({
+          label: 'Last night',
+          button: 'Report my stack',
+          note: closesSentence('Reporting is still open until', note.closes_at) +
+            ' If you went home without sending your final stack, send it now.'
+        });
+        tonightShown = true;
+        return;
+      }
+      if (note) { clearTonightNote(); }
+      hideTonight();
+      tonightShown = false;
+    }).catch(function (err) {
+      // Offline, or the database will not answer. The page goes back to being
+      // exactly what it is on a quiet Tuesday, and the nav still says Tonight.
+      warn('tonight route unavailable', err);
+      hideTonight();
+      tonightShown = false;
+    });
+  }
+
+  /* A phone left on this page since 19:00 keeps rendering whatever the first
+   * read said, and "the round is open" is a worse stale artefact than a nine
+   * minute old headcount. Re-read on the way back into the tab, but ONLY when
+   * a tonight face is up and at most once a minute, so a quiet Tuesday still
+   * makes exactly the one request it makes today. */
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible') { return; }
+    if (!tonightShown) { return; }
+    if (Date.now() - tonightReadAt < 60000) { return; }
+    try { initTonight(true); } catch (err) { warn('tonight refresh failed', err); }
+  });
+
+  /* Three independent entry points. None can take the others down, and none
+   * can take the page down. */
   try { initEvents(); } catch (err) { warn('events init failed', err); }
   try { initIndex(); } catch (err) { warn('index init failed', err); }
+  try { initTonight(false); } catch (err) { warn('tonight route init failed', err); }
 })();

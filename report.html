@@ -29,7 +29,8 @@
           <a href="events.html" class="nav__link">Events</a>
           <a href="leaderboard.html" class="nav__link">Leaderboard</a>
           <a href="rules.html" class="nav__link">Rules</a>
-          <a href="login.html" class="nav__cta">Member login</a>
+          <a href="login.html" class="nav__link">Member login</a>
+          <a href="report.html" class="nav__cta nav__link--active" aria-current="page">Tonight</a>
         </div>
       </div>
     </nav>
@@ -47,7 +48,7 @@
              ring appears for a touch or mouse user. -->
         <div class="whoami" style="padding-top: 0;">
           <div>
-            <h1 class="app-title" id="standing-order" tabindex="-1" style="margin-bottom: 0;">Tonight</h1>
+            <h1 class="app-title step-anchor" id="standing-order" tabindex="-1" style="margin-bottom: 0;">Tonight</h1>
             <p class="app-subtitle" id="standing-sub" hidden style="margin: var(--space-xs) 0 0;"></p>
             <div class="whoami__label" id="whoami-line" hidden>
               Signed in as <strong id="whoami-name"></strong>
@@ -193,7 +194,7 @@
              open: a member who has checked in is playing, and this screen must
              not push them toward the exit. -->
         <div id="state-report" hidden>
-          <div class="card" style="margin-bottom: var(--space-lg);">
+          <div class="card step-anchor" style="margin-bottom: var(--space-lg);">
             <div class="section__label">1 · Checked in</div>
             <dl class="kv" style="margin: 0;">
               <dt>Attendance bonus</dt><dd id="report-bonus">…</dd>
@@ -223,7 +224,7 @@
                so topupFace()'s hardcoded id list spans two state divs.
                enterTopup() re-shows the flow on purpose and renderTopup()
                hides it again on the way home. -->
-          <div class="card" id="topup-card" hidden style="margin-bottom: var(--space-lg);">
+          <div class="card step-anchor" id="topup-card" hidden style="margin-bottom: var(--space-lg);">
             <div id="topup-open" hidden>
               <div class="section__label">2 · The top-up</div>
               <!-- The break time also lives in BREAK_TIME_TEXT in
@@ -307,7 +308,7 @@
                this card is the way out. After it, the closing slip is the
                artefact the organiser needs while the chips come back, so it
                has to be reachable from home and not only from the receipt. -->
-          <div class="card">
+          <div class="card step-anchor">
             <div class="section__label" id="close-card-label">3 · Close the round</div>
             <p class="card__text" id="close-card-text" style="margin-bottom: var(--space-md);">
               When you are done for the night, count your chips and report the
@@ -343,7 +344,7 @@
             </p>
 
             <div id="topup-flow" hidden>
-              <div id="topup-step-count">
+              <div id="topup-step-count" class="step-anchor">
                 <div class="field" style="margin-bottom: var(--space-sm);">
                   <label class="label" for="topup-stack-input">Chips in front of you right now</label>
                   <input class="input input--numeric" id="topup-stack-input" type="text"
@@ -359,7 +360,7 @@
                 </p>
               </div>
 
-              <div id="topup-step-quote" hidden>
+              <div id="topup-step-quote" class="step-anchor" hidden>
                 <p class="topup-quote" id="topup-max-line">…</p>
                 <div class="field" style="margin-bottom: var(--space-sm);">
                   <label class="label" for="topup-amount-input">Chips to take (edit to take less)</label>
@@ -367,12 +368,20 @@
                          inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                 </div>
                 <p class="help" id="topup-becomes" style="margin-bottom: var(--space-md);"></p>
+                <!-- take_rebuy has already written the row by the time the
+                     slip appears, so the club's record is safe. The CHIPS
+                     have not moved: nobody at the bank counts anything out
+                     until an organiser reads that slip. This is about a tap
+                     that has not happened yet, never a clock: no deadline, no
+                     database flag, and not one of the words early, late,
+                     missed or closed. It must stay ONE line at 390px, or it
+                     pushes the primary off the fold. -->
+                <p class="help not-done" id="topup-not-done" style="margin-bottom: var(--space-md);">Not done until the slip is on screen.</p>
                 <button class="btn btn--primary btn--block btn--lg" id="topup-confirm-btn" type="button">Take it: show the slip</button>
                 <button class="btn btn--ghost btn--block" id="topup-back-btn" type="button"
                         style="margin-top: var(--space-sm);">Back to the chip count</button>
                 <p class="help">
-                  Next: a top-up slip. Show it at the bank and they count out
-                  your chips.
+                  Next: a top-up slip. The bank counts your chips out from it.
                 </p>
               </div>
 
@@ -397,13 +406,19 @@
              the review card, with no card around it: one decision screen with
              two ghost routes that went to different places. The review sheet
              has exactly one way back, #edit-btn, and it is inside the
-             sheet's own card. -->
+             sheet's own card.
+
+             ORDER IS LOAD BEARING, and the rule is: the destructive answer is
+             never between the input and the primary, and never above the
+             primary in the document. Anything added later that FILLS the
+             field rather than submitting it goes below #close-next-help,
+             behind the hairline, with #bust-btn. -->
         <div id="state-close" hidden>
           <form id="report-form" novalidate>
-            <div class="card" style="margin-bottom: var(--space-lg);">
+            <div class="card step-anchor" id="final-card" style="margin-bottom: var(--space-lg);">
               <div class="section__label">3 · Close the round</div>
               <p class="help" id="close-intro" style="margin-top: 0; margin-bottom: var(--space-md);"></p>
-              <h2 class="card__title">Your final chip stack</h2>
+              <h2 class="card__title" id="final-card-title" tabindex="-1">Your final chip stack</h2>
               <p class="card__text" style="margin-bottom: var(--space-md);">
                 Count everything in front of you and type the total. That is the
                 only number we need: your buy-in and any top-up are already on
@@ -415,15 +430,13 @@
                        inputmode="numeric" pattern="[0-9]*" autocomplete="off"
                        placeholder="e.g. 12 350">
               </div>
-              <!-- The one-tap answer for the most common outcome. 64px of
-                   clay, sitting apart from the submit button on purpose. -->
-              <button type="button" class="btn--bust" id="bust-btn">I busted: <span class="mono">0</span> chips</button>
               <p class="form-msg" id="final-msg" role="status" aria-live="polite"></p>
             </div>
 
             <button class="btn btn--primary btn--block btn--lg" id="review-btn" type="submit">Review my report</button>
             <p class="help" id="close-next-help">
-              Next: we show the maths. Nothing is sent until you press Send.
+              Next: we show the maths. Nothing is sent until you press Send, so
+              keep your phone out.
             </p>
             <!-- Shown in place of Review once reports_close_at has passed,
                  including while a member is sitting on this screen and the
@@ -433,6 +446,22 @@
                  answers P0021, so Review would lead to a Send that cannot
                  land. -->
             <p class="help" id="close-no-send" hidden></p>
+
+            <!-- The one-tap answer for the most common outcome, in its own
+                 lane BELOW the primary and behind a hairline. It fills the
+                 field, it does not submit, so it has no business sitting
+                 between the number and Review: with the keyboard up it was
+                 the first thing a thumb met on the way down, 24px from the
+                 input while the brass primary was 85px further on and off the
+                 fold. It stays INSIDE #report-form so
+                 S.show($('report-form'), false) takes it away with the review
+                 sheet; outside, it floated beside the review card as a second
+                 ghost route. -->
+            <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--border);">
+              <p class="help" style="margin-top: 0;">Nothing left in front of you? Skip the count.</p>
+              <button type="button" class="btn--bust" id="bust-btn">I busted: <span class="mono">0</span> chips</button>
+            </div>
+
             <div style="margin-top: var(--space-sm);">
               <button class="btn btn--ghost btn--block" id="close-back-btn" type="button">Not yet, back to tonight</button>
             </div>
@@ -445,17 +474,22 @@
                above is hidden while this is up, which is what keeps one brass
                action on the screen instead of two. -->
           <div id="review-panel" hidden style="margin-top: var(--space-lg);">
-            <div class="card card--accent">
+            <div class="card card--accent step-anchor" id="review-card">
               <div class="section__label">Last step</div>
-              <h2 class="card__title">Check the maths, then send</h2>
+              <h2 class="card__title" id="review-card-title" tabindex="-1">Check the maths, then send</h2>
               <div class="ledger" id="review-ledger"></div>
               <p class="help" id="review-balance-note" hidden></p>
               <div style="display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-md);">
+                <!-- Hidden by renderCloseRoute together with #submit-btn, so
+                     this line is never left standing over a Send that has
+                     been withdrawn. -->
+                <p class="help not-done" id="review-not-done" style="margin: 0;">Not done until the receipt is on screen. One more tap.</p>
                 <button class="btn btn--primary btn--block btn--lg" id="submit-btn" type="button">Send my report</button>
                 <button class="btn btn--ghost btn--block" id="edit-btn" type="button">Go back and edit</button>
               </div>
               <p class="help">
-                Next: your closing slip. Show it as you hand your chips back.
+                Next: your closing slip, then your receipt. Show the slip as
+                you hand your chips back.
               </p>
             </div>
           </div>
@@ -476,15 +510,19 @@
                to scroll past "you can put your phone away" to reach the one
                thing the heading was pointing at. It is hidden on every other
                face of this screen, so the normal path pays nothing for it. -->
-          <div class="organiser-card" id="organiser-card" hidden>
-            <h3>Couldn't send. Show this to an organiser</h3>
+          <!-- .step-anchor and the heading id are what dismissSlip lands on
+               when this card is up. Both are read only through goToStep,
+               which falls back to the standing order if either goes missing,
+               so neither can throw before boot() reaches OB.start(sender). -->
+          <div class="organiser-card step-anchor" id="organiser-card" hidden>
+            <h3 id="organiser-title" tabindex="-1">Couldn't send. Show this to an organiser</h3>
             <div class="organiser-payload" id="organiser-payload"></div>
             <p class="card__text" style="margin-top: var(--space-md);" id="organiser-why"></p>
             <button class="btn btn--secondary btn--block" id="retry-btn" type="button"
                     style="margin-top: var(--space-md);">Try sending again</button>
           </div>
 
-          <div class="card card--accent" style="text-align: center;">
+          <div class="card card--accent step-anchor" style="text-align: center;">
             <div class="receipt__icon" id="receipt-icon">✓</div>
             <h2 class="card__title" id="receipt-title">Report received</h2>
             <p class="card__text" id="receipt-sub">…</p>

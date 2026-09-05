@@ -69,7 +69,63 @@
                 'state-topup', 'state-close',
                 'state-receipt', 'state-settled'];
 
-  function showState(name) {
+  /* ------------------------------------------------------------------
+   * Placing a step, and announcing it.
+   *
+   * The rule, applied everywhere below: the viewport is placed so the next
+   * thing to do is on screen, and focus goes to the element that names the
+   * step. Scroll happens FIRST and explicitly; focus happens second with
+   * preventScroll. Before this, focus() was doing both jobs, and because
+   * focus() on the element that is already document.activeElement is a no-op
+   * in Chrome, it only scrolled when the member had just typed in a field.
+   * That is why "it jumps back to the top" looked intermittent and why it hit
+   * the top-up and the final stack, the two flows that start in an input.
+   * ------------------------------------------------------------------ */
+
+  /* Bring a step into view under the fixed nav. NO behavior key on purpose:
+   * scrollIntoView then inherits html{scroll-behavior}, so the reduce rule in
+   * css/style.css turns every one of these into a snap without this file ever
+   * reading matchMedia. The two window.scrollTo({behavior:'smooth'}) calls
+   * this replaces could not be turned off at all.
+   * Nothing moves while a slip is up: openSlip puts .no-scroll on body and
+   * assumes body is the scroller, so a scroll fired under a slip is swallowed
+   * and the reader is somewhere else when they dismiss it. That is already
+   * how the receipt ended up resting at scrollY 276 instead of 0. */
+  function goToView(anchor) {
+    if (!anchor || !$('slip').hidden) { return; }
+    anchor.scrollIntoView({ block: 'start' });
+  }
+
+  /* Place the step, then announce it. focus() IS the announcement channel:
+   * #standing-order and the card headings carry no role and no aria-live, and
+   * adding one would announce every step twice. A missing element degrades to
+   * the standing order, which is today's behaviour, never to silence. */
+  function goToStep(anchor, target) {
+    var a = anchor || $('standing-order');
+    var t = target || a;
+    if (!$('slip').hidden) { return; }
+    goToView(a);
+    if (t && t.focus) { t.focus({ preventScroll: true }); }
+  }
+
+  /* The screen we are on. showState places and announces only on a REAL
+   * change, because refreshCtx re-enters the hub when the tab comes back and
+   * a member scrolled down to the way-out card must not be thrown to the top
+   * for it. Until now that was safe by accident, because focus() on the
+   * already focused h1 does nothing. Here it has to be said out loud. */
+  var currentState = null;
+
+  /* One anchor per state that needs one. Everything else lands on the
+   * standing order, which is where it lands today. The close screen is the
+   * exception: its card carries the field, and landing on the page top left
+   * the brass primary below the fold. */
+  var STATE_STEP = {
+    'state-close': { anchor: 'final-card', focus: 'final-card-title' }
+  };
+
+  /* quiet: the caller is about to open a slip over this screen, so placing
+   * and announcing here would be overwritten a millisecond later anyway. */
+  function showState(name, quiet) {
     // A slip is a takeover over ONE screen. Changing screens underneath it
     // would strand it with its timer running and the body unscrollable, so
     // it always closes first. Every slip in this file is opened AFTER its
@@ -78,10 +134,11 @@
     states.forEach(function (id) { S.show($(id), id === name); });
     var o = stateOrder(name);
     setOrder(o.order, o.sub);
-    // Focus, not aria-live: this announces the new heading once and puts a
-    // screen reader at the top of the new screen. A live region as well
-    // would announce it twice.
-    $('standing-order').focus();
+    var changed = (name !== currentState);
+    currentState = name;
+    if (quiet || !changed) { return; }
+    var st = STATE_STEP[name];
+    goToStep(st ? $(st.anchor) : null, st ? $(st.focus) : null);
   }
 
   /* ------------------------------------------------------------------
@@ -757,8 +814,45 @@
    * slip the organiser has just read. showState calls closeSlip directly
    * instead, because there the screen underneath is rebuilt anyway. */
   function dismissSlip() {
+    var back = slipReturnFocus;   // closeSlip clears it
     closeSlip();
     renderSync();
+    /* <body> is what slipReturnFocus holds when the slip was opened by a
+     * tap that never focused its button, which is most taps on a phone.
+     * body.closest('.card') is null, so the fallback below scrolled <body>
+     * into view, and that is the top of the page: the exact jump this
+     * whole change exists to remove, reintroduced on the one path nobody
+     * clicks with a keyboard. Body is not a place to return to, so the
+     * reader is simply left where they already were. */
+    if (back === document.body || back === document.documentElement) { back = null; }
+    // Put the card that button belongs to under the nav. The receipt's own
+    // headline used to sit behind the fixed nav at the exact moment it was
+    // the whole point of the screen, and the next errand after a top-up slip
+    // was 19px below the fold.
+    if (back && document.contains(back)) {
+      // The escalated receipt inverts that rule. There the h1 reads "Show
+      // this to an organiser." and the thing it points at is #organiser-card,
+      // which sits ABOVE the receipt card and is not an ancestor of the
+      // button that opened the slip, so closest('.card') found the receipt
+      // card BELOW it and scrolled the payload and #retry-btn off the top,
+      // the last 64px of it behind the fixed nav. This is the one screen
+      // where a number is closest to being lost, so it gets the landing.
+      // Focus goes with the scroll: #closing-slip-btn is about 1100px below
+      // this card, and a focus ring parked off screen is no better than none.
+      // The heading is what the standing order is pointing at, so it is what
+      // gets announced.
+      var esc = $('organiser-card');
+      // The card lives inside #state-receipt and keeps its own hidden state
+      // when the member walks off to another screen, so both are checked.
+      // Both are read defensively: a missing element falls through to the
+      // ordinary landing rather than throwing inside a dismissal.
+      var rec = $('state-receipt');
+      if (esc && !esc.hidden && rec && !rec.hidden) {
+        goToStep(esc, $('organiser-title'));
+      } else {
+        goToStep((back.closest ? back.closest('.card') : null) || back, back);
+      }
+    }
   }
 
   $('slip-close').addEventListener('click', dismissSlip);
@@ -1131,12 +1225,17 @@
         try {
           window.localStorage.setItem(EVER_KEY, '1');
         } catch (e) { /* private mode: the first-night note shows again, no harm */ }
-        enterReport();
+        // Quiet: the slip below takes the screen a millisecond later, so
+        // placing and announcing the hub here would be work nobody sees.
+        enterReport(true);
         // The first thing the player does after checking in is collect
         // chips, so the buy-in slip opens itself. Focus lands on a control
         // that is actually on screen first, because openSlip remembers
-        // document.activeElement and closeSlip hands focus back to it.
-        $('buyin-slip-btn').focus();
+        // document.activeElement and closeSlip hands focus back to it: this
+        // line is what decides where the reader is put down afterwards, so it
+        // is not dead code. preventScroll, because dismissSlip does the
+        // placing once the slip is out of the way.
+        $('buyin-slip-btn').focus({ preventScroll: true });
         openBuyinSlip(false);
       })
       .catch(function (err) {
@@ -1208,7 +1307,7 @@
 
   /* Arriving at the hub by a tap. The state change and the one thing that
    * belongs to arriving rather than to the facts: the count in the field. */
-  function enterReport() {
+  function enterReport(quiet) {
     var e = ctx.entry;
     renderHub();
 
@@ -1224,7 +1323,7 @@
       $('bust-btn').classList.toggle('btn--bust--on', draft.busted);
     }
 
-    showState('state-report');
+    showState('state-report', quiet);
   }
 
   /* Close is available from the moment of check-in and never goes away: the
@@ -1313,12 +1412,15 @@
     }
 
     // The visible half of the resilience contract. A force quit mid count
-    // keeps the number, and until now nothing said so.
+    // keeps the number, and until now nothing said so. It is also the only
+    // place a member who walked away mid count meets their own unsent number
+    // on the way back, so it now says out loud that it is unsent: the guard
+    // above means it can never appear once a report exists.
     var d = loadDraft();
     var note = $('hub-draft-note');
     if (!reported && d && d.final) {
       note.textContent = 'You started closing the round. Your count of ' +
-        d.final + ' is saved on this phone.';
+        d.final + ' is saved on this phone and nothing has been sent yet.';
       S.show(note, true);
     } else {
       S.show(note, false);
@@ -1358,6 +1460,9 @@
     S.show($('review-btn'), !closed);
     S.show($('close-next-help'), !closed);
     S.show($('submit-btn'), !closed);
+    // Goes with #submit-btn, so "Not done until the receipt is on screen" is
+    // never left standing over a Send that has been withdrawn.
+    S.show($('review-not-done'), !closed);
     $('close-no-send').textContent = closed
       ? 'Reporting closed at ' + closedAtWords() + ', so nothing can be sent ' +
         'from this phone now. Count your chips and read the total to an ' +
@@ -1372,6 +1477,12 @@
       S.show($('review-panel'), false);
       S.show($('report-form'), true);
       setOrder(ORDER_DEFAULTS['state-close'].order, ORDER_DEFAULTS['state-close'].sub);
+      // The swap hides the element that held focus, which drops
+      // document.activeElement to BODY and leaves the explanation silent.
+      // Place the card and announce its heading instead. Reached from
+      // enterClose, from the submit handler's deadline guard and from
+      // refreshCtx on a tab return, never from a timer.
+      goToStep($('final-card'), $('final-card-title'));
     }
   }
 
@@ -1427,6 +1538,11 @@
     $('bust-btn').classList.add('btn--bust--on');
     msg($('final-msg'), 'Busted stack recorded as 0.', 'ok');
     saveDraft();
+    // The button now sits BELOW the primary, so the 0 it just wrote is off
+    // screen above. Scroll only, no focus: #final-msg is the one step level
+    // announcement on this screen that already works, and moving focus would
+    // talk over it.
+    goToView($('final-card'));
   });
 
   $('final-input').addEventListener('input', function () {
@@ -1560,7 +1676,7 @@
     var stack = S.parseChips($('topup-stack-input').value);
     if (stack === null) {
       msg($('topup-msg'), 'Count the chips in front of you and type the total. 0 counts.', 'error');
-      $('topup-stack-input').focus();
+      goToStep($('topup-step-count'), $('topup-stack-input'));
       return;
     }
     var btn = $('topup-quote-btn');
@@ -1596,6 +1712,18 @@
         // not by showState.
         setOrder('Choose how much to take.',
                  'One top-up per night, points for chips 1:1, up to tonight’s stack.');
+        // The quote step goes under the nav and the step is announced from
+        // the field it is about: "Chips to take (edit to take less), edit
+        // text, 4000". Until now this step change moved neither scroll nor
+        // focus, so the h1 changed in silence while focus sat on the field
+        // the step had just hidden.
+        // Focus stays INSIDE the element we scrolled to, as it does at every
+        // other step. Announcing the new h1 instead meant focusing
+        // #standing-order, which is 375px above this step: a live 2px brass
+        // focus ring was being painted off the top of the screen. The two
+        // other ways into this step, a bad amount and the back button, land
+        // on this same field, so the step now has one landing place.
+        goToStep($('topup-step-quote'), $('topup-amount-input'));
       })
       .catch(topupError)
       .finally(function () { btn.removeAttribute('aria-busy'); });
@@ -1626,7 +1754,7 @@
   $('topup-back-btn').addEventListener('click', function () {
     topupReset();
     setOrder(ORDER_DEFAULTS['state-topup'].order, ORDER_DEFAULTS['state-topup'].sub);
-    $('topup-stack-input').focus();
+    goToStep($('topup-step-count'), $('topup-stack-input'));
   });
 
   $('topup-confirm-btn').addEventListener('click', function () {
@@ -1634,13 +1762,13 @@
     var amount = S.parseChips($('topup-amount-input').value);
     if (amount === null || amount <= 0) {
       msg($('topup-msg'), 'Type how many chips to take, 1 or more.', 'error');
-      $('topup-amount-input').focus();
+      goToStep($('topup-step-quote'), $('topup-amount-input'));
       return;
     }
     if (amount > topupQuote.max_topup) {
       msg($('topup-msg'), 'The most you can take is ' + S.fmt(topupQuote.max_topup) +
           '. Lower the amount.', 'error');
-      $('topup-amount-input').focus();
+      goToStep($('topup-step-quote'), $('topup-amount-input'));
       return;
     }
     var btn = $('topup-confirm-btn');
@@ -1661,8 +1789,11 @@
         ctx.entry = Array.isArray(r.data) ? r.data[0] : r.data;
         topupReset();
         S.show($('topup-flow'), false);
-        enterReport();      // re-reads the draft, restates the bank fact
-        $('topup-reshow-btn').focus();
+        // Quiet: the top-up slip takes the screen on the next line.
+        enterReport(true);  // re-reads the draft, restates the bank fact
+        // This is where the reader is put down when the slip is dismissed,
+        // so it is not a dead call. dismissSlip does the placing.
+        $('topup-reshow-btn').focus({ preventScroll: true });
         openTopupSlip(false);
       })
       .catch(topupError)
@@ -1691,7 +1822,7 @@
     var finalStack = S.parseChips($('final-input').value);
     if (finalStack === null) {
       msg($('final-msg'), 'Type your final stack, or tap “I busted” if it is 0.', 'error');
-      $('final-input').focus();
+      goToStep($('final-card'), $('final-input'));
       return;
     }
 
@@ -1721,14 +1852,21 @@
     S.show($('report-form'), false);
     S.show($('review-panel'), true);
     setOrder('Check the maths, then send.', '');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Hiding the form takes the focused element with it, which drops
+    // document.activeElement to BODY: nothing was announced and the next Tab
+    // restarted at the top of the document. Focus is restored inside this
+    // same task, so activeElement is never observably BODY. This replaces an
+    // unconditional window.scrollTo({ behavior: 'smooth' }) that ignored
+    // prefers-reduced-motion and landed the reader at scrollY 0 with
+    // #submit-btn 47px below the fold.
+    goToStep($('review-card'), $('review-card-title'));
   });
 
   $('edit-btn').addEventListener('click', function () {
     S.show($('review-panel'), false);
     S.show($('report-form'), true);
     setOrder(ORDER_DEFAULTS['state-close'].order, ORDER_DEFAULTS['state-close'].sub);
-    $('final-input').focus();
+    goToStep($('final-card'), $('final-input'));
   });
 
   $('submit-btn').addEventListener('click', function () {
@@ -1741,11 +1879,15 @@
       p_rebuy_chips: reviewed.rebuy
     });
     renderReceipt();
-    showState('state-receipt');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Quiet: the closing slip takes the screen two lines below. The
+    // window.scrollTo that used to sit here was swallowed by .no-scroll
+    // anyway, which is why the receipt rested at scrollY 276 instead of 0.
+    showState('state-receipt', true);
     // Handing the chips back is the next physical act, so the slip that
-    // proves it opens itself, with focus first on a control that is on screen.
-    $('closing-slip-btn').focus();
+    // proves it opens itself, with focus first on a control that is on
+    // screen. This is where dismissSlip puts the reader down afterwards, so
+    // it is not a dead call.
+    $('closing-slip-btn').focus({ preventScroll: true });
     openClosingSlip(false);
   });
 

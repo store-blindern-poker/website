@@ -540,12 +540,16 @@ code, kbd, samp {
   background: var(--brass);
 }
 
-/* "Member login" call to action in the nav */
+/* "Tonight" call to action in the nav: the permanent route to report.html,
+   which nothing on the public site linked to before. Brass OUTLINED, never
+   filled, so it does not spend a screen's one brass fill. */
 .nav__cta {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
+  /* Was 40px, which is the one control in the shared chrome that broke the
+     48px floor. The bar is 64px tall, so there is room. */
+  min-height: var(--tap-target);
   padding: 0 var(--space-md);
   border: 1px solid var(--brass-line);
   border-radius: var(--radius);
@@ -553,12 +557,38 @@ code, kbd, samp {
   font-weight: 600;
   color: var(--brass);
   white-space: nowrap;
+  /* .nav__link is position:relative and this was static, so on report.html,
+     the one page whose current item IS the CTA, .nav__link--active::after had
+     no positioned ancestor and resolved against nav.nav (position:fixed).
+     left:0 right:0 then painted the 2px brass rule across the entire bar:
+     measured 1197px at 1280 wide instead of the 83px link. */
+  position: relative;
   transition: background-color var(--dur) var(--ease),
               border-color var(--dur) var(--ease),
               color var(--dur) var(--ease);
 }
 
 .nav__cta:hover {
+  background-color: var(--brass-fill);
+  border-color: var(--brass);
+  color: var(--brass-lift);
+}
+
+/* The current-page marker on the CTA. Even scoped correctly the underline is
+   wrong here: the CTA is a bordered pill, not a bare word, and left:0 right:0
+   would run the rule wall to wall across its own border. The pill takes the
+   marker on its frame instead, so report.html still says which page you are
+   on, like the five other pages that carry a marker. Still an OUTLINE: the
+   ground is --brass-fill #241f13, a dark brass-tinted ground, not a brass
+   fill, so the screen's one brass fill stays with the primary action. Same
+   frame the hover state uses, deliberately: it is the one "this pill is
+   lit" treatment the design already has, a hover is transient, and a phone
+   has none at all. Two classes, so this beats .nav__cta's own colour, which
+   sits later in the file than .nav__link--active and was quietly winning it:
+   without this the page would carry aria-current with nothing to see. */
+.nav__cta.nav__link--active::after { content: none; }
+
+.nav__cta.nav__link--active {
   background-color: var(--brass-fill);
   border-color: var(--brass);
   color: var(--brass-lift);
@@ -632,8 +662,23 @@ code, kbd, samp {
     margin-top: var(--space-md);
     min-height: var(--tap-target);
     justify-content: center;
+    /* No order swap here, on purpose. Painting Tonight first while it
+       stays last in the DOM makes a sighted keyboard user tab in an order
+       they can see is wrong, and it is the one mismatch on the site.
+       Nothing is lost by dropping it: the panel is six items of 48px, so
+       Tonight is on screen without scrolling either way, and it is the
+       only brass-filled thing in the list. The fill is what makes it
+       findable on a Friday, not the position. */
   }
 }
+
+/* Scroll target for a step. .nav is fixed, 65px tall (64 plus its border)
+   and z-index 1000, and nothing else in this file sets scroll-margin, so a
+   plain scrollIntoView drops a step's first line behind it: measured, the h1
+   landed at viewport top -27, fully hidden. 88px puts a card's section label
+   23px clear of the nav. Applied by class, never by attribute selector, so
+   it can never reach the slip takeover. */
+.step-anchor { scroll-margin-top: calc(var(--nav-height) + var(--space-lg)); }
 
 /* ==========================================================================
    6. BUTTONS
@@ -824,6 +869,16 @@ code, kbd, samp {
   color: var(--cream-dim);
   margin-top: var(--space-sm);
   line-height: 1.5;
+}
+
+/* "Not done until the slip is on screen." A member who walks away half way
+   through a step leaves nothing behind, and until now no copy said so. Brass
+   text and a brass rule, never a fill: the one brass fill on the screen is
+   the button directly under this line. */
+.not-done {
+  border-left: 2px solid var(--brass);
+  padding-left: var(--space-sm);
+  color: var(--brass);
 }
 
 .input,
@@ -1490,6 +1545,16 @@ select.input {
   .hero__actions { flex-direction: column; align-items: stretch; }
   .hero__actions .btn { width: 100%; }
 }
+
+/* The live-night route on the landing page. Hidden in the markup and
+   revealed by js/rsvp.js only when the database says a night is open, so the
+   six quiet days render exactly as they did before. */
+.hero__tonight {
+  max-width: 420px;
+  margin: 0 auto var(--space-lg);
+}
+
+.hero__tonight .help { margin-top: var(--space-sm); }
 
 /* ==========================================================================
    13. COUNTDOWN

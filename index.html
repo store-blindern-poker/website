@@ -28,7 +28,8 @@
           <a href="events.html" class="nav__link">Events</a>
           <a href="leaderboard.html" class="nav__link">Leaderboard</a>
           <a href="rules.html" class="nav__link">Rules</a>
-          <a href="login.html" class="nav__cta">Member login</a>
+          <a href="login.html" class="nav__link">Member login</a>
+          <a href="report.html" class="nav__cta">Tonight</a>
         </div>
       </div>
     </nav>
@@ -55,8 +56,22 @@
         <h1 class="hero__title fade-in">
           Store Blindern<br><em>Poker</em>
         </h1>
+        <!-- The live-night route. Hidden in the markup exactly like
+             #countdown-section, so a script failure, an offline phone or a
+             database that will not answer leaves this page complete and
+             identical to a quiet Tuesday. js/rsvp.js reveals it only when
+             v_upcoming_nights says a night is open or reconciling, and demotes
+             "Upcoming events" to secondary in the same breath so the screen
+             keeps exactly one brass fill. Nothing on the public site linked to
+             report.html before this; the nav's "Tonight" is the permanent
+             route and this is the loud one. -->
+        <div class="hero__tonight" id="hero-tonight" style="display:none;">
+          <div class="section__label" id="hero-tonight-label">Tonight</div>
+          <a class="btn btn--primary btn--lg btn--block" href="report.html" id="hero-tonight-btn">Check in and report</a>
+          <p class="help" id="hero-tonight-note"></p>
+        </div>
         <div class="hero__actions fade-in fade-in-delay-1">
-          <a href="events.html" class="btn btn--primary">Upcoming events</a>
+          <a href="events.html" class="btn btn--primary" id="hero-events-btn">Upcoming events</a>
           <a href="rules.html" class="btn btn--secondary">How it works</a>
         </div>
         <p class="hero__subtitle fade-in fade-in-delay-2">
