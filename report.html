@@ -69,6 +69,54 @@
           <span class="status-pill" id="night-status">…</span>
         </div>
 
+        <!-- The other night. Chrome, not a state: it sits outside the state
+             machine for the same reason #night-banner and #sync-pill do,
+             because what it says is true whatever screen is up. Written
+             entirely by renderOutstanding() in js/report.js, which keeps its
+             own hand-maintained list of the screens it must stay hidden on.
+
+             A PLAIN .card on purpose. #state-checkin below is .card--accent
+             and it must stay the loudest thing on the screen, and this
+             card's button is never brass: the screen underneath keeps the one
+             brass action it has.
+
+             ON THE CHECK-IN SCREEN THIS CARD DROPS ITS PARAGRAPH AND ITS
+             TITLE. The comment on #state-checkin is the rule: the code field
+             and the brass Check in button stay above the fold on a 390x844
+             phone, and the three facts were moved below the button to buy
+             that back. Measured there, fonts loaded, with this card above the
+             check-in card, the button's bottom edge sits at 697 with no card
+             at all, 964 with the card whole, 877 without the paragraph, 844
+             without the paragraph and the title, and 828 once the gap under
+             the card closes to --space-sm as well. Only the last of those
+             clears 844, so renderOutstanding() hides #other-night-text and
+             #other-night-title on that one state and tightens the margin
+             there, leaving a label and a 44px button whose own text names the
+             night. The title alone is worth 33px of that against 16px of
+             headroom, so it does not go back in for free. Anything added
+             above #code-input, in here or in the check-in card, means
+             measuring all of this again. The order to strip in is paragraph,
+             then title, then label. Never the button.
+
+             THE IDS ARE LOAD BEARING in the same way every other id in this
+             file is: both handlers are registered at module scope with an
+             unguarded getElementById, and boot() with OB.start(sender) is the
+             last line of js/report.js, so renaming one throws before the
+             outbox pump ever starts and every queued report on every phone
+             stops retrying with nothing on screen to show it. -->
+        <div class="card" id="other-night-card" hidden style="margin-bottom: var(--space-lg);">
+          <div class="section__label" id="other-night-label">Still open</div>
+          <h2 class="card__title" id="other-night-title">…</h2>
+          <p class="card__text" id="other-night-text" style="margin-bottom: var(--space-md);">…</p>
+          <button class="btn btn--secondary btn--block" id="other-night-btn" type="button">Report</button>
+          <!-- The hidden attribute lives on the WRAPPER, because an empty div
+               with a margin-top is still 8px of card and renderOutstanding()
+               is counting single pixels against the check-in fold. -->
+          <div id="other-night-back-wrap" style="margin-top: var(--space-sm);" hidden>
+            <button class="btn btn--ghost btn--block" id="other-night-back-btn" type="button">Go back</button>
+          </div>
+        </div>
+
         <!-- STATE: config placeholders not patched -->
         <div class="card card--accent" id="state-config" hidden>
           <h2 class="card__title">Not connected yet</h2>
@@ -319,9 +367,14 @@
                  from #topup-closed, which is a hand-set closing time, from
                  #topup-settled, which is the settle, and from #topup-none,
                  which is the allowance. -->
+            <!-- Two branches of renderTopup() share this face and they need
+                 different words, so the paragraph carries an id and both
+                 branches write it. This is the wording for TONIGHT's round
+                 once it stops being open, and it is duplicated as
+                 TOPUP_OVER_TONIGHT in js/report.js: change both or neither. -->
             <div id="topup-over" hidden>
               <div class="section__label">2 · The bank has packed up</div>
-              <p class="topup-done">
+              <p class="topup-done" id="topup-over-text">
                 The round is over, so the bank has stopped issuing top-ups.
                 Reporting is still open: count your chips and close the round
                 below.
@@ -583,7 +636,10 @@
 
         <!-- STATE: night settled -->
         <div class="card" id="state-settled" hidden>
-          <h2 class="card__title">Tonight is settled</h2>
+          <!-- The id is what lets enterSettled() say "That round is settled"
+               instead, on a night that is not tonight. Adding an id is safe;
+               RENAMING one is what throws before boot(). -->
+          <h2 class="card__title" id="settled-title">Tonight is settled</h2>
           <p class="card__text" id="settled-text" style="margin-bottom: var(--space-lg);">
             The organisers have settled the night. Spot a mistake in your
             numbers? Tell an organiser: settled nights can be corrected and

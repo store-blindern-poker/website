@@ -136,6 +136,12 @@
     setOrder(o.order, o.sub);
     var changed = (name !== currentState);
     currentState = name;
+    // The card is chrome sitting over every screen, like #night-banner and
+    // #sync-pill, so it follows the one choke point every screen change
+    // already goes through. After currentState is written, because the card
+    // reads it to go compact on the check-in screen. Before the early return,
+    // because a quiet or repeated showState still has to leave it correct.
+    renderOutstanding();
     if (quiet || !changed) { return; }
     var st = STATE_STEP[name];
     goToStep(st ? $(st.anchor) : null, st ? $(st.focus) : null);
@@ -173,7 +179,27 @@
   function stateOrder(name) {
     if (name === 'state-report')  { return hubOrder(); }
     if (name === 'state-receipt') { return receiptOrder(); }
+    if (name === 'state-close')   { return closeOrder(); }
     return ORDER_DEFAULTS[name] || { order: 'Tonight', sub: '' };
+  }
+
+  /* The close screen's instruction. "Count everything in front of you" is
+   * about chips on a table and there is no table for a round played last
+   * Friday: that member is at home with a number they already know, and the
+   * only thing left is to send it. #close-intro two lines below has said so
+   * since this screen learned about older nights, and the h1 above it was
+   * still giving the other instruction.
+   *
+   * Every route back to the bare form goes through here, not through
+   * ORDER_DEFAULTS: enterClose by way of showState, the review sheet standing
+   * itself down in renderCloseRoute, and the Edit button. All three used to
+   * read the map directly, so fixing one would have left the other two. */
+  function closeOrder() {
+    if (!isDefaultNight()) {
+      return { order: 'Send your final stack.',
+               sub: 'Type the total you finished that round with.' };
+    }
+    return ORDER_DEFAULTS['state-close'];
   }
 
   function hubOrder() {
@@ -197,6 +223,17 @@
         return { order: 'You have reported.',
                  sub: 'Reporting has closed, so an organiser makes any change to your numbers now.' };
       }
+      // "If you play on" is an offer to somebody sitting at a table with
+      // chips in front of them, and there is no table for a round played last
+      // Friday. The card below already says there is nothing left to hand
+      // back, and #close-start-btn still reads "Change my report", so nothing
+      // is withdrawn here, only the sentence that would have sent somebody
+      // back to a game that finished a week ago. Same words the receipt uses
+      // for the same night, so the two screens agree.
+      if (!isDefaultNight()) {
+        return { order: 'You have reported.',
+                 sub: 'Your numbers are in. The organisers settle that round from here.' };
+      }
       return { order: 'You have reported.',
                sub: 'Your numbers are in. If you play on, close the round again with the new total.' };
     }
@@ -204,6 +241,18 @@
     if (sendRefused()) {
       return { order: 'Show your numbers to an organiser.',
                sub: 'Reporting has closed. An organiser can still enter your final stack.' };
+    }
+    // Asked BEFORE the status branch below, and every other renderer on this
+    // page asks it in that order for the same reason: "count what is in front
+    // of you" is an instruction about chips on a table, and there are none in
+    // front of anybody for a round played a week ago. An older night is
+    // reachable in BOTH statuses, open and reconciling, so the status branch
+    // would otherwise catch the reconciling half of them and hand back the
+    // one sentence this whole change exists to stop printing. "Go and play"
+    // and the break-time line at the tail are the same kind of instruction.
+    if (!isDefaultNight()) {
+      return { order: 'Send your final stack.',
+               sub: 'That round is over. Report the total you finished it with.' };
     }
     if (n && n.status !== 'open') {
       return { order: 'Count your chips.',
@@ -255,6 +304,16 @@
       return { order: 'You have reported.',
                sub: 'Reporting has closed, so an organiser makes any change to your numbers now.' };
     }
+    // The chips went back when that round ended, so "Hand your chips back."
+    // is a stale instruction and the busted line below it is a stale reason.
+    // Placed after the stuck, unknown and refused branches, which are correct
+    // copy for any night.
+    if (!isDefaultNight()) {
+      return { order: 'That round is done.',
+               sub: (job && job.status !== 'sent')
+                 ? 'Your final stack is on its way. It keeps sending by itself.'
+                 : 'Your final stack is in. The organisers settle that round from here.' };
+    }
     if (nums && nums.final === 0) {
       return { order: 'Show an organiser you are done.',
                sub: 'You busted, so there are no chips to hand back. The closing slip is your tick off the list.' };
@@ -282,6 +341,42 @@
    * 5 characters instead. Checked-in players never see the field again. */
   var urlCode = S.normCode(new URLSearchParams(window.location.search).get('n') || '');
 
+  /* A link may name a night: /report?r=<night id>. The night ID, NEVER the
+   * attendance code. nights.code is admin only behind get_night_code, and
+   * putting it in a URL would hand the check-in gate to anybody who saw the
+   * link; the id opens nothing on its own, check_in still wants the code and
+   * report_entry still wants the session, and it is already exposed to anon
+   * through v_upcoming_nights.
+   *
+   * It does NOT survive signing in, and no email may depend on it.
+   * requireAuth sends a signed out member to login.html?next=report.html and
+   * login.js redirects back to the bare whitelisted page name, so the query
+   * string is dropped on the way through. That is why the bare /report link
+   * in the reminder mail is what everything below is written to serve, and
+   * this parameter is only ever a convenience for a member who is already
+   * signed in. */
+  var urlNightId = (function () {
+    var raw = new URLSearchParams(window.location.search).get('r') || '';
+    return /^[0-9a-fA-F-]{36}$/.test(raw) ? raw : '';
+  })();
+
+  /* The night boot landed on, and the entry it found there. Written once and
+   * never reassigned: this is the way back to tonight from any older night,
+   * so it must not drift while the member is away. */
+  var defaultNight = null;
+  var defaultEntry = null;
+
+  /* Open nights this member has an unreported entry on, oldest first, and
+   * their own entry rows keyed by night id. Filled AFTER the screen has
+   * painted and never waited on by anything. */
+  var outstanding = [];
+  var outstandingEntries = {};
+
+  /* What #other-night-btn will switch to, written only by
+   * renderOutstanding(). */
+  var offerNight = null;
+  var offerEntry = null;
+
   /* Non-null rebuy_at means the BANK issued the top-up, so there is a slip
    * to re-show and the server defends the number against this client. */
   function bankMode() {
@@ -307,10 +402,13 @@
    * hand for a single night, so every reader goes through here and nothing
    * downstream parses the column a second way or reads a missing deadline as
    * a passed one. */
-  function deadlineAt() {
-    var n = ctx.night;
+  function deadlineAtFor(n) {
     var t = (n && n.reports_close_at) ? new Date(n.reports_close_at) : null;
     return (t && !isNaN(t)) ? t : null;
+  }
+
+  function deadlineAt() {
+    return deadlineAtFor(ctx.night);
   }
 
   /* A deadline was set by hand for this night and it has passed. False all
@@ -318,9 +416,13 @@
    * a send can still land may read this alone: sendRefused() is that
    * question. It is NOT the top-up break, which is guidance and never a
    * gate. */
-  function reportingClosed() {
-    var t = deadlineAt();
+  function reportingClosedOn(n) {
+    var t = deadlineAtFor(n);
     return !!(t && Date.now() >= t.getTime());
+  }
+
+  function reportingClosed() {
+    return reportingClosedOn(ctx.night);
   }
 
   /* The organisers have closed the books. report_entry raises P0003 from
@@ -344,8 +446,11 @@
    * has no time to name and would print "Reporting closed at , so". That is
    * why each swap below carries a nightSettled() branch. renderDeadline
    * builds its own line with a mono span, so this one is plain text. */
-  function closedAtWords() {
-    var t = deadlineAt();
+  function closedAtWords(night) {
+    /* The argument is for the other-night card, which has to name a hand-set
+     * deadline on a night that is not the one on screen. Every existing
+     * caller passes nothing and is unchanged. */
+    var t = night ? deadlineAtFor(night) : deadlineAt();
     if (!t) { return ''; }
     return osloClock(t, false) + ' ' + osloDayWord(t);
   }
@@ -583,7 +688,8 @@
       ledgerRow(bankMode() ? 'Top-up (bank)' : 'Top-up',
                 rebuy > 0 ? '−' + S.fmt(rebuy) : '0', { minus: rebuy > 0 }) +
       ledgerRow('Final stack', '+' + S.fmt(finalStack), { plus: finalStack > 0 }) +
-      ledgerRow('Net for tonight', S.fmtSigned(net),
+      ledgerRow(isDefaultNight() ? 'Net for tonight' : 'Net for that round',
+                S.fmtSigned(net),
                 { total: true, plus: net > 0, minus: net < 0 });
     return { html: html, net: net };
   }
@@ -1148,12 +1254,20 @@
    * in place, so a change here costs a member nothing but the truth. */
   function queueSignature() {
     var job = myJob();
+    // The oldest pending night's job rides in here too, because the card
+    // below reports it and nothing else on this page reads a job for a night
+    // that is not the one on screen. Without it, "Round 1 is still sending"
+    // would still be on the card a minute after Round 1 landed.
+    var other = pendingNights()[0];
+    var oj = (other && ctx.member) ? OB.get(other.id, ctx.member.id) : null;
     return [job ? job.status : '-',
             job ? job.attempts : '-',
             sendVerdict(),
             jobStuck() ? 'stuck' : '-',
             tabOnly() ? 'tab' : '-',
-            navigator.onLine === false ? 'off' : 'on'].join('|');
+            navigator.onLine === false ? 'off' : 'on',
+            other ? other.id : '-',
+            oj ? oj.status : '-'].join('|');
   }
 
   /* What the HUB reads, which is deliberately less. job.attempts and the flip
@@ -1178,7 +1292,7 @@
     // verdict line, and re-rendering the hub underneath it would close it.
     if (!$('slip').hidden) { return; }
     var sig = queueSignature();
-    if (sig !== syncSig) { syncSig = sig; renderSync(); }
+    if (sig !== syncSig) { syncSig = sig; renderSync(); renderOutstanding(); }
     // The hub carries the same number, the same standing order and the only
     // other route to the closing slip, and it is where a member sits between
     // the report and the walk to the bank. renderHub, never enterReport: this
@@ -1202,7 +1316,12 @@
     $('checkin-points').textContent = ctx.balance ? S.fmt(ctx.balance.points) : '…';
     // Arrived via the TV's QR? The code is pre-filled; a typo-free tap away.
     // (Only the server can verify it, the client cannot read nights.code.)
-    if (urlCode && !$('code-input').value) {
+    // isDefaultNight(): the QR on the venue TV encodes TONIGHT's code, and a
+    // ?r= link can name an older night. Nothing routes there today, because
+    // an older night is only ever offered when an entry already exists and
+    // this is the no-entry screen, but the prefill must not be the thing that
+    // makes that a bug later.
+    if (urlCode && isDefaultNight() && !$('code-input').value) {
       $('code-input').value = urlCode;
       msg($('checkin-msg'), 'Code filled in from the QR. Just tap Check in.', 'ok');
     }
@@ -1294,6 +1413,10 @@
       // has to be asked before the three branches below it or the row reads
       // "not taken yet" about a bank that shut hours ago.
       cap = 'bank closed';
+    } else if (!isDefaultNight()) {
+      // An older night. Whatever the status column says, the bank packed up
+      // when that round ended, and "not taken yet" would be an offer.
+      cap = 'bank closed';
     } else if (n.status === 'open' && !e.rebuy_cap_chips) {
       cap = 'no allowance left tonight';
     } else if (n.status === 'open') {
@@ -1309,6 +1432,14 @@
 
     var nums = shownNumbers();
     $('report-reported').textContent = nums ? S.fmt(nums.final) + ' chips' : 'not yet';
+
+    // The buy-in slip says GIVE CHIPS OUT in 24px, and until this screen
+    // could show an older night there was no way to reach one for a round
+    // that had finished. Now there is, so the button goes with the closing
+    // slip and the bank offer. The buy-in itself is not hidden: it is two
+    // rows up, on the card, as "Buy-in booked". Only the instruction to an
+    // organiser to count chips out goes.
+    S.show($('buyin-slip-btn'), isDefaultNight());
 
     renderTopup();
     renderCloseCta();
@@ -1373,7 +1504,9 @@
       var t = when ? new Date(when) : null;
       text.textContent = 'You reported ' + S.fmt(nums.final) + ' chips' +
         (t && !isNaN(t) ? ' at ' + osloClock(t, false) : '') +
-        '. Show the closing slip as you hand your chips back.' +
+        (isDefaultNight()
+          ? '. Show the closing slip as you hand your chips back.'
+          : '. That round is over, so there is nothing left to hand back.') +
         (refused
           ? (nightSettled()
               ? ' The night has been settled, so an organiser makes any ' +
@@ -1398,7 +1531,13 @@
       slipBtn.className = sendVerdict() === 'unknown'
         ? 'btn btn--secondary btn--block'
         : 'btn btn--primary btn--block btn--lg';
-      S.show(slipBtn, true);
+      // The slip is the artefact for a chip handover, and on an older night
+      // there is no handover: it reads COLLECT FROM in 24px over a round
+      // whose chips went back last Friday, and the sentence directly above it
+      // has just said there is nothing left to hand back. One card, one
+      // instruction. The number itself is on this card and on the receipt, so
+      // nothing is lost with the button.
+      S.show(slipBtn, isDefaultNight());
       btn.textContent = 'Change my report';
       btn.className = 'btn btn--secondary btn--block';
       // A refused send is refused whatever the network does (P0021 past a
@@ -1428,6 +1567,21 @@
       }
       S.show(slipBtn, false);
       S.show(btn, false);
+    } else if (!isDefaultNight()) {
+      // An older night that is still open. Reporting is the only thing left
+      // on it, so this card takes the screen's one brass fill by the same
+      // rule that promotes it once a night leaves 'open'. None of the words
+      // about tonight, the count in front of you or the chips going back are
+      // true here.
+      label.textContent = '3 · Send your final stack';
+      text.textContent = 'That round is over, and reporting for it is open ' +
+        'until the organisers settle it. Send the total you finished it ' +
+        'with. If you are not sure to the chip, your best honest count is ' +
+        'what we want, and an organiser can change it afterwards.';
+      S.show(slipBtn, false);
+      S.show(btn, true);
+      btn.textContent = 'Send my final stack';
+      btn.className = 'btn btn--primary btn--block btn--lg';
     } else {
       label.textContent = '3 · Close the round';
       // No deadline is invented here. With reports_close_at null there is no
@@ -1501,6 +1655,11 @@
       el.textContent = 'Reporting has closed, so nothing sent from here will be accepted. Show your numbers to an organiser and they can enter them.';
     } else if (reportedNumbers()) {
       el.textContent = 'You already reported. Change the number and send again: the new report replaces the old one.';
+    } else if (!isDefaultNight()) {
+      // "The round is still running" is false about a night played a week
+      // ago. Asked after the settled, closed and already-reported branches,
+      // which are correct copy for any night.
+      el.textContent = 'That round is over and reporting for it is still open. Type the total you finished it with.';
     } else if (ctx.night && ctx.night.status === 'open') {
       el.textContent = 'The round is still running. Only close if you are done playing for tonight.';
     } else {
@@ -1552,7 +1711,7 @@
       // cannot work.
       S.show($('review-panel'), false);
       S.show($('report-form'), true);
-      setOrder(ORDER_DEFAULTS['state-close'].order, ORDER_DEFAULTS['state-close'].sub);
+      setOrder(closeOrder().order, closeOrder().sub);
       // The swap hides the element that held focus, which drops
       // document.activeElement to BODY and leaves the explanation silent.
       // Place the card and announce its heading instead. Reached from
@@ -1666,6 +1825,19 @@
     S.show($('topup-card'), !!name);
   }
 
+  /* #topup-over is the one face two branches share, and the two are not
+   * saying the same thing. On tonight's round, once it stops being open,
+   * there are chips in front of the reader and counting them is the next
+   * thing to do. On a round played last Friday there are none, and "count
+   * your chips" would be the stale instruction this screen keeps having to
+   * take out. The tonight wording is also the markup's pre-render default in
+   * report.html: change both or neither. */
+  var TOPUP_OVER_TONIGHT = 'The round is over, so the bank has stopped ' +
+    'issuing top-ups. Reporting is still open: count your chips and close ' +
+    'the round below.';
+  var TOPUP_OVER_OLDER = 'That round is over, so the bank packed up with it. ' +
+    'Reporting for it is still open: send the total you finished it with.';
+
   function renderTopup() {
     var e = ctx.entry;
     if (!e) { topupFace(null); return; }
@@ -1698,6 +1870,17 @@
       // goes hunting for it, which is the ambiguity this screen exists to
       // remove.
       topupFace('topup-closed');
+    } else if (!isDefaultNight()) {
+      // An older night, in either status it can still be reached in.
+      // take_rebuy tests the STATUS and nothing else, so on one still reading
+      // 'open' the bank would really issue chips against a round that
+      // finished days ago: a member on last week's hub taps Top up, walks to
+      // the bank, and an organiser counts out chips for a round that is over.
+      // Asked BEFORE the status branch for exactly the reason the
+      // reportingClosed() branch above is. Withdrawing the offer is the
+      // club's position, not the server's.
+      $('topup-over-text').textContent = TOPUP_OVER_OLDER;
+      topupFace('topup-over');
     } else if (ctx.night && ctx.night.status === 'open') {
       // No allowance: the season points are all in play, so there is no offer
       // to make and never was tonight. The card used to vanish outright,
@@ -1707,8 +1890,11 @@
       if (!e.rebuy_cap_chips) { topupFace('topup-none'); return; }
       topupFace('topup-open');
     } else {
-      // Night reconciling or beyond: the bank has packed up, while reporting
-      // is still running. It gets its own face for the same reason.
+      // TONIGHT's night, reconciling or beyond: the bank has packed up, while
+      // reporting is still running. It gets its own face for the same reason.
+      // The text is restated rather than left to the markup, because the
+      // branch above shares this face and writes different words into it.
+      $('topup-over-text').textContent = TOPUP_OVER_TONIGHT;
       topupFace('topup-over');
     }
   }
@@ -1938,7 +2124,8 @@
     var note = $('review-balance-note');
     if (ctx.balance) {
       var after = Math.max(0, ctx.balance.points + m.net);
-      note.textContent = 'Season points after tonight: about ' + S.fmt(after) +
+      note.textContent = 'Season points after ' +
+        (isDefaultNight() ? 'tonight' : 'that round') + ': about ' + S.fmt(after) +
         (ctx.balance.points + m.net < 0 ? ' (points never drop below zero)' : '') +
         '. Final numbers land when the organisers settle the night.';
       S.show(note, true);
@@ -1950,7 +2137,13 @@
     // action instead of two, and #submit-btn is the only thing left to tap.
     S.show($('report-form'), false);
     S.show($('review-panel'), true);
-    setOrder('Check the maths, then send.', '');
+    // The night's own name at the one moment of commitment. This is the
+    // screen where somebody could otherwise type tonight's count into an
+    // older round's form, and goToStep announces the review card immediately
+    // below, so a screen reader hears the night before Send.
+    setOrder('Check the maths, then send.',
+             isDefaultNight() ? '' : ('This is ' + nightName(ctx.night) +
+               ', played ' + osloDateWords(ctx.night.played_on) + '.'));
     // Hiding the form takes the focused element with it, which drops
     // document.activeElement to BODY: nothing was announced and the next Tab
     // restarted at the top of the document. Focus is restored inside this
@@ -1964,7 +2157,7 @@
   $('edit-btn').addEventListener('click', function () {
     S.show($('review-panel'), false);
     S.show($('report-form'), true);
-    setOrder(ORDER_DEFAULTS['state-close'].order, ORDER_DEFAULTS['state-close'].sub);
+    setOrder(closeOrder().order, closeOrder().sub);
     goToStep($('final-card'), $('final-input'));
   });
 
@@ -1978,6 +2171,15 @@
       p_rebuy_chips: reviewed.rebuy
     });
     renderReceipt();
+    // On an older night nothing physical happens next: the chips went back
+    // when that round ended, so there is no slip to open and no takeover to
+    // be quiet for. The receipt is the whole of the answer, and it is placed
+    // and announced the ordinary way, which is what a quiet showState would
+    // have skipped.
+    if (!isDefaultNight()) {
+      showState('state-receipt');
+      return;
+    }
     // Quiet: the closing slip takes the screen two lines below. The
     // window.scrollTo that used to sit here was swallowed by .no-scroll
     // anyway, which is why the receipt rested at scrollY 276 instead of 0.
@@ -2109,6 +2311,12 @@
     $('closing-slip-btn').className = (stuck || verdict === 'unknown')
       ? 'btn btn--secondary btn--block'
       : 'btn btn--primary btn--block btn--lg';
+    // Same rule as the hub's copy of this button, and the same reason: the
+    // slip exists for the moment chips cross the table, and on a round played
+    // last week that moment is gone. The standing order above already reads
+    // "That round is done." An escalated report is unaffected, because the
+    // organiser card below carries the numbers in its own right.
+    S.show($('closing-slip-btn'), isDefaultNight());
 
     if (stuck) {
       $('organiser-payload').innerHTML =
@@ -2130,9 +2338,11 @@
       // job's own error is read here and not just reportingClosed().
       var refusedText = String((job && job.last_error) || '');
       if (job.status === 'failed' && /^reporting /i.test(refusedText)) {
-        $('organiser-why').textContent = 'Reporting has closed for tonight, ' +
-          'so the server will not take this from your phone any more. An ' +
-          'organiser can still enter it.';
+        // Not "for tonight". This screen reaches older nights now, and a
+        // hand-set deadline can have passed on one of those just as easily.
+        $('organiser-why').textContent = 'Reporting has closed, so the ' +
+          'server will not take this from your phone any more. An organiser ' +
+          'can still enter it.';
       } else if (job.status === 'failed') {
         $('organiser-why').textContent = S.friendlyError({ message: job.last_error });
       } else if (nightSettled()) {
@@ -2234,6 +2444,16 @@
       S.show($('settled-ledger'), false);
     }
     showState('state-settled');
+    // "Tonight is settled" is false about a night played a week ago, and this
+    // screen is reachable for one: refreshCtx settles the night under a
+    // member who switched to it. showState has just written the default
+    // order, so this overwrites it, the way the top-up quote step does.
+    if (isDefaultNight()) {
+      $('settled-title').textContent = 'Tonight is settled';
+    } else {
+      $('settled-title').textContent = 'That round is settled';
+      setOrder('That round is settled.', '');
+    }
   }
 
   /* ------------------------------------------------------------------
@@ -2316,6 +2536,22 @@
         // it cannot tell. renderSync() re-renders the receipt itself when the
         // receipt is the screen, which is why there is no separate call for
         // it here any more.
+        //
+        // The card is re-read only for the members who have something ON it,
+        // which is pendingNights() and NOT outstanding. outstanding holds
+        // every night this member owes a count on, and the one they are
+        // sitting at is always one of them: an entry is unreported from
+        // check-in until they close the round. So `outstanding.length` is
+        // true for all 38 people at the table from the moment they check in,
+        // and every one of them was paying two reads on every return to the
+        // tab, forever, to re-read a list whose only member is the night
+        // already on screen. pendingNights() drops that one, so this is now
+        // what it says it is.
+        //
+        // Nobody can acquire a pending night mid session either: the only
+        // night a member can check in to is the one they are already on, and
+        // that one is never pending by definition.
+        if (pendingNights().length) { loadOutstanding(); }
         renderSync();
       })
       .catch(function () { /* offline, or the night vanished: leave the screen alone */ });
@@ -2325,6 +2561,392 @@
     if (document.visibilityState === 'visible') { refreshCtx(); }
   });
   window.addEventListener('online', refreshCtx);
+
+  /* ------------------------------------------------------------------
+   * The other night.
+   *
+   * Reporting used to close at 09:00 the morning after, so activeNight()'s
+   * "newest open night" was the only night a member could possibly have
+   * meant. It now runs until an organiser settles, so somebody can be
+   * carrying an unreported entry on a night that is no longer the newest one,
+   * and boot would hand them a check-in screen for a round they have not
+   * played, with no route at all to the one number they came to send.
+   *
+   * activeNight() is NOT changed. It is on the critical path of the screen 38
+   * people open on a Friday evening, and the only thing it ever got wrong was
+   * being the last word. Everything below makes that choice reversible
+   * without touching it: two reads fired after the paint and never waited on,
+   * one card of chrome, and a switch that re-enters the arrival tree boot
+   * already has. The bank, the draft key, the outbox key, the ledger, the
+   * deadline tests and report_entry's night id all read ctx.night already.
+   * ------------------------------------------------------------------ */
+
+  /* True when the screen is showing the night boot chose, AND true when there
+   * was no choice to make. With no open night at all, boot lands on a freshly
+   * settled night through latestSettled() and every sentence on that path is
+   * already written for it, so defaultNight being null must read as "this is
+   * the only night there is" and not as "this is an older one". Only a
+   * DELIBERATE switch makes this false.
+   *
+   * It compares two ids the server gave us and reads no clock, so a phone
+   * whose date is wrong cannot get it wrong. Every sentence on this screen
+   * containing the word tonight, and every control that only makes sense on
+   * the round being played, hangs off this one switch. */
+  function isDefaultNight() {
+    if (!defaultNight) { return true; }
+    return !!(ctx.night && ctx.night.id === defaultNight.id);
+  }
+
+  function nightName(n) {
+    return n ? (n.title || ('Night ' + n.night_no)) : '';
+  }
+
+  /* What a night scores if this member never reports: no final stack means
+   * zero chips back. Deliberately the SAME arithmetic as
+   * supabase/functions/notify-unreported, which puts this figure in the
+   * reminder mail, so somebody arriving from that mail meets the number the
+   * mail quoted rather than a second opinion about it. */
+  function silentPoints(night, entry) {
+    if (!night || !entry) { return null; }
+    var taken = (entry.buyin_chips || 0) + (entry.rebuy_chips || 0);
+    return 0 - taken + (night.attendance_bonus || 0);
+  }
+
+  /* Fired by boot and NOT waited on. A failure leaves the page exactly as it
+   * is today, which is the worst case this whole change is allowed to have. */
+  function loadOutstanding() {
+    if (!ctx.member) { return Promise.resolve(); }
+    return S.outstandingNights(ctx.member.id).then(function (res) {
+      outstanding = res.nights;
+      outstandingEntries = res.entries;
+      renderOutstanding();
+    });
+  }
+
+  /* The outstanding nights that are not the one on screen. The night a member
+   * is actually on is unreported until they close it, so it is always in the
+   * list and is never something to nag them about. */
+  function pendingNights() {
+    return outstanding.filter(function (n) {
+      return !ctx.night || n.id !== ctx.night.id;
+    });
+  }
+
+  /* Screens the card must never appear on. state-close and state-topup carry
+   * exactly one instruction each and are the two screens refreshCtx already
+   * refuses to disturb, because a thumb is mid count on them.
+   *
+   * HAND MAINTAINED, and it fails the same way the `states` array at the top
+   * of this file fails: a state added later that must not carry this card
+   * will carry it, and the symptom is two things stacked on a phone at 20:30
+   * with nothing in the console. */
+  var CARD_HIDE_ON = ['state-config', 'state-loading', 'state-nopseudonym',
+                      'state-close', 'state-topup'];
+
+  /* The sentence under the card's title. It leads with the points, because
+   * that is what the reminder mail led with and it is the whole reason this
+   * matters to the person reading it. */
+  function owedText(n, entry, count) {
+    var when = osloDateWords(n.played_on);
+    var pts = silentPoints(n, entry);
+    if (reportingClosedOn(n)) {
+      // Night state B: a deadline was set by hand for that night and it has
+      // passed, so this phone cannot send for it and must not offer to.
+      return (count > 1 ? 'The oldest is ' + nightName(n) + ', from ' : 'No final stack from ') +
+        when + ', and reporting for it closed at ' + closedAtWords(n) +
+        '. Open it and an organiser can enter your total.';
+    }
+    if (count > 1) {
+      return 'The oldest is ' + nightName(n) + ' from ' + when +
+        (pts !== null && pts < 0
+          ? ', with no final stack: that counts as 0 chips back, ' + S.fmtSigned(pts) + ' points.'
+          : ', with no final stack on record.') +
+        ' Send that one and this card brings up the next.';
+    }
+    if (pts !== null && pts < 0) {
+      return 'No final stack from ' + when + ', so it counts as 0 chips back, ' +
+        'which is ' + S.fmtSigned(pts) + ' points. One number fixes it.';
+    }
+    return 'No final stack from ' + when + ', and the round is still open. ' +
+      'One number fixes it.';
+  }
+
+  /* The card. A leaf: it writes DOM, calls nothing that renders, and moves
+   * neither focus nor scroll, because a member reading the way-out card must
+   * not be thrown to the top of the page because a background read answered.
+   *
+   * Four faces in priority order: a report for another night still in this
+   * phone's queue, a night missing a count, the way back once the screen is
+   * on an older night, and hidden. Its button is never brass: the current
+   * screen keeps the one brass action it has. */
+  function renderOutstanding() {
+    var card = $('other-night-card');
+    var backBtn = $('other-night-back-btn');
+    // The WRAPPER carries the hiding, not the button. An empty div with a
+    // margin-top is still 8px of card, and on the check-in screen 8px is a
+    // quarter of the room the brass Check in button has left below the fold.
+    var backWrap = $('other-night-back-wrap');
+    offerNight = null;
+    offerEntry = null;
+    if (!ctx.member || !defaultNight || !currentState ||
+        CARD_HIDE_ON.indexOf(currentState) !== -1) {
+      S.show(card, false);
+      return;
+    }
+
+    var pend = pendingNights();
+    var sending = null;
+    var owed = [];
+    var i, n, job;
+    for (i = 0; i < pend.length; i += 1) {
+      n = pend[i];
+      // A job in the store at all, sent or not, means this member has done
+      // their part and the outbox owns it from here. Only a night with no job
+      // behind it is still something to ask them for, which is also what
+      // keeps the card from nagging about a round they reported a moment ago
+      // while the list itself is still a minute old.
+      job = OB.get(n.id, ctx.member.id);
+      if (job && job.status !== 'sent') {
+        if (!sending) { sending = { night: n, job: job }; }
+      } else if (!job && n.id !== defaultNight.id) {
+        // The default night is never OWED, only ever gone back to.
+        //
+        // pendingNights() drops the night on screen for the reason that it is
+        // unreported until the member closes it, and the moment they step off
+        // tonight to send an older count, tonight becomes exactly that night:
+        // checked in, still being played, still unreported. Without this
+        // clause a member sitting on Round 1 reads "Round 2 needs your chip
+        // count" with the full silent-points figure under it, about the round
+        // they are in the middle of playing, at a table with chips in front
+        // of them. Face 3 below is how tonight is offered instead, and it is
+        // the same one tap.
+        //
+        // Nothing is lost by it: the way back always exists, and tonight's
+        // own hub carries the whole instruction once they are on it. It can
+        // never fire on the common path either, because pendingNights() has
+        // already dropped tonight whenever tonight is the screen.
+        owed.push(n);
+      }
+    }
+
+    var label, title, text, btnText;
+    if (sending) {
+      n = sending.night;
+      offerNight = n;
+      offerEntry = outstandingEntries[n.id] || null;
+      label = 'Still sending';
+      title = nightName(n) + ' is still sending';
+      // #sync-pill reads myJob(), which reads ctx.night, so a queued report
+      // for another night goes invisible the moment the member comes back to
+      // tonight. The pill is described in this file as the one piece of
+      // chrome that outlives every state, and this is the line that stops the
+      // switch making it lie by omission.
+      text = 'Your ' + nightName(n) + ' count of ' +
+        S.fmt(sending.job.payload.p_final_stack) +
+        ' is saved on this phone and still going out. Open it to see where it stands.';
+      btnText = 'Open ' + nightName(n);
+    } else if (owed.length) {
+      n = owed[0];
+      offerNight = n;
+      offerEntry = outstandingEntries[n.id] || null;
+      label = 'Still open';
+      title = owed.length > 1
+        ? (owed.length + ' rounds are missing your chip count')
+        : (nightName(n) + ' needs your chip count');
+      text = owedText(n, offerEntry, owed.length);
+      btnText = (reportingClosedOn(n) ? 'Open ' : 'Report ') + nightName(n);
+    } else if (!isDefaultNight()) {
+      offerNight = defaultNight;
+      offerEntry = defaultEntry;
+      label = 'The newest round';
+      title = 'You are on ' + nightName(ctx.night);
+      text = 'Everything on this screen belongs to ' + nightName(ctx.night) +
+        ', played ' + osloDateWords(ctx.night.played_on) + '. ' +
+        nightName(defaultNight) + ' is the newest round, and this page goes ' +
+        'back to it whenever you want.';
+      btnText = 'Go to ' + nightName(defaultNight);
+    } else {
+      S.show(card, false);
+      return;
+    }
+
+    $('other-night-label').textContent = label;
+    $('other-night-title').textContent = title;
+    $('other-night-text').textContent = text;
+    $('other-night-btn').textContent = btnText;
+    // The check-in screen's fold, which is a measured number and not a
+    // guess. report.html's rule is that the code field and the brass Check in
+    // button both stay above it on a 390x844 phone, and the three facts were
+    // moved below the button to buy that back. Measured on that phone, fonts
+    // loaded, with this card above the check-in card, the button's bottom
+    // edge sits at:
+    //   697  no card at all
+    //   964  the card whole
+    //   877  paragraph hidden
+    //   844  paragraph and title hidden, which is ON the fold, not above it
+    //   828  and the gap under the card closed to --space-sm
+    // Only the last of those clears 844, so that is what the check-in screen
+    // gets. Read the middle rows before trying to put the title back: the
+    // paragraph is worth 87px and the TITLE IS WORTH 33, twice the 16px of
+    // headroom the shipped layout has left. Paragraph goes first, then the
+    // title, and the button never goes: the night is named on the button
+    // itself, so "Report Round 1" is a whole instruction with everything else
+    // stripped off it.
+    var compact = (currentState === 'state-checkin');
+    S.show($('other-night-text'), !compact);
+    S.show($('other-night-title'), !compact);
+    // Inline, because it is a per-state measurement and not a style: the
+    // markup's own var(--space-lg) is what every other screen keeps.
+    card.style.marginBottom = compact ? 'var(--space-sm)' : 'var(--space-lg)';
+    // The route home exists whenever the screen is on an older night, even
+    // while the card is pointing at a third one.
+    //
+    // BY ID, never by object identity. defaultNight is the row activeNight()
+    // handed boot; outstanding holds rows loadOutstanding() read separately,
+    // so tonight appears in BOTH as two different objects with one id. The
+    // first face reaches for tonight's row out of outstanding whenever a
+    // report for tonight is still in this phone's queue, which is the
+    // ordinary shape of the evening: report tonight, take the card's offer of
+    // last week, and land on last week with tonight still sending. Compared
+    // by identity that came out true, and the card grew a second button
+    // reading "Go to Round 2" directly under one reading "Open Round 2".
+    if (!isDefaultNight() && offerNight && offerNight.id !== defaultNight.id) {
+      backBtn.textContent = 'Go to ' + nightName(defaultNight);
+      S.show(backWrap, true);
+    } else {
+      S.show(backWrap, false);
+    }
+    S.show(card, true);
+  }
+
+  /* Everything on this page that is night shaped and NOT keyed by night.
+   *
+   * Drafts and outbox jobs need no clearing at all: draftKey() and OB.keyOf()
+   * are both keyed by (night, member), so a queued Round 1 report and a
+   * queued Round 2 report coexist without touching each other, and the pump
+   * in outbox.js is night agnostic and keeps retrying both.
+   *
+   * lastReported is the one that bites, and it is why this function exists.
+   * It is a memory of THIS page load's report with no night on it, and
+   * shownNumbers() falls back to it whenever the queue and the entry row have
+   * nothing, so a member who reported Round 1 and then went back to tonight
+   * would find tonight's hub reading "You have reported." over Round 1's
+   * count, with the way-out card printing the figure. */
+  function resetNightState() {
+    lastReported = null;
+    reviewed = null;
+    topupQuote = null;
+    hubSig = null;
+    syncSig = null;
+    // The 30 second throttle belongs to the night being left.
+    refreshedAt = 0;
+    // enterReport only writes the field when the server row or a draft says
+    // to, so a count typed for one night would otherwise follow the member
+    // into the other night's close screen.
+    $('final-input').value = '';
+    $('bust-btn').classList.remove('btn--bust--on');
+    $('code-input').value = '';
+    msg($('final-msg'), '', '');
+    msg($('checkin-msg'), '', '');
+    msg($('topup-msg'), '', '');
+    S.show($('review-panel'), false);
+    S.show($('report-form'), true);
+    // showState places and announces only on a REAL change, and a switch can
+    // land on the same state name it left. The night underneath is different,
+    // so it is a real change and has to be announced like one.
+    currentState = null;
+  }
+
+  /* Boot's arrival tree, lifted out whole so it can be entered a second time.
+   * Nothing in it is about WHICH night this is: the job, the entry and the
+   * report are all read off ctx, which is why switching night needs no new
+   * state div and no new copy. */
+  function enterNight() {
+    var job = myJob();
+    if (job && job.status !== 'sent') {
+      // A submission is still in flight (or stuck) from a previous
+      // visit, land on the receipt, not on a blank form.
+      renderReceipt();
+      showState('state-receipt');
+    } else if (!ctx.entry) {
+      enterCheckin();
+    } else if (ctx.entry.reported) {
+      renderReceipt();
+      showState('state-receipt');
+    } else {
+      enterReport();
+    }
+    renderSync();
+  }
+
+  /* Move the whole screen to another night, with NO network.
+   *
+   * Everything it needs was fetched by loadOutstanding, and that matters more
+   * than it looks: this runs at 20:35 on campus wifi, and a design that
+   * reloaded the page here would strand a member whose connection had just
+   * gone, on the one screen that exists to survive exactly that. The refresh
+   * at the tail corrects a stale entry row when the network is there and
+   * costs nothing when it is not.
+   *
+   * Refused while a slip is up and on the two screens refreshCtx already
+   * refuses to disturb, so nothing can move under a thumb mid count. */
+  function switchNight(n, entry) {
+    if (!n) { return; }
+    if (!$('slip').hidden) { return; }
+    if (!$('state-close').hidden || !$('state-topup').hidden) { return; }
+    // Leaving tonight: keep the freshest entry we have for it, because that
+    // is what the way back will be entered with.
+    if (isDefaultNight() && ctx.night) { defaultEntry = ctx.entry; }
+    resetNightState();
+    ctx.night = n;
+    ctx.entry = entry || null;
+    // The balance belongs to the season it was read for. Two open nights can
+    // straddle a semester boundary, and the wrong season's points on the
+    // check-in card and the review sheet are worse than none: every reader
+    // already handles null.
+    if (!defaultNight || n.season_id !== defaultNight.season_id) { ctx.balance = null; }
+    nightBanner();
+    enterNight();
+    // refreshedAt was zeroed above, so this really runs. It re-reads this
+    // night and this entry by id and re-renders the right screen with all of
+    // its own guards, which is the whole reason nothing new is written here.
+    refreshCtx();
+  }
+
+  $('other-night-btn').addEventListener('click', function () {
+    switchNight(offerNight, offerEntry);
+  });
+
+  $('other-night-back-btn').addEventListener('click', function () {
+    switchNight(defaultNight, defaultEntry);
+  });
+
+  /* A /report?r=<night id> link, which only an already signed in member can
+   * arrive on. Honoured ONLY when the night is one this member could actually
+   * report on: open or reconciling, not removed, and carrying an unreported
+   * entry of their own. Anything else falls back to the night boot chose,
+   * silently, because a link that has gone stale must not cost somebody the
+   * screen they came for. The two reads happen only when the parameter is
+   * there, so the common case, which has no parameter at all, waits for
+   * nothing. */
+  function enterLinkedNight() {
+    return Promise.all([
+      S.nightById(urlNightId),
+      S.myEntry(urlNightId, ctx.member.id)
+    ]).then(function (res) {
+      var n = res[0], e = res[1];
+      var usable = n && !n.deleted_at &&
+        (n.status === 'open' || n.status === 'reconciling') &&
+        e && !e.reported && !e.voided_at;
+      if (usable) {
+        ctx.night = n;
+        ctx.entry = e;
+        if (n.season_id !== defaultNight.season_id) { ctx.balance = null; }
+        nightBanner();
+      }
+      enterNight();
+    }).catch(function () { enterNight(); });
+  }
 
   function boot() {
     if (!S.configured()) {
@@ -2377,6 +2999,10 @@
         });
       }
 
+      // Remembered before anything can move it: this is the way back to
+      // tonight from any older night, and it is what every "is this tonight"
+      // test on the page compares against.
+      defaultNight = night;
       ctx.night = night;
       nightBanner();
 
@@ -2386,22 +3012,18 @@
       ]).then(function (res) {
         ctx.entry = res[0];
         ctx.balance = res[1];
+        defaultEntry = res[0];
 
-        var job = myJob();
-        if (job && job.status !== 'sent') {
-          // A submission is still in flight (or stuck) from a previous
-          // visit, land on the receipt, not on a blank form.
-          renderReceipt();
-          showState('state-receipt');
-        } else if (!ctx.entry) {
-          enterCheckin();
-        } else if (ctx.entry.reported) {
-          renderReceipt();
-          showState('state-receipt');
-        } else {
-          enterReport();
+        // The two reads behind the other-night card, fired and deliberately
+        // NOT waited on. The screen this member came for is painted by the
+        // line below on the same round trips it takes today, and a card that
+        // never arrives leaves them exactly the page they have now.
+        loadOutstanding();
+
+        if (urlNightId && urlNightId !== night.id) {
+          return enterLinkedNight();
         }
-        renderSync();
+        enterNight();
       });
     }).catch(function (err) {
       // Network died mid-boot. If we at least know who they are, keep the

@@ -129,24 +129,126 @@
     'settled_at,settled_by,revision,created_at,reports_close_at,' +
     'location,location_url,notes,capacity,deleted_at';
 
-  /* The night that is open for reporting, if any: an 'open' night wins, else
-   * a 'reconciling' one (members may still report while the organisers
+  /* The night this screen opens on: the NEWEST night still taking reports,
+   * open or reconciling (members may still report while the organisers
    * reconcile). Not necessarily today's: nothing closes reporting but
-   * settling, so an unsettled night is still the active one days later. */
+   * settling, so an unsettled night is still an answer days later, which is
+   * what the other-night card in js/report.js exists to handle.
+   *
+   * It used to read two rows and prefer an 'open' night over a 'reconciling'
+   * one whatever the dates said. That was safe while only one night could be
+   * unsettled at a time. Two can now, and the preference inverts the answer
+   * at the worst possible moment: an organiser closing reporting on tonight's
+   * round at 20:30 moves it to 'reconciling', and last week's still-open
+   * round would then become the night every phone at the table opened on.
+   * Newest wins, full stop. The older night is still reachable, through the
+   * card, which is the whole point of it.
+   *
+   * deleted_at is filtered for the same reason outstandingNights() filters
+   * it: delete_night() leaves status alone, and nights_read lets an ADMIN see
+   * removed rows, so an organiser would otherwise land on a night they had
+   * just removed. */
   function activeNight() {
     var c = client();
     if (!c) { return Promise.resolve(null); }
     return c.from('nights')
       .select(NIGHT_COLS)
       .in('status', ['open', 'reconciling'])
+      .is('deleted_at', null)
       .order('played_on', { ascending: false })
-      .limit(2)
+      .limit(1)
       .then(function (r) {
         if (r.error) { throw r.error; }
         var rows = r.data || [];
-        var open = rows.filter(function (n) { return n.status === 'open'; });
-        return open[0] || rows[0] || null;
+        return rows[0] || null;
       });
+  }
+
+  /* The nights this member still owes a report on, oldest first.
+   *
+   * Reporting used to close at 09:00 the morning after, so two nights could
+   * never be open at once and activeNight()'s answer was the only night a
+   * member could possibly have meant. Reporting now runs until an organiser
+   * settles, so somebody can be carrying an unreported entry on a night that
+   * is no longer the newest one, and nothing on the report screen would ever
+   * put it in front of them again.
+   *
+   * member_id is filtered explicitly for the same reason myEntry() does it:
+   * RLS narrows a plain member to their own rows, but an ADMIN reads
+   * everyone's, so without it an organiser opening /report would be offered
+   * somebody else's unfinished night. This never enumerates anybody, it asks
+   * only about rows the caller owns.
+   *
+   * select('*') on entries, because the caller hands the row it gets back
+   * straight to ctx.entry and every screen reads a full row. Nights are named
+   * columns as always: '*' fails with 42501 under the grant that hides
+   * nights.code.
+   *
+   * The status and deleted_at filters are what keep a settled, void or
+   * removed night out of the answer entirely, so nothing downstream needs
+   * copy for a night that cannot be reported on. delete_night() leaves status
+   * alone and nights_read lets an admin see removed rows, so the deleted_at
+   * filter is doing real work and not decoration.
+   *
+   * Resolves { nights: [rows], entries: { night_id: row } }. NEVER rejects:
+   * this is an extra, and a member who cannot load it must still get exactly
+   * the screen they get today. */
+  function outstandingNights(memberId) {
+    var c = client();
+    var empty = { nights: [], entries: {} };
+    if (!c || !memberId) { return Promise.resolve(empty); }
+    return c.from('entries')
+      .select('*')
+      .eq('member_id', memberId)
+      .eq('reported', false)
+      .is('voided_at', null)
+      /* NEWEST FIRST, and the order is not decoration. reported = false is
+       * true of every night a member ever walked away from, settled ones
+       * included, and those are filtered out one query later, by which point
+       * the cap has already been applied. A chronic non-reporter with a
+       * season of them behind her would hand PostgREST an unordered set and
+       * take back whichever twelve it felt like, so the one night she can
+       * still fix could be the one left out. Newest first puts the still-open
+       * nights at the front of the cap, where they belong. */
+      .order('created_at', { ascending: false })
+      .limit(12)
+      .then(function (r) {
+        if (r.error) { throw r.error; }
+        var rows = r.data || [];
+        if (!rows.length) { return empty; }
+        var byNight = {};
+        var ids = [];
+        rows.forEach(function (e) {
+          byNight[e.night_id] = e;
+          ids.push(e.night_id);
+        });
+        return c.from('nights')
+          .select(NIGHT_COLS)
+          .in('id', ids)
+          .in('status', ['open', 'reconciling'])
+          .is('deleted_at', null)
+          .order('played_on', { ascending: true })
+          .then(function (rn) {
+            if (rn.error) { throw rn.error; }
+            return { nights: rn.data || [], entries: byNight };
+          });
+      })
+      .catch(function () { return empty; });
+  }
+
+  /* One night by id, for a link that names one. Named columns for the 42501
+   * reason above. Resolves null on anything at all going wrong, because the
+   * caller falls back to the night it already has. */
+  function nightById(nightId) {
+    var c = client();
+    if (!c || !nightId) { return Promise.resolve(null); }
+    return c.from('nights').select(NIGHT_COLS).eq('id', nightId)
+      .limit(1).maybeSingle()
+      .then(function (r) {
+        if (r.error) { throw r.error; }
+        return r.data || null;
+      })
+      .catch(function () { return null; });
   }
 
   /* My entry for a night (or null). member_id is filtered explicitly,
@@ -408,6 +510,8 @@
     isAdmin: isAdmin,
     currentSeason: currentSeason,
     activeNight: activeNight,
+    outstandingNights: outstandingNights,
+    nightById: nightById,
     myEntry: myEntry,
     myBalance: myBalance,
     isPermanentError: isPermanentError,
