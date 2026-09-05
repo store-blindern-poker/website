@@ -241,6 +241,10 @@
    * ------------------------------------------------------------------ */
   var leaderboardBody = document.getElementById('leaderboard-body');
   if (leaderboardBody) {
+    // Its own read, deliberately not chained to the board's. If the banner
+    // fails the standings still render, and a board with no caveat is worse
+    // than a board with one but better than no board at all.
+    fetchPendingBanner();
     fetchLiveLeaderboard()
       .then(function (rows) {
         if (rows && rows.length) {
@@ -256,6 +260,53 @@
       });
   }
 
+  /* The caveat above the board.
+   *
+   * Points move as members report, rather than only when an organiser
+   * settles a night, so the standings are usually a little ahead of the
+   * record. This says by how much, in the two numbers anybody actually
+   * wants: which night is still open, and how many people it is waiting on.
+   *
+   * It hides itself when there is nothing outstanding, so a settled season
+   * reads exactly as it did before any of this existed. */
+  function fetchPendingBanner() {
+    var box = document.getElementById('leaderboard-provisional');
+    if (!box) { return; }
+    var cfg = window.SBP_CONFIG || {};
+    var ok = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY &&
+      String(cfg.SUPABASE_URL).indexOf('__') !== 0 &&
+      String(cfg.SUPABASE_ANON_KEY).indexOf('__') !== 0 &&
+      window.supabase && window.supabase.createClient;
+    if (!ok) { return; }
+    try {
+      var client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+      client.from('v_leaderboard_pending')
+        .select('title,night_no,entries,unreported')
+        .order('played_on', { ascending: true })
+        .then(function (res) {
+          if (res.error) { throw res.error; }
+          var rows = (res.data || []).filter(function (r) { return r.unreported > 0; });
+          if (!rows.length) { return; }
+          var parts = rows.map(function (r) {
+            var name = r.title || ('Round ' + r.night_no);
+            return escapeHtml(name) + ' is waiting on ' + r.unreported +
+              ' of ' + r.entries + ' players';
+          });
+          box.innerHTML = '<div><strong>These standings can still change.</strong> ' +
+            parts.join(', and ') + '. Anybody marked ' +
+'<span class="badge badge--muted">not reported</span> is shown at the ' +
+            'points they had before that night, because we do not know their ' +
+            'result yet.</div>';
+          box.hidden = false;
+        })
+        .catch(function (err) {
+          console.warn('Provisional banner unavailable:', err);
+        });
+    } catch (err) {
+      console.warn('Provisional banner unavailable:', err);
+    }
+  }
+
   function fetchLiveLeaderboard() {
     var cfg = window.SBP_CONFIG || {};
     var configured = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY &&
@@ -269,7 +320,7 @@
       var client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
       return client
         .from('v_leaderboard')
-        .select('rank,pseudonym,points,nights_played')
+        .select('rank,pseudonym,points,nights_played,pending,provisional')
         .order('rank', { ascending: true })
         .then(function (res) {
           if (res.error) { throw res.error; }
@@ -308,10 +359,17 @@
     if (podium) {
       var medals = ['Champion', 'Second', 'Third'];
       podium.innerHTML = rows.slice(0, 3).map(function (r, i) {
+        // A leader whose own night is unreported is standing on last week's
+        // number, not this week's. Saying so is the difference between a
+        // provisional board and a wrong one.
+        var waiting = r.pending
+          ? '<div class="podium__medal">Not reported yet</div>'
+          : '';
         return '<div class="podium__place podium__place--' + (i + 1) + '">' +
           '<div class="podium__medal">' + medals[i] + '</div>' +
           '<div class="podium__name">' + escapeHtml(r.pseudonym) + '</div>' +
           '<div class="podium__points">' + fmt(r.points) + ' pts</div>' +
+          waiting +
         '</div>';
       }).join('');
       podium.style.display = '';
@@ -319,10 +377,21 @@
 
     leaderboardBody.innerHTML = rows.map(function (r) {
       var initial = (r.pseudonym || '?').trim().charAt(0).toUpperCase();
+      // WHY THE TAG EXISTS. Points only move when somebody reports, so a
+      // player who has not reported sits at the number they had before the
+      // night. Without a word on the row that reads as a result, and it
+      // quietly flatters silence: report a loss and you drop, say nothing
+      // and you hold your place. The tag makes the reason visible, which is
+      // how this club handles everything else it cannot verify.
+      var tag = r.pending
+        ? ' <span class="badge badge--muted" title="This player has not sent'
+          + ' their chip count yet, so their points do not include that night.">'
+          + 'not reported</span>'
+        : '';
       return '<tr>' +
         '<td><span class="rank-number">' + escapeHtml(r.rank) + '</span></td>' +
         '<td><span class="player-cell"><span class="player-avatar">' + escapeHtml(initial) +
-          '</span><span class="player-name">' + escapeHtml(r.pseudonym) + '</span></span></td>' +
+          '</span><span class="player-name">' + escapeHtml(r.pseudonym) + '</span>' + tag + '</span></td>' +
         '<td class="num">' + fmt(r.points) + '</td>' +
         '<td class="num">' + fmt(r.nights_played) + '</td>' +
       '</tr>';

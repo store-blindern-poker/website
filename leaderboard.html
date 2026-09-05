@@ -54,6 +54,13 @@
 
           <!-- Podium for the top three, filled by js/app.js once the first
                night has been settled; hidden until then. -->
+          <!-- Provisional banner. Filled by js/app.js from v_leaderboard_pending,
+               hidden whenever every night that touches the standings is settled.
+               It is the first thing on the page on purpose: a number that can
+               still move should say so before anybody reads it. -->
+          <div class="notice" id="leaderboard-provisional" role="status" hidden
+               style="margin-bottom: var(--space-lg);"></div>
+
           <div id="leaderboard-podium" class="podium" style="display:none;"></div>
 
           <!-- Pre-season notice. js/app.js hides this the moment live
