@@ -11,11 +11,21 @@ so the two should never drift.
 | `0003_pin_search_path.sql` | Pins `search_path` on four internal helpers |
 | `0004_rsvps.sql` | RSVP table, `set_rsvp()`, the two views, public count vs member names |
 | `0005_pseudonym_change_deadline.sql` | `change_pseudonym()` and the per-season lock |
-| `0006_reporting_closes_next_morning.sql` | `reports_close_at`, defaults to 09:00 the next day |
+| `0006_reporting_closes_next_morning.sql` | Adds `reports_close_at`, defaulting to 09:00 the next day. 0019 repeals that default |
 | `0007_live_rebuy.sql` | Top-ups as a live transaction at the bank |
 | `0008_roles_directory_names.sql` | Super admins, the member directory, names |
 | `0009_split_first_last_name.sql` | First and last name as separate fields |
 | `0010_grant_norm_pseudonym.sql` | Fixes the directory: a view needs EXECUTE on the functions it calls |
+| `0011_soft_delete_members.sql` | Removing a member is a soft delete, `restore_member()` |
+| `0012_editable_night_details.sql` | Venue and notes on the night row, `update_night()` |
+| `0013_soft_delete_nights.sql` | Removing a night is a soft delete, `restore_night()` |
+| `0014_removed_nights_guards.sql` | Admins can see removed nights again; `check_in` and `report_entry` refuse them |
+| `0015_night_capacity.sql` | `capacity` on a night, caps RSVPs only |
+| `0016_revoke_stray_anon_capacity_grant.sql` | Takes back a stray `anon` grant that reached production with 0015 and was never needed |
+| `0017_topup_guard_and_full_night_code.sql` | One top-up a night however it was recorded; full night becomes P0030 |
+| `0018_unreported_reminders.sql` | `unreported_roster()`, `mark_reminded()`, the reminder button |
+| `0019_reporting_has_no_deadline.sql` | `reports_close_at` defaults to NULL; settling the night closes reporting |
+| `0020_round_announcements.sql` | One mail when a round opens, to this season's players, with an opt out |
 
 ## The rule that matters
 

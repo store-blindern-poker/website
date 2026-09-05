@@ -156,10 +156,10 @@
    * because their instruction depends on the entry and the outbox. */
   var ORDER_DEFAULTS = {
     'state-config':      { order: 'Not connected yet.', sub: '' },
-    'state-loading':     { order: 'Tonight', sub: 'Loading tonight’s round.' },
+    'state-loading':     { order: 'Tonight', sub: 'Loading tonight\'s round.' },
     'state-nopseudonym': { order: 'Pick your pseudonym.', sub: 'It is the only name ever shown in public.' },
     'state-nonight':     { order: 'No round tonight.', sub: '' },
-    'state-checkin':     { order: 'Type tonight’s code.', sub: 'It is on the screen at the front, five characters.' },
+    'state-checkin':     { order: 'Type tonight\'s code.', sub: 'It is on the screen at the front, five characters.' },
     'state-topup':       { order: 'Count your chips.', sub: 'Count everything in front of you right now, then type the total.' },
     'state-close':       { order: 'Count your chips.', sub: 'Count everything in front of you and type the total.' },
     'state-settled':     { order: 'Tonight is settled.', sub: '' }
@@ -189,9 +189,11 @@
         return { order: 'Show your numbers to an organiser.',
                  sub: 'This phone can no longer tell whether your report was sent. Your count is on the card below.' };
       }
-      if (reportingClosed()) {
-        // "Close the round again" is an offer past the deadline, and the card
-        // three lines below has just hidden the button that would do it.
+      if (sendRefused()) {
+        // "Close the round again" is an offer the server would refuse, and the
+        // card three lines below has just hidden the button that would do it.
+        // Both reasons read the same here: reporting is closed once the night
+        // is settled, deadline or no deadline.
         return { order: 'You have reported.',
                  sub: 'Reporting has closed, so an organiser makes any change to your numbers now.' };
       }
@@ -199,7 +201,7 @@
                sub: 'Your numbers are in. If you play on, close the round again with the new total.' };
     }
     var n = ctx.night;
-    if (reportingClosed()) {
+    if (sendRefused()) {
       return { order: 'Show your numbers to an organiser.',
                sub: 'Reporting has closed. An organiser can still enter your final stack.' };
     }
@@ -243,12 +245,13 @@
       return { order: 'Show this to an organiser.',
                sub: 'This phone can no longer tell whether your report was sent.' };
     }
-    // Past the deadline with nothing left in the queue: this is the morning
-    // after. The chips went back last night, so "Hand your chips back." is a
-    // stale instruction, and the only thing that can still change anything is
-    // an organiser. A report still queued never reaches here, because
-    // jobStuck() answers first for it.
-    if (reportingClosed()) {
+    // Reporting is over and nothing is left in the queue. The chips went back
+    // when the round ended, so "Hand your chips back." is a stale instruction,
+    // and the only thing that can still change anything is an organiser.
+    // sendRefused(), not reportingClosed(): with no deadline set it is
+    // settling that ends reporting. A report still queued never reaches here,
+    // because jobStuck() answers first for it.
+    if (sendRefused()) {
       return { order: 'You have reported.',
                sub: 'Reporting has closed, so an organiser makes any change to your numbers now.' };
     }
@@ -298,17 +301,26 @@
     return !bankMode() && recordedRebuy() > 0;
   }
 
-  /* Reporting is over for this night. nights.reports_close_at is a server
-   * fact and the server enforces it (report_entry raises P0021), so this is
-   * the page agreeing with the server in advance instead of offering a
-   * button it already knows will be refused. Read in one place by the hub
-   * order, the status card, the bank card, the way out and the close screen,
-   * because those five used to work it out separately and disagreed on
-   * screen. It is NOT the top-up break, which is guidance and never a gate. */
-  function reportingClosed() {
+  /* The night's own reporting deadline, or null when it has none. Null is the
+   * normal case: reporting runs until the organisers settle, and settling is
+   * what report_entry refuses on. An organiser can still set a deadline by
+   * hand for a single night, so every reader goes through here and nothing
+   * downstream parses the column a second way or reads a missing deadline as
+   * a passed one. */
+  function deadlineAt() {
     var n = ctx.night;
     var t = (n && n.reports_close_at) ? new Date(n.reports_close_at) : null;
-    return !!(t && !isNaN(t) && Date.now() >= t.getTime());
+    return (t && !isNaN(t)) ? t : null;
+  }
+
+  /* A deadline was set by hand for this night and it has passed. False all
+   * night when there is none, which is why nothing that needs to know whether
+   * a send can still land may read this alone: sendRefused() is that
+   * question. It is NOT the top-up break, which is guidance and never a
+   * gate. */
+  function reportingClosed() {
+    var t = deadlineAt();
+    return !!(t && Date.now() >= t.getTime());
   }
 
   /* The organisers have closed the books. report_entry raises P0003 from
@@ -326,19 +338,21 @@
     return nightSettled() || reportingClosed();
   }
 
-  /* "09:00 today", for copy that has to name the deadline inside a sentence.
-   * renderDeadline builds its own line with a mono span, so this one is
-   * deliberately plain text. */
+  /* "09:00 today", for copy that has to name a hand-set deadline inside a
+   * sentence. Empty when there is none, so every caller must sit behind
+   * reportingClosed() and never behind sendRefused() alone: a settled night
+   * has no time to name and would print "Reporting closed at , so". That is
+   * why each swap below carries a nightSettled() branch. renderDeadline
+   * builds its own line with a mono span, so this one is plain text. */
   function closedAtWords() {
-    var n = ctx.night;
-    var t = (n && n.reports_close_at) ? new Date(n.reports_close_at) : null;
-    if (!t || isNaN(t)) { return ''; }
+    var t = deadlineAt();
+    if (!t) { return ''; }
     return osloClock(t, false) + ' ' + osloDayWord(t);
   }
 
   /* ------------------------------------------------------------------
-   * Oslo time. The deadline and the slips are read in one room, in one
-   * timezone; the phone's own zone is irrelevant.
+   * Oslo time. A hand-set deadline and the slips are read in one room, in
+   * one timezone; the phone's own zone is irrelevant.
    * ------------------------------------------------------------------ */
   function osloClock(date, withSeconds) {
     try {
@@ -396,14 +410,14 @@
    * admin.html while this phone is still retrying on bad wifi, which is the
    * same bad wifi the outbox exists for, so the two go together more often
    * than not. The payload was frozen at Send with whatever was on record
-   * then, and report_entry defends the BANK’s number (rebuy_at set) but
-   * overwrites an ORGANISER’s (rebuy_at null) with whatever the parameter
-   * says, so posting the frozen 0 would quietly write the organiser’s 4,000
+   * then, and report_entry defends the BANK's number (rebuy_at set) but
+   * overwrites an ORGANISER's (rebuy_at null) with whatever the parameter
+   * says, so posting the frozen 0 would quietly write the organiser's 4,000
    * down to nothing, with the receipt still reading the record and showing
    * no sign of it. So the figure is re-read from the server on EVERY
    * attempt, immediately before the post. The read can never fail the send:
    * any error falls back to the queued figure, which is what would have gone
-   * anyway. The member’s own number, p_final_stack, is never touched here.
+   * anyway. The member's own number, p_final_stack, is never touched here.
    *
    * This is also why the payload is rebuilt rather than mutated in place:
    * the outbox has already written the job to localStorage by the time the
@@ -522,8 +536,9 @@
     $('night-meta').textContent = meta;
     /* The pill says what a MEMBER can do, not what nights.status holds.
      *
-     * Those are two different facts and they disagree for a whole morning:
-     * past reports_close_at the column still reads 'open', because the
+     * Those are two different facts and they disagree whenever an organiser
+     * has set a deadline by hand: past reports_close_at the column still
+     * reads 'open', because the
      * organisers have not settled yet, while this phone can no longer send
      * anything. The pill is the first thing read on the screen, so a green
      * OPEN three lines above "Show your numbers to an organiser" left the
@@ -969,9 +984,9 @@
    * so outbox.js never falls back to memory and simply sees no job. Mapping
    * that absence to SENT would print the strongest reassurance on the site,
    * in the felt colour, on the one screen an organiser reads before chips
-   * move, about a number the server may not hold. The server’s own entries
+   * move, about a number the server may not hold. The server's own entries
    * row is the only thing that may say SENT without a job behind it. It is a
-   * leaf, safe to call from the slip’s per-second tick: it reads the queue and
+   * leaf, safe to call from the slip's per-second tick: it reads the queue and
    * the entry and renders nothing. */
   function sendVerdict() {
     var job = myJob();
@@ -1145,8 +1160,8 @@
    * from queued to sending and back appear nowhere on that screen, and they
    * change on every retry, so re-rendering the hub on them moved the screen
    * under a member who was sitting still while nothing they could see had
-   * changed. The deadline is in here because 09:00 passing rewrites the whole
-   * card with no queue event behind it. */
+   * changed. Whether the server would still take a report is in here because
+   * it rewrites the whole card with no queue event behind it. */
   function hubSignature() {
     var nums = shownNumbers();
     var d = loadDraft();
@@ -1154,7 +1169,7 @@
             myJob() ? 'job' : '-',
             nums ? nums.final : '-',
             recordedRebuy(),
-            reportingClosed() ? 'closed' : '-',
+            sendRefused() ? 'closed' : '-',
             (d && d.final) || '-'].join('|');
   }
 
@@ -1336,7 +1351,11 @@
   function renderCloseCta() {
     var nums = shownNumbers();
     var reported = !!nums;
-    var closed = reportingClosed();
+    // sendRefused(), not reportingClosed(): with no deadline set it is
+    // settling that ends reporting, and it can land while this card is on
+    // screen. The deadline alone left "Change my report" and "Close my round"
+    // live on a settled night, both routes to a refused send.
+    var refused = sendRefused();
     var label = $('close-card-label');
     var text = $('close-card-text');
     var slipBtn = $('hub-slip-btn');
@@ -1355,8 +1374,13 @@
       text.textContent = 'You reported ' + S.fmt(nums.final) + ' chips' +
         (t && !isNaN(t) ? ' at ' + osloClock(t, false) : '') +
         '. Show the closing slip as you hand your chips back.' +
-        (closed ? ' Reporting closed at ' + closedAtWords() +
-                  ', so an organiser makes any change to it now.' : '');
+        (refused
+          ? (nightSettled()
+              ? ' The night has been settled, so an organiser makes any ' +
+                'change to it now.'
+              : ' Reporting closed at ' + closedAtWords() +
+                ', so an organiser makes any change to it now.')
+          : '');
       // The queue held this report a moment ago and holds nothing now. The
       // number and the slip stay, because reading them to an organiser is all
       // that is left to do, and the card says so instead of implying the
@@ -1377,29 +1401,53 @@
       S.show(slipBtn, true);
       btn.textContent = 'Change my report';
       btn.className = 'btn btn--secondary btn--block';
-      // Past the deadline the server refuses report_entry with P0021, so
-      // "Change my report" is a route to a form that cannot send. The
-      // sentence above says who to talk to instead.
-      S.show(btn, !closed);
-    } else if (closed) {
+      // A refused send is refused whatever the network does (P0021 past a
+      // hand-set deadline, P0003 once settled), so "Change my report" is a
+      // route to a form that cannot send. The sentence above says who to talk
+      // to instead.
+      S.show(btn, !refused);
+    } else if (refused) {
       // Nothing on this phone can reach the server any more, so the card
-      // carries no control at all: it names the deadline, says why the two
-      // buttons are gone, and gives the one thing that still works. The
-      // standing order above it already reads "Show your numbers to an
-      // organiser."
-      label.textContent = '3 · Reporting has closed';
-      text.textContent = 'Reporting closed at ' + closedAtWords() +
-        ', so this phone can no longer send your final stack, and the bank ' +
-        'has shut. Count your chips and read the total to an organiser: they ' +
-        'can still enter it for you.';
+      // carries no control at all: it says why the two buttons are gone and
+      // gives the one thing that still works. The standing order above it
+      // already reads "Show your numbers to an organiser." nightSettled() is
+      // asked first, because a settled night has no time to name and
+      // closedAtWords() would hand back an empty string mid sentence.
+      if (nightSettled()) {
+        label.textContent = '3 · The night is settled';
+        text.textContent = 'The night has been settled, so this phone can no ' +
+          'longer send your final stack, and the bank has shut. Count your ' +
+          'chips and read the total to an organiser: they can still enter ' +
+          'it, and a settled night can be corrected and settled again.';
+      } else {
+        label.textContent = '3 · Reporting has closed';
+        text.textContent = 'Reporting closed at ' + closedAtWords() +
+          ', so this phone can no longer send your final stack, and the bank ' +
+          'has shut. Count your chips and read the total to an organiser: ' +
+          'they can still enter it for you.';
+      }
       S.show(slipBtn, false);
       S.show(btn, false);
     } else {
       label.textContent = '3 · Close the round';
+      // No deadline is invented here. With reports_close_at null there is no
+      // time to name and reporting runs until the organisers settle; when one
+      // has been set by hand, closedAtWords() names it AND the settle, because
+      // settle_night can land before a deadline and refuses with P0003. The
+      // organiser sentence is the rescue the first real night did not have.
+      // This copy is duplicated as the pre-render default of #close-card-text
+      // in report.html: change both or neither.
       text.textContent = 'When you are done for the night, count your chips ' +
         'and report the total. You get a closing slip to show an organiser ' +
-        'while you hand the chips back. No rush: reporting stays open until ' +
-        'the morning after.';
+        'while you hand the chips back. ' +
+        (reportingClosed() || !deadlineAt()
+          ? 'No rush: reporting stays open until the organisers settle the ' +
+            'night. If you go home without reporting, an organiser can still ' +
+            'enter your numbers by hand.'
+          : 'Reporting is open until the organisers settle the night, and no ' +
+            'later than ' + closedAtWords() + ', Oslo time. If you go home ' +
+            'without reporting, an organiser can still enter your numbers by ' +
+            'hand.');
       S.show(slipBtn, false);
       S.show(btn, true);
       btn.textContent = 'Close my round';
@@ -1419,8 +1467,15 @@
     var d = loadDraft();
     var note = $('hub-draft-note');
     if (!reported && d && d.final) {
-      note.textContent = 'You started closing the round. Your count of ' +
-        d.final + ' is saved on this phone and nothing has been sent yet.';
+      // "nothing has been sent yet" promises a send that is now impossible if
+      // the card two centimetres above has just said this phone cannot send.
+      // The number itself stays either way: it is the thing an organiser
+      // needs, and hiding it would throw it away.
+      note.textContent = refused
+        ? 'You started closing the round. Your count of ' + d.final +
+          ' is saved on this phone. It was never sent, so read it to an organiser.'
+        : 'You started closing the round. Your count of ' + d.final +
+          ' is saved on this phone and nothing has been sent yet.';
       S.show(note, true);
     } else {
       S.show(note, false);
@@ -1433,10 +1488,16 @@
    * nobody chases them. */
   function renderCloseIntro() {
     var el = $('close-intro');
-    if (reportingClosed()) {
-      // Asked first. This branch used to be missing entirely, so the intro
-      // read "The round is still running" directly above a deadline line
-      // that read, in clay, that reporting had closed.
+    if (nightSettled()) {
+      // Asked first, and asked before the deadline: with reports_close_at
+      // null, settling is the only thing that ends reporting. Settled used to
+      // fall through to "The organisers are closing the night. Report your
+      // final stack now." over a Send that report_entry answers with P0003.
+      el.textContent = 'The night has been settled, so nothing sent from here will be accepted. Show your numbers to an organiser: a settled night can be corrected and settled again.';
+    } else if (reportingClosed()) {
+      // This branch used to be missing entirely, so the intro read "The round
+      // is still running" directly above a deadline line that read, in clay,
+      // that reporting had closed.
       el.textContent = 'Reporting has closed, so nothing sent from here will be accepted. Show your numbers to an organiser and they can enter them.';
     } else if (reportedNumbers()) {
       el.textContent = 'You already reported. Change the number and send again: the new report replaces the old one.';
@@ -1449,38 +1510,53 @@
 
   /* The close screen's send route, withdrawn when the server will refuse it.
    * #close-intro and #deadline-line are statements of fact and #review-btn is
-   * a route to a send, so all three follow the deadline rather than the
-   * moment enterClose happened to run. A tab left open overnight had the
-   * intro still reading "the round is still running" over a live brass Send
-   * that report_entry answers with P0021. #final-input is never touched here:
-   * a member typing a chip count must not have the field move under their
-   * thumb, and the count is still worth having for the organiser. */
+   * a route to a send, so all three follow the server rather than the moment
+   * enterClose happened to run. A tab left open across the end of the night
+   * had the intro still reading "the round is still running" over a live
+   * brass Send. #final-input is never touched here: a member typing a chip
+   * count must not have the field move under their thumb, and the count is
+   * still worth having for the organiser. */
   function renderCloseRoute() {
-    var closed = reportingClosed();
-    S.show($('review-btn'), !closed);
-    S.show($('close-next-help'), !closed);
-    S.show($('submit-btn'), !closed);
+    // sendRefused(), not reportingClosed(). With no deadline set, settling is
+    // the act that ends reporting, and it lands while members are still on
+    // this screen: refreshCtx returns early whenever #state-close is up, so
+    // this function IS the settled path for them. The deadline alone left
+    // Review and Send live for report_entry to answer with P0003.
+    var refused = sendRefused();
+    S.show($('review-btn'), !refused);
+    S.show($('close-next-help'), !refused);
+    S.show($('submit-btn'), !refused);
     // Goes with #submit-btn, so "Not done until the receipt is on screen" is
     // never left standing over a Send that has been withdrawn.
-    S.show($('review-not-done'), !closed);
-    $('close-no-send').textContent = closed
-      ? 'Reporting closed at ' + closedAtWords() + ', so nothing can be sent ' +
-        'from this phone now. Count your chips and read the total to an ' +
-        'organiser: they can still enter it for you.'
-      : '';
-    S.show($('close-no-send'), closed);
-    if (closed && !$('review-panel').hidden) {
+    S.show($('review-not-done'), !refused);
+    // nightSettled() is asked first: a settled night has no deadline to name,
+    // and closedAtWords() would hand back an empty string mid sentence.
+    if (!refused) {
+      $('close-no-send').textContent = '';
+    } else if (nightSettled()) {
+      $('close-no-send').textContent = 'The night has been settled, so ' +
+        'nothing can be sent from this phone now. Count your chips and read ' +
+        'the total to an organiser: they can still enter it, and a settled ' +
+        'night can be corrected and settled again.';
+    } else {
+      $('close-no-send').textContent = 'Reporting closed at ' +
+        closedAtWords() + ', so nothing can be sent from this phone now. ' +
+        'Count your chips and read the total to an organiser: they can ' +
+        'still enter it for you.';
+    }
+    S.show($('close-no-send'), refused);
+    if (refused && !$('review-panel').hidden) {
       // The review sheet is a route to the same send, so a member who was
-      // already looking at it when the deadline passed goes back to the form
-      // and its explanation rather than sitting in front of a Send button
-      // that cannot work.
+      // already looking at it when reporting ended goes back to the form and
+      // its explanation rather than sitting in front of a Send button that
+      // cannot work.
       S.show($('review-panel'), false);
       S.show($('report-form'), true);
       setOrder(ORDER_DEFAULTS['state-close'].order, ORDER_DEFAULTS['state-close'].sub);
       // The swap hides the element that held focus, which drops
       // document.activeElement to BODY and leaves the explanation silent.
       // Place the card and announce its heading instead. Reached from
-      // enterClose, from the submit handler's deadline guard and from
+      // enterClose, from the submit handler's guard and from
       // refreshCtx on a tab return, never from a timer.
       goToStep($('final-card'), $('final-card-title'));
     }
@@ -1511,15 +1587,25 @@
   $('close-back-btn').addEventListener('click', function () { enterReport(); });
 
   /* ------------------------------------------------------------------
-   * Deadline line: nights.reports_close_at, shown in Oslo time. The
-   * server enforces it (P0021); this line just keeps nobody surprised.
+   * Deadline line: the hand-set nights.reports_close_at, in Oslo time.
+   * Most nights have none and this line never appears at all. The server
+   * enforces the ones that do exist (P0021); this line just keeps nobody
+   * surprised by one.
    * ------------------------------------------------------------------ */
   function renderDeadline() {
     var el = $('deadline-line');
-    var n = ctx.night;
-    if (!n || !n.reports_close_at) { S.show(el, false); return; }
-    var t = new Date(n.reports_close_at);
-    if (isNaN(t)) { S.show(el, false); return; }
+    var t = deadlineAt();
+    // No deadline is the normal case, and there is nothing true to say about
+    // one that does not exist. The line stays hidden rather than naming a
+    // time; #close-intro carries the state of the night instead.
+    if (!t) { S.show(el, false); return; }
+    // A settle can land BEFORE a hand-set deadline, so the deadline on its
+    // own is not enough to go on. Without this, the line read "You can report
+    // until 09:00 tomorrow" two centimetres above #close-no-send saying the
+    // night is settled and nothing can be sent. A window this phone does not
+    // have is the one thing the screen must never offer, so the line stands
+    // down and lets #close-intro and #close-no-send tell the one story.
+    if (nightSettled()) { S.show(el, false); return; }
     var when = '<span class="mono">' + S.escapeHtml(osloClock(t, false)) + '</span> ' +
       S.escapeHtml(osloDayWord(t));
     if (Date.now() >= t.getTime()) {
@@ -1571,11 +1657,11 @@
    * openTopupSlip(true) directly, so it still reads RE-SHOW. */
   var topupTakenHere = false;
 
-  /* Five faces, and #topup-flow is the one that now lives in #state-topup:
+  /* The faces, and #topup-flow is the one that now lives in #state-topup:
    * this list spans two state divs on purpose. */
   function topupFace(name) {
     ['topup-open', 'topup-flow', 'topup-done', 'topup-organiser',
-     'topup-closed', 'topup-none', 'topup-over']
+     'topup-closed', 'topup-settled', 'topup-none', 'topup-over']
       .forEach(function (id) { S.show($(id), id === name); });
     S.show($('topup-card'), !!name);
   }
@@ -1594,12 +1680,23 @@
       // the bank here would let take_rebuy overwrite the organiser's number.
       $('topup-organiser-amount').textContent = S.fmt(recordedRebuy());
       topupFace('topup-organiser');
+    } else if (nightSettled()) {
+      // A settled night used to fall through to #topup-over, whose copy says
+      // "Reporting is still open", which is the one thing it is not. It does
+      // NOT get #topup-closed either: take_rebuy shuts the bank at status
+      // <> 'open', which is close_reporting, so on a settled night the bank
+      // shut BEFORE reporting did and that card's first clause would be
+      // backwards. Its own face, saying the true thing.
+      topupFace('topup-settled');
     } else if (reportingClosed()) {
-      // Reporting is over, so the bank has shut. Asked BEFORE the open-night
-      // branch, because the night status can still read 'open' past the
-      // deadline and the offer would come back with it. The card says why it
-      // is gone: a member who watched a button disappear goes hunting for it,
-      // which is the ambiguity this screen exists to remove.
+      // A hand-set deadline has passed. Asked BEFORE the open-night branch,
+      // because the night status can still read 'open' past it and the offer
+      // would come back with it. Withdrawing the offer here is a club choice,
+      // not the server's: take_rebuy has no deadline guard, so the copy on
+      // #topup-closed states the club's position and not the server's. The
+      // card says why it is gone: a member who watched a button disappear
+      // goes hunting for it, which is the ambiguity this screen exists to
+      // remove.
       topupFace('topup-closed');
     } else if (ctx.night && ctx.night.status === 'open') {
       // No allowance: the season points are all in play, so there is no offer
@@ -1711,7 +1808,7 @@
         // A step change inside one state, so the order line is set here and
         // not by showState.
         setOrder('Choose how much to take.',
-                 'One top-up per night, points for chips 1:1, up to tonight’s stack.');
+                 'One top-up per night, points for chips 1:1, up to tonight\'s stack.');
         // The quote step goes under the nav and the step is announced from
         // the field it is about: "Chips to take (edit to take less), edit
         // text, 4000". Until now this step change moved neither scroll nor
@@ -1807,12 +1904,14 @@
   $('report-form').addEventListener('submit', function (e) {
     e.preventDefault();
 
-    // The deadline can pass between the render that withdrew Review and the
-    // tap that reaches it, and a hidden submit button is still a submit
-    // button to a keyboard. Re-render instead of opening a review sheet whose
-    // Send has already been taken away: #close-no-send says why and stays
-    // said.
-    if (reportingClosed()) {
+    // Reporting can end between the render that withdrew Review and the tap
+    // that reaches it, and a hidden submit button is still a submit button to
+    // a keyboard. sendRefused(), not reportingClosed(): with no deadline set,
+    // a night settled under a member sitting on this screen is the only thing
+    // that ends reporting, and it refuses the send just as hard. Re-render
+    // instead of opening a review sheet whose Send has already been taken
+    // away: #close-no-send says why and stays said.
+    if (sendRefused()) {
       renderCloseIntro();
       renderDeadline();
       renderCloseRoute();
@@ -1821,7 +1920,7 @@
 
     var finalStack = S.parseChips($('final-input').value);
     if (finalStack === null) {
-      msg($('final-msg'), 'Type your final stack, or tap “I busted” if it is 0.', 'error');
+      msg($('final-msg'), 'Type your final stack, or tap "I busted" if it is 0.', 'error');
       goToStep($('final-card'), $('final-input'));
       return;
     }
@@ -2001,7 +2100,7 @@
 
     $('receipt-ledger').innerHTML = mathLedger(nums.final, nums.rebuy).html;
 
-    // The screen’s one brass fill, and on an escalated screen it is NOT this
+    // The screen's one brass fill, and on an escalated screen it is NOT this
     // button. The single thing to do there is get the numbers in front of an
     // organiser, which is a card and not a control, so the escalated receipt
     // carries no brass fill at all, the way the hub does while the night is
@@ -2180,7 +2279,7 @@
           nightBanner();
           // #close-intro and #deadline-line are statements of fact, and
           // #review-btn is a route to a send, so all three follow the server.
-          // A tab left open across 09:00 used to keep "the round is still
+          // A tab left open past the end of the night used to keep "the round
           // running" and a live brass Send on a screen the server had already
           // stopped accepting. #final-input is still never touched.
           if (!$('state-close').hidden) {

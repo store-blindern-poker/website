@@ -154,11 +154,20 @@ Deno.serve(async (req) => {
   if (night.status === 'settled' || night.status === 'void') {
     return json({ error: 'that night is already over' }, 400)
   }
-  // The organiser's own words: this is an option on a night that is part of
-  // the semester tournament series. Enforced here and not only in the console,
-  // because the console is a browser and browsers are not a security boundary.
-  if (!night.counts_as_round) {
-    return json({ error: 'that night is not part of the tournament series' }, 400)
+  // Deliberately NOT gated on counts_as_round any more. The audience is
+  // everybody who played ANY night this semester, the Welcome Round and side
+  // events included, so refusing to announce those same kinds of night was an
+  // arbitrary line: the people it would invite are already on the list.
+  //
+  // What IS enforced is the season, and that is the guard that matters. The
+  // recipient list is built from this night's season_id, so pointing this at a
+  // night from a finished semester would mail that semester's roster about a
+  // round they cannot play. Checked here and not only in the console, because
+  // the console is a browser and browsers are not a security boundary.
+  const { data: season } = await admin
+    .from('seasons').select('id,is_current').eq('id', night.season_id).single()
+  if (!season || !season.is_current) {
+    return json({ error: 'that night belongs to a season that is over' }, 400)
   }
   // Announcing twice would mail forty people twice. Deliberate re-sends go
   // through force, which the console asks about in plain words.

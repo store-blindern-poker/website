@@ -47,7 +47,11 @@
     directory: [],    // v_member_directory rows (admin-only names + emails)
     dirState: 'idle', // idle | ready | failed (skeleton is the idle look)
     dirShowRemoved: false, // false = current members (the default), true = removed only
-    nightsShowRemoved: false // same switch for the nights list
+    nightsShowRemoved: false, // same switch for the nights list
+    announce: null,        // announce_audience() row for the selected night
+    announceState: 'idle', // idle | loading | ready | failed
+    announceError: '',     // why the audience could not be read, if it could not
+    announceForce: false   // the strip on screen is asking about a second send
   };
 
   function msg(el, text, kind) {
@@ -151,7 +155,13 @@
       ctx.night ? loadAdjustments() : Promise.resolve(),
       // loadRsvps() swallows its own failures, so a headcount that will not
       // load can never fail this Promise.all and stop the rest refreshing.
-      ctx.night ? loadRsvps() : Promise.resolve()
+      ctx.night ? loadRsvps() : Promise.resolve(),
+      // A failed audience count tells the organiser to refresh and try again,
+      // so Refresh has to be the thing that tries: without this the same
+      // failure sits there until the page is reloaded. It costs nothing per
+      // tick, because the 45-second poll runs loadEntries and loadRsvps on
+      // their own and never comes through here.
+      ctx.night ? loadAnnounce() : Promise.resolve()
     ]).then(function () { if (ctx.night) { renderDetail(); } });
   }
 
@@ -238,6 +248,7 @@
     S.show($('remove-night-confirm'), false);
     msg($('adjust-msg'), '', '');
     S.show($('settle-confirm'), false);
+    resetAnnounce();
     // Whatever was typed belonged to the night you just left. The form
     // refills from the new one when it is opened again.
     closeEdit();
@@ -247,6 +258,7 @@
     loadEntries();
     loadAdjustments();
     loadRsvps();
+    loadAnnounce();
     armPolling();
     $('night-detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -314,6 +326,8 @@
     // The TV takeover: available for any live-ish night (showing it for a
     // draft lets organisers put it on the screen before doors open).
     S.show($('btn-code'), !removed && n.status !== 'void');
+
+    renderAnnounce();
 
     // The numbers of the night, computed from live entries the same way
     // recompute_season() will: unreported final stacks count as zero.
@@ -1039,7 +1053,7 @@
     if (!list.length) { return; }
     $('nudge-confirm-text').textContent =
       'Email ' + list.length + (list.length === 1 ? ' player' : ' players') +
-      ' their own figures and the deadline? They get one mail each.';
+      ' their own figures and what silence costs them? They get one mail each.';
     S.show($('nudge-confirm'), true);
   });
 
@@ -1088,6 +1102,270 @@
       return loadEntries();
     }).catch(function (err) {
       msg($('nudge-msg'), S.friendlyError(err), 'error');
+    });
+  });
+
+  /* ------------------------------------------------------------------
+   * Announcing a round: registration is open
+   *
+   * The audience is everybody with an entry in any night of the current
+   * season, the welcome round and one-off side events included. Somebody
+   * whose only night was the welcome is exactly the person worth inviting
+   * back, and because the list is derived from the season every time it is
+   * sent, it resets itself each semester with nobody having to clear it.
+   *
+   * Two server calls, one rule. announce_audience() counts the audience and
+   * deliberately returns no addresses and no per-person rows, and the Edge
+   * Function works the list out again from the night id when it sends. So
+   * this console can say how many people a press reaches and can never say
+   * who they are, and a tampered request cannot turn the button into a way
+   * of mailing the whole world.
+   *
+   * Around forty mails leave on one press and nothing recalls them. The
+   * number is on the button and on the confirm strip, and a round that has
+   * already gone out has to be sent again on purpose: the function answers
+   * 409 rather than quietly mailing everybody a second time.
+   * ------------------------------------------------------------------ */
+
+  /* Draft and open only, because the mail says registration is open and that
+   * has to still be true when it lands. Settled and void are over, a removed
+   * night is a record rather than a night, and reconciling is the night after
+   * the cards are away: announcing there would tell forty people to save a
+   * seat at a Friday they have already played. The function refuses the rest
+   * for itself, a night outside the tournament series and a caller who is not
+   * an organiser, because a browser tab is not a boundary. */
+  function announceable(n) {
+    return !!(n && !nightRemoved(n) && (n.status === 'draft' || n.status === 'open'));
+  }
+
+  /* The name the MAIL will use. The edge function falls back to "Round 3"
+   * where the rest of this console says "Night 3", and the strip below is
+   * quoting a subject line, so it has to be the words that actually leave. */
+  function roundName(n) {
+    return (n && (n.title || ('Round ' + n.night_no))) || 'this round';
+  }
+
+  function announceCount() {
+    return (ctx.announce && Number(ctx.announce.will_email)) || 0;
+  }
+
+  function resetAnnounce() {
+    ctx.announce = null;
+    ctx.announceState = 'idle';
+    ctx.announceError = '';
+    ctx.announceForce = false;
+    S.show($('announce-confirm'), false);
+    msg($('announce-msg'), '', '');
+  }
+
+  /* "on 5 September at 14:20", Oslo time. announced_at is a timestamptz and
+   * the organiser reading it is standing in Oslo, so a laptop left on some
+   * other timezone must not hand back an hour nobody in the room
+   * recognises. Two formatters rather than one, so the words between the
+   * date and the time are ours and not whatever the engine picks. */
+  function osloStamp(iso) {
+    var t = iso ? new Date(iso) : null;
+    if (!t || isNaN(t)) { return 'earlier'; }
+    try {
+      return 'on ' + new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Oslo', day: 'numeric', month: 'long'
+      }).format(t) + ' at ' + new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+      }).format(t);
+    } catch (err) {
+      // No timezone data: the date alone is still true, and an hour nobody
+      // can place is worse than no hour at all.
+      return 'on ' + String(iso).slice(0, 10);
+    }
+  }
+
+  function loadAnnounce() {
+    var n = ctx.night;
+    if (!announceable(n)) { renderAnnounce(); return Promise.resolve(); }
+    var id = n.id;
+    // A count already on screen stays there while the next one is fetched.
+    // Refresh runs this too, and blanking the button on every refresh would
+    // take it away exactly as somebody reaches for it.
+    if (ctx.announceState !== 'ready') { ctx.announceState = 'loading'; }
+    renderAnnounce();
+    return rpc('announce_audience', { p_night_id: id }).then(function (row) {
+      if (!ctx.night || ctx.night.id !== id) { return; }   // switched nights
+      ctx.announce = row || null;
+      ctx.announceState = row ? 'ready' : 'failed';
+      ctx.announceError = row ? '' : 'the count came back empty';
+      renderAnnounce();
+    }).catch(function (err) {
+      if (!ctx.night || ctx.night.id !== id) { return; }
+      // The reason goes on the help line, not the message line: the message
+      // line belongs to the send, and a failed count must not wipe the
+      // "Emailed 40" an organiser is still reading.
+      ctx.announce = null;
+      ctx.announceState = 'failed';
+      ctx.announceError = S.friendlyError(err);
+      renderAnnounce();
+    });
+  }
+
+  function renderAnnounce() {
+    var bar = $('announce-bar');
+    var btn = $('announce-btn');
+    var note = $('announce-note');
+    if (!announceable(ctx.night)) {
+      S.show(bar, false);
+      S.show($('announce-confirm'), false);
+      // The result line sits outside the bar, so it has to be cleared by
+      // hand: otherwise "Emailed 38 OK" stays on screen under nothing once
+      // the night is closed or settled. Same as renderNudge.
+      msg($('announce-msg'), '', '');
+      return;
+    }
+    if (ctx.announceState === 'idle' || ctx.announceState === 'loading') {
+      // Nothing to press until the number on the button is the server's.
+      // Offering a send whose size nobody knows is the one press this whole
+      // block is careful about.
+      S.show(bar, false);
+      return;
+    }
+    S.show(bar, true);
+
+    if (ctx.announceState !== 'ready') {
+      S.show(btn, false);
+      note.textContent = 'Could not check who would be emailed. This mail ' +
+        'goes to the whole semester, so it is not offered without a count. ' +
+        'Refresh to try again' +
+        (ctx.announceError ? ': ' + ctx.announceError : '.');
+      return;
+    }
+
+    var a = ctx.announce;
+    var count = announceCount();
+    S.show(btn, count > 0);
+    btn.textContent = count === 1
+      ? 'Email the 1 player who has played this semester'
+      : 'Email the ' + count + ' players who have played this semester';
+
+    var skipped = [];
+    if (a.opted_out) { skipped.push(a.opted_out + ' who opted out'); }
+    if (a.no_address) { skipped.push(a.no_address + ' with no address on file'); }
+
+    // What the mail SAYS comes first. The button names the audience and the
+    // season, and neither of those tells an organiser which night forty
+    // people are about to be told to save a seat at.
+    var bits = ['The mail says registration for ' + roundName(ctx.night) + ' is open.'];
+    if (a.season_name) {
+      bits.push('It goes to everybody with an entry in ' + a.season_name + '.');
+    }
+    if (skipped.length) { bits.push('Skipping ' + skipped.join(' and ') + '.'); }
+    if (!count) {
+      bits.push('There is nobody left to write to, so there is nothing to send.');
+    }
+    if (a.already_sent) {
+      // No "press again" where there is no button to press: with nobody left
+      // to write to the button is gone, and only the fact is left.
+      bits.push('This round was announced ' + osloStamp(a.already_sent) + '.' +
+        (count ? ' Pressing again sends a second mail to every one of them.' : ''));
+    }
+    note.textContent = bits.join(' ');
+  }
+
+  /* The confirm strip, written in one place because the 409 raises it a
+   * second time. again drives both the wording and the force flag: forty
+   * duplicate mails is the harm here, so the word "again" and the time the
+   * first one went out are on screen before anybody can press. */
+  function openAnnounceConfirm(count, again, announcedAt) {
+    var n = ctx.night;
+    if (!n) { return; }
+    var who = count + (count === 1 ? ' player' : ' players');
+    var what = roundName(n);
+    ctx.announceForce = again;
+    $('announce-confirm-text').textContent = again
+      ? what + ' was announced ' + osloStamp(announcedAt) + '. Email the same ' +
+        who + ' again? Every one of them gets a second mail.'
+      : 'Email ' + who + ' that registration for ' + what + ' is open? They ' +
+        'get one mail each, and a mail that has gone cannot be taken back.';
+    $('announce-really').textContent = again ? 'Send it again' : 'Send them';
+    S.show($('announce-confirm'), true);
+  }
+
+  $('announce-btn').addEventListener('click', function () {
+    var count = announceCount();
+    if (!count || !announceable(ctx.night)) { return; }
+    var sent = ctx.announce.already_sent;
+    openAnnounceConfirm(count, !!sent, sent);
+  });
+
+  $('announce-cancel').addEventListener('click', function () {
+    S.show($('announce-confirm'), false);
+    ctx.announceForce = false;
+  });
+
+  /* Same shape as invokeNudge, and for the same reason: functions.invoke
+   * reports any non-2xx as a bare "non-2xx status code" and leaves the body
+   * unread. This one keeps the body on the error too, not only its sentence,
+   * because the 409 carries the time the round was announced. */
+  function invokeAnnounce(force) {
+    var body = { night_id: ctx.night.id };
+    if (force) { body.force = true; }
+    return S.client().functions.invoke('announce-round', { body: body })
+      .then(function (r) {
+        if (!r.error) { return r.data || {}; }
+        var res = r.error.context;
+        if (res && typeof res.json === 'function') {
+          return res.json().then(function (b) {
+            var e = new Error((b && (b.message || b.error)) || r.error.message);
+            e.body = b;
+            throw e;
+          }, function () { throw r.error; });
+        }
+        throw r.error;
+      });
+  }
+
+  $('announce-really').addEventListener('click', function () {
+    if (!ctx.night) { return; }
+    var force = ctx.announceForce;
+    ctx.announceForce = false;
+    S.show($('announce-confirm'), false);
+    msg($('announce-msg'), 'Sending...', 'busy');
+    invokeAnnounce(force).then(function (d) {
+      var parts = [];
+      var bad = (d.failed && d.failed.length) ? d.failed.length : 0;
+      // The sent count leads even when it is nothing, because every other
+      // number here is somebody who was NOT written to and a line of those
+      // alone reads like a delivery report.
+      parts.push(d.sent ? 'Emailed ' + d.sent : (d.message || 'Nobody was emailed'));
+      if (d.opted_out) { parts.push(d.opted_out + ' opted out and left alone'); }
+      if (d.no_address) { parts.push(d.no_address + ' with no address on file'); }
+      if (bad) {
+        parts.push(bad + ' failed (' + d.failed.map(function (x) {
+          return x.pseudonym;
+        }).join(', ') + ')');
+      }
+      msg($('announce-msg'), parts.join(' - ') + (d.sent && !bad ? ' OK' : ''),
+        bad ? 'error' : (d.sent ? 'ok' : ''));
+      // Re-read so the help line carries the server's own stamp and a second
+      // press knows this round has already gone out.
+      return loadAnnounce();
+    }).catch(function (err) {
+      var b = (err && err.body) || {};
+      if (b.error === 'already_announced') {
+        // Somebody announced this round between the count being read and the
+        // press, most likely in another tab. Nothing was sent, so say when it
+        // went and put the same press back as a deliberate second one.
+        msg($('announce-msg'), 'Nothing was sent: this round has already ' +
+          'been announced.', 'error');
+        openAnnounceConfirm(announceCount(), true, b.announced_at);
+        return;
+      }
+      if (b.error === 'no_sender') {
+        // The one refusal an organiser can act on, and it names both what is
+        // missing and how many the press would have reached. Shown as the
+        // server wrote it: friendlyError has no pattern for it today, and one
+        // added later must not turn this into a shrug.
+        msg($('announce-msg'), b.message || S.friendlyError(err), 'error');
+        return;
+      }
+      msg($('announce-msg'), S.friendlyError(err), 'error');
     });
   });
 

@@ -232,6 +232,35 @@
               <button class="btn btn--ghost" id="btn-remove-cancel" type="button">Cancel</button>
             </div>
 
+            <!-- ANNOUNCE THE ROUND. One press emails everybody who has
+                 played any night this semester, around forty people, and
+                 nothing recalls a mail that has gone. So the count is on the
+                 button before the press and on the confirm strip during it,
+                 and a round that has already been announced has to be
+                 announced again on purpose.
+
+                 Same rule as the reminder further down: the count comes from
+                 the announce_audience() RPC and the send from an Edge
+                 Function, and both work the list out from the night id.
+                 Neither hands this console an email address.
+
+                 js/admin.js hides the whole block until it knows the number,
+                 hides the button when there is nobody to write to, and shows
+                 none of it on a night past draft or open: registration
+                 cannot be open for a Friday that has been played. -->
+            <div id="announce-bar" hidden style="margin-bottom: var(--space-lg);">
+              <div class="toolbar">
+                <button class="btn btn--secondary" id="announce-btn" type="button" hidden>Email this semester's players</button>
+              </div>
+              <p class="help" id="announce-note"></p>
+            </div>
+            <div class="confirm-strip" id="announce-confirm" hidden>
+              <span id="announce-confirm-text">Send?</span>
+              <button class="btn btn--primary" id="announce-really" type="button">Send them</button>
+              <button class="btn btn--ghost" id="announce-cancel" type="button">Cancel</button>
+            </div>
+            <p class="form-msg" id="announce-msg" role="status" aria-live="polite"></p>
+
             <!-- EDIT THIS NIGHT. Hidden until "Edit details" is pressed, so
                  the block below it stays the first thing on screen.
 

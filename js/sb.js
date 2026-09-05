@@ -129,8 +129,10 @@
     'settled_at,settled_by,revision,created_at,reports_close_at,' +
     'location,location_url,notes,capacity,deleted_at';
 
-  /* Tonight's night, if any: an 'open' night wins, else a 'reconciling' one
-   * (members may still report while the organisers reconcile). */
+  /* The night that is open for reporting, if any: an 'open' night wins, else
+   * a 'reconciling' one (members may still report while the organisers
+   * reconcile). Not necessarily today's: nothing closes reporting but
+   * settling, so an unsettled night is still the active one days later. */
   function activeNight() {
     var c = client();
     if (!c) { return Promise.resolve(null); }
@@ -229,8 +231,10 @@
     if (code === '28000' || /not signed in/i.test(msg)) {
       return 'You are signed out. Sign in again, then retry.';
     }
+    /* Not "tonight". Reporting has no deadline, so a night can be settled
+     * days after it was played, and this is what the late reporter sees. */
     if (code === 'P0003' || /night_settled/i.test(msg)) {
-      return 'Tonight has already been settled. Show your numbers to an organiser instead.';
+      return 'The night has already been settled. Show your numbers to an organiser instead.';
     }
     // Raised with the default P0001 by set_my_name() and
     // admin_set_member_details(). Checked BEFORE the P0001 line below, or a
@@ -260,13 +264,18 @@
      * All three are written server-side for the one person who sees them, an
      * organiser mid-task, and each names the fix. Rewriting them here would
      * only make them vaguer, so they pass through with a capital letter.
-     * The two night-edit codes below join them for the same reason. */
+     * The night-edit codes below join them for the same reason. */
     /* Editing a night (update_night).
      * P0060 the night is settled or void, reopen it first
      * P0061 somebody has checked in, so the date, the stack, the bonus and
      *       the two scoring switches are frozen. The server counts the
      *       players and says how many, which is the part that makes an
      *       organiser believe it, so the sentence passes through whole.
+     * P0062 moving the date would leave a reporting deadline standing before
+     *       the night it belongs to. Nothing in the database sets a deadline
+     *       on its own any more, so this only ever fires on a night somebody
+     *       set one on by hand, and the sentence names both the time it is
+     *       set to and the two ways out.
      * Same rule as the block above: the server wrote these for the one
      * person who reads them, and each names the fix. */
     /* Two more that carry their own fix and pass through whole:
@@ -275,8 +284,8 @@
      *       branches on it.
      * P0070 that night has been removed */
     if (code === 'P0050' || code === 'P0051' || code === 'P0053' ||
-        code === 'P0060' || code === 'P0061' || code === 'P0030' ||
-        code === 'P0070') {
+        code === 'P0060' || code === 'P0061' || code === 'P0062' ||
+        code === 'P0030' || code === 'P0070') {
       var said = msg.charAt(0).toUpperCase() + msg.slice(1);
       return /[.!?]$/.test(said) ? said : said + '.';
     }

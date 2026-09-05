@@ -725,12 +725,14 @@
    * appeared on the third screen, and the one element that knew it was a live
    * night, the countdown, pointed at a calendar.
    *
-   * The nav's "Tonight" is the PERMANENT route and it cannot fail. This is
-   * the loud one, and it is the opposite of the rest of this file: everything
-   * else here fails soft toward a page that is complete without it, which is
-   * right for a headcount. An element that fails soft toward nothing is wrong
-   * for the only loud route to reporting, so every path below ends either in
-   * a visible route or in exactly today's page, never in a half state.
+   * The nav's "Report" is the PERMANENT route and it cannot fail: it sits in
+   * the bar itself, not in the hamburger panel, so it is there at every width.
+   * This is the loud one, and it is the opposite of the rest of this file:
+   * everything else here fails soft toward a page that is complete without it,
+   * which is right for a headcount. An element that fails soft toward nothing
+   * is wrong for the only loud route to reporting, so every path below ends
+   * either in a visible route or in exactly today's page, never in a half
+   * state.
    *
    * The source is v_upcoming_nights, which index.html already reads once for
    * the headcount and the venue, and which already carries status. It is
@@ -742,7 +744,15 @@
    * ------------------------------------------------------------------ */
 
   var TONIGHT_KEY = 'sbp.tonight';
-  var SIGN_IN_NOTE = ' You sign in first if you are not already.';
+  /* No leading space. The old code concatenated fragments blindly; joinSentences
+   * owns the spacing now, and a fragment carrying its own would fight it the
+   * next time somebody reorders the parts. */
+  var SIGN_IN_NOTE = 'You sign in first if you are not already.';
+  /* What stands in for a deadline when there is none, which is now the normal
+   * case. It names an act rather than a clock. Settle is the ordinary closer;
+   * a void or a removal also ends reporting, and report.html says the true
+   * thing in both cases, so this line does not try to enumerate them. */
+  var OPEN_UNTIL_SETTLED = 'Reporting stays open until the organisers settle the night.';
 
   function osloHm(date) {
     try {
@@ -765,13 +775,55 @@
     }
   }
 
-  /* "until 09:00 tomorrow", or no number at all rather than a guessed one.
-   * lead is the sentence up to the time. */
+  /* Join sentence fragments and drop the empty ones. Every note here has a
+   * fragment that disappears when a night has no deadline, and blind
+   * concatenation is how two spacing schemes end up fighting. */
+  function joinSentences(parts) {
+    var out = [];
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i]) { out.push(parts[i]); }
+    }
+    return out.join(' ');
+  }
+
+  /* '', ' tomorrow', or ' on Friday 5 September', for a time that is not
+   * today. The old inline version called every day that was not today
+   * "tomorrow", which is wrong the moment an organiser extends a deadline past
+   * the morning after. A clock change can defeat the 24 hour probe; it falls
+   * through to the full date, which is longer and still true. */
+  function osloDayPhrase(t, now) {
+    var key = osloDayKey(t);
+    if (key === osloDayKey(now)) { return ''; }
+    if (key === osloDayKey(new Date(now.getTime() + 86400000))) { return ' tomorrow'; }
+    try {
+      return ' on ' + new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Oslo', weekday: 'long', day: 'numeric', month: 'long'
+      }).format(t);
+    } catch (err) {
+      var p = isoParts(key);
+      return p ? (' on ' + p.d + ' ' + MONTH_ABBR[p.mo - 1]) : '';
+    }
+  }
+
+  /* The morning after a night, as a plain calendar date. played_on is a date,
+   * never a timestamp, so this is deliberately UTC arithmetic: no timezone is
+   * involved in "the day after the 3rd". */
+  function dayAfter(iso) {
+    var p = isoParts(iso);
+    if (!p) { return null; }
+    var d = new Date(Date.UTC(p.y, p.mo - 1, p.d + 1));
+    return isNaN(d) ? null : d.toISOString().slice(0, 10);
+  }
+
+  /* "Reporting stays open until 09:00 tomorrow.", or '' when the night has no
+   * deadline. Empty is the whole point: reports_close_at is null by default
+   * now, there is no hour to name, and the caller says something true about
+   * the settle instead. This used to answer "the morning", which invented a
+   * deadline out of a null and is the one thing this copy must never do. */
   function closesSentence(lead, closesAt) {
     var t = closesAt ? new Date(closesAt) : null;
-    if (!t || isNaN(t)) { return lead + ' the morning.'; }
-    var word = (osloDayKey(t) === osloDayKey(new Date())) ? '' : ' tomorrow';
-    return lead + ' ' + osloHm(t) + word + '.';
+    if (!t || isNaN(t)) { return ''; }
+    return lead + ' ' + osloHm(t) + osloDayPhrase(t, new Date()) + '.';
   }
 
   function readTonightNote() {
@@ -779,21 +831,83 @@
       var raw = window.localStorage.getItem(TONIGHT_KEY);
       if (!raw) { return null; }
       var v = JSON.parse(raw);
-      if (!v || !v.closes_at) { return null; }
-      var t = new Date(v.closes_at);
-      if (isNaN(t)) { return null; }
-      return { closes_at: v.closes_at, ms: t.getTime() };
+      // The shipped version wrote no played_on. Nothing can be done with such
+      // a note, so it goes rather than sitting there until the next night.
+      if (!v || !v.played_on) { clearTonightNote(); return null; }
+      return {
+        night_id: v.night_id || null,
+        played_on: isoOf(v.played_on),
+        closes_at: v.closes_at || null
+      };
     } catch (err) { return null; }
   }
 
+  /* Write down that the database called this night open. The landing page
+   * reads it back after midnight, when the night has left v_upcoming_nights
+   * on date alone and no query a signed-out phone may run can bring it back.
+   *
+   * Written for every live night now, deadline or not. The old version
+   * returned early when reports_close_at was null, so once the deadline went
+   * away the note was never written and the "Last night" face never appeared:
+   * the one face that speaks to somebody who went home without reporting.
+   * played_on is what bounds the note when there is no deadline. See
+   * noteIsLive. */
   function writeTonightNote(night) {
     try {
-      if (!night.reports_close_at) { return; }
       window.localStorage.setItem(TONIGHT_KEY, JSON.stringify({
         night_id: night.night_id,
-        closes_at: night.reports_close_at
+        played_on: isoOf(night.played_on),
+        closes_at: night.reports_close_at || null
       }));
     } catch (err) { /* private mode: the note is a bonus, never the route */ }
+  }
+
+  /* The one window in which this note can still be true.
+   *
+   * The note is one phone's memory of a database row. It cannot see the
+   * settle, which is the act that actually closes reporting, so it needs a
+   * bound of its own, and that bound has to hold with no deadline to expire
+   * against.
+   *
+   * Never on the night itself: the view drops a night for four reasons, the
+   * date rolling, settled, void, removed, and only the date is possible once
+   * it is no longer today. A row that is gone while it is still today went
+   * because reporting is already refused.
+   *
+   * A deadline an organiser set by hand is a real close, so it is the bound
+   * whenever there is one, even days out: extending is the usual reason to
+   * set one. With none, the bound is the calendar, the day after the night,
+   * because "Last night" is not true a day later either. Neither bound is
+   * ever spoken to a member, and neither is a deadline. */
+  function noteIsLive(note, now) {
+    if (!note) { return false; }
+    if (osloDayKey(now) === isoOf(note.played_on)) { return false; }
+    if (note.closes_at) {
+      var t = new Date(note.closes_at);
+      if (!isNaN(t)) { return now.getTime() < t.getTime(); }
+    }
+    return osloDayKey(now) === dayAfter(note.played_on);
+  }
+
+  /* The heading over that note. "Last night" is only true on the morning
+   * after, and a hand-set deadline holds this face up for as long as the
+   * organiser extended it, so past the morning after the heading names the
+   * night instead of misdating it. A member reading "Last night" on the Monday
+   * would otherwise be told there was a night on the Sunday. played_on is a
+   * plain calendar date, so it is formatted in UTC: there is no timezone in
+   * "the 4th" to get wrong. */
+  function nightLabel(playedOn, now) {
+    if (osloDayKey(now) === dayAfter(playedOn)) { return 'Last night'; }
+    var p = isoParts(playedOn);
+    if (!p) { return 'That night'; }
+    var d = new Date(Date.UTC(p.y, p.mo - 1, p.d));
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long'
+      }).format(d);
+    } catch (err) {
+      return p.d + ' ' + MONTH_ABBR[p.mo - 1];
+    }
   }
 
   function clearTonightNote() {
@@ -832,22 +946,42 @@
   }
 
   function tonightFace(night) {
-    if (night.status === 'reconciling') {
-      // The bank has packed up but reporting is still running, so the copy
-      // does not offer a check-in that would be refused.
-      return {
-        label: 'Tonight',
-        button: 'Report my stack',
-        note: 'The round is over. ' +
-          closesSentence('Reporting stays open until', night.reports_close_at) +
-          SIGN_IN_NOTE
-      };
-    }
+    var t = night.reports_close_at ? new Date(night.reports_close_at) : null;
+    var past = !!(t && !isNaN(t) && Date.now() >= t.getTime());
+
+    /* Three things can be true of a night that is still open, and the note has
+     * to pick the one that is: a deadline has passed, a deadline is coming, or
+     * nobody set one and the settle is what will close it. The third is the
+     * default now, and it gets no hour, because there is none. */
+    var closes = past
+      ? joinSentences([closesSentence('Reporting closed at', night.reports_close_at),
+                       'Show an organiser your numbers instead.'])
+      : (closesSentence('Reporting stays open until', night.reports_close_at) ||
+         OPEN_UNTIL_SETTLED);
+
+    /* A first check-in needs status 'open' (check_in raises P0001), so the
+     * button stops offering it once the bank is reconciling. Past a hand-set
+     * deadline check_in still works, but report_entry answers P0021, so there
+     * is nothing useful on the far side of a check-in either, and a brass
+     * button must not name an action the note under it has just refused.
+     * index.html hard-codes href="report.html", so the label is all there is
+     * to change. */
+    var button = past ? 'Open the report page'
+      : (night.status === 'reconciling' ? 'Report my stack' : 'Check in and report');
+
+    /* The sign-in line sets expectations before a brass button that leads to a
+     * login wall, so it goes wherever the button still offers reporting. Past a
+     * deadline the last thing said is "show an organiser your numbers", and a
+     * sign-in sentence sitting after that reads as a step in doing THAT, which
+     * is not a thing anyone signs in for. */
     return {
       label: 'Tonight',
-      button: 'Check in and report',
-      note: closesSentence('Reporting stays open until', night.reports_close_at) +
-        SIGN_IN_NOTE
+      button: button,
+      note: joinSentences([
+        night.status === 'reconciling' ? 'The round is over.' : '',
+        closes,
+        past ? '' : SIGN_IN_NOTE
+      ])
     };
   }
 
@@ -869,7 +1003,7 @@
       // plain calendar date, the phone can be anywhere, and the club's day is
       // Oslo's. After midnight this stops matching, which is right: the row
       // is last night's, and the localStorage note below is what covers the
-      // hours to 09:00 with the correct "Last night" wording.
+      // hours after it with the correct "Last night" wording.
       var today = osloDayKey(new Date());
       for (i = 0; i < nights.length; i++) {
         if (isoOf(nights[i].played_on) !== today) { continue; }
@@ -885,28 +1019,42 @@
         return;
       }
       // No qualifying row. Either there is no night, or it is past midnight
-      // Oslo and the view has dropped a night whose reporting runs to 09:00.
-      // The phone that was in the room can tell the difference, because it
-      // wrote down when reporting closes while the night was still open. A
-      // phone that was not in the room gets the nav item and an honest
-      // report.html, which is the stated limit of this route.
+      // Oslo and the loop above skipped last night's on date. The view may
+      // still be returning it for an hour or two, because current_date is the
+      // database's date and Oslo runs ahead of it. While it does, the row's
+      // presence proves the night is not settled; once it is gone, nothing a
+      // signed-out phone may read can say either way, and the note below is
+      // all that is left. A phone that was not in the room gets the nav item
+      // and an honest report.html, which is the stated limit of this route.
       var note = readTonightNote();
-      if (note && Date.now() < note.ms) {
+      if (noteIsLive(note, new Date())) {
         showTonight({
-          label: 'Last night',
+          label: nightLabel(note.played_on, new Date()),
           button: 'Report my stack',
-          note: closesSentence('Reporting is still open until', note.closes_at) +
-            ' If you went home without sending your final stack, send it now.'
+          /* The invitation leads, because it is true either way. Then the
+           * deadline, if an organiser set one; with none, the rule rather than
+           * a time, because this phone cannot see a settle. The third sentence
+           * covers the settle it cannot see: organisers now settle the morning
+           * after, which is exactly when this face is up. */
+          note: joinSentences([
+            'If you went home without sending your final stack, send it now.',
+            closesSentence('Reporting is still open until', note.closes_at) ||
+              OPEN_UNTIL_SETTLED,
+            'If the night has already been settled, an organiser can still enter your numbers.'
+          ])
         });
         tonightShown = true;
         return;
       }
+      // Stale, so it goes. On the night itself that means the night was
+      // settled, voided or removed while this phone watched, and the face
+      // must not come back up.
       if (note) { clearTonightNote(); }
       hideTonight();
       tonightShown = false;
     }).catch(function (err) {
       // Offline, or the database will not answer. The page goes back to being
-      // exactly what it is on a quiet Tuesday, and the nav still says Tonight.
+      // exactly what it is on a quiet Tuesday, and the nav still says Report.
       warn('tonight route unavailable', err);
       hideTonight();
       tonightShown = false;

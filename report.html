@@ -206,11 +206,12 @@
                     type="button" style="margin-top: var(--space-md);">Show my buy-in slip</button>
           </div>
 
-          <!-- Bank top-up. Six faces live here, one visible at a time:
+          <!-- Bank top-up. Seven faces live here, one visible at a time:
                #topup-open       the offer, while the night is open and no top-up
                #topup-done       the bank's own record + the slip again
                #topup-organiser  a top-up an organiser recorded by hand
-               #topup-closed     reporting has closed, so the bank has shut
+               #topup-closed     a hand-set closing time has passed
+               #topup-settled    the organisers have settled the night
                #topup-none       no allowance left, so there is nothing to offer
                #topup-over       the round is over, so the bank has packed up
 
@@ -220,7 +221,7 @@
                hunting for it, and the hunt happens at the bank with a queue
                behind them.
 
-               The seventh face, #topup-flow, now lives in #state-topup below,
+               The eighth face, #topup-flow, now lives in #state-topup below,
                so topupFace()'s hardcoded id list spans two state divs.
                enterTopup() re-shows the flow on purpose and renderTopup()
                hides it again on the way home. -->
@@ -235,8 +236,7 @@
                 One top-up per night, points for chips <span class="mono">1:1</span>,
                 and it can only bring you back to tonight's stack. Most people
                 take it at the first break, around <span class="mono">19:15</span>,
-                when everybody is at the bank anyway. It stays open for as long
-                as the night is open, so there is nothing to miss.
+                when everybody is at the bank anyway. The bank is open now.
               </p>
               <button class="btn btn--secondary btn--block" id="topup-start-btn" type="button">Top up at the bank</button>
             </div>
@@ -260,18 +260,41 @@
               </p>
             </div>
 
-            <!-- Past nights.reports_close_at. The offer is gone because the
-                 server would refuse it, and this face is here so it does not
-                 simply vanish: a member who watched a button disappear goes
-                 hunting for it. The night status can still read 'open' after
-                 the deadline, which is why renderTopup() asks
-                 reportingClosed() before it asks the status. -->
+            <!-- Past nights.reports_close_at, which is now set only when an
+                 organiser sets one by hand: the column is NULL by default, so
+                 most nights never reach this face. The offer is gone because
+                 the club withdraws it, NOT because the server refuses it:
+                 take_rebuy has no deadline test and would still issue the
+                 chips. The copy therefore states the club's position and does
+                 not put words in the server's mouth. The face is here so the
+                 step does not simply vanish: a member who watched a button
+                 disappear goes hunting for it. The night status can still
+                 read 'open' past a hand-set time, which is why renderTopup()
+                 asks reportingClosed() before it asks the status. -->
             <div id="topup-closed" hidden>
               <div class="section__label">2 · The bank has shut</div>
               <p class="topup-done">
-                The bank shut when reporting closed, so there is no top-up
-                left to take tonight. An organiser can still sort out
-                anything that is wrong.
+                Reporting has closed for tonight, so there is no top-up to
+                take now. An organiser can still sort out anything that is
+                wrong.
+              </p>
+            </div>
+
+            <!-- The organisers have settled the night. Its own face rather
+                 than #topup-closed, because on a settled night the bank shut
+                 BEFORE reporting did: take_rebuy refuses any status other
+                 than 'open', so close_reporting is what shut it, and
+                 #topup-closed's copy, which gives reporting closing as the
+                 reason the bank is shut, would have the order backwards here.
+                 Reached from the hub after a member taps "Not yet, back to
+                 tonight" on a close screen that settled under them. -->
+            <div id="topup-settled" hidden>
+              <div class="section__label">2 · The night is settled</div>
+              <p class="topup-done">
+                The night has been settled, so the bank has shut and there is
+                no top-up to take. If something in your numbers is wrong, tell
+                an organiser: a settled night can be corrected and settled
+                again.
               </p>
             </div>
 
@@ -291,8 +314,10 @@
             </div>
 
             <!-- The night has moved off 'open' and the bank has packed up,
-                 while reporting is still running. Distinct from
-                 #topup-closed, which is the deadline, and from #topup-none,
+                 while reporting is still running. This is the normal end of a
+                 night now that reports_close_at is NULL by default. Distinct
+                 from #topup-closed, which is a hand-set closing time, from
+                 #topup-settled, which is the settle, and from #topup-none,
                  which is the allowance. -->
             <div id="topup-over" hidden>
               <div class="section__label">2 · The bank has packed up</div>
@@ -310,11 +335,15 @@
                has to be reachable from home and not only from the receipt. -->
           <div class="card step-anchor">
             <div class="section__label" id="close-card-label">3 · Close the round</div>
+            <!-- The same sentence is built in renderCloseCta(), which
+                 overwrites this element before the card is ever painted.
+                 Change both or neither. -->
             <p class="card__text" id="close-card-text" style="margin-bottom: var(--space-md);">
               When you are done for the night, count your chips and report the
               total. You get a closing slip to show an organiser while you hand
-              the chips back. No rush: reporting stays open until the morning
-              after.
+              the chips back. No rush: reporting stays open until the organisers
+              settle the night. If you go home without reporting, an organiser
+              can still enter your numbers by hand.
             </p>
             <!-- Both button classNames are rebuilt wholesale by
                  renderCloseCta(), so their spacing lives on these wrappers and
@@ -438,13 +467,17 @@
               Next: we show the maths. Nothing is sent until you press Send, so
               keep your phone out.
             </p>
-            <!-- Shown in place of Review once reports_close_at has passed,
-                 including while a member is sitting on this screen and the
-                 deadline goes by under them. renderCloseRoute() writes the
-                 text, because it names the time the deadline actually was.
-                 The route is withdrawn and not merely explained: the server
-                 answers P0021, so Review would lead to a Send that cannot
-                 land. -->
+            <!-- Shown in place of Review once the server would refuse the
+                 send, including while a member is sitting on this screen and
+                 it happens under them. Two reasons reach it: a hand-set
+                 closing time has passed (P0021), or the organisers have
+                 settled the night (P0003). The second is the ordinary one now
+                 that reports_close_at is NULL by default, and refreshCtx
+                 returns early while this screen is up, so renderCloseRoute()
+                 is the only thing that catches it. renderCloseRoute() writes
+                 the text, because only it knows which of the two reasons it
+                 was. The route is withdrawn and not merely explained: Review
+                 would lead to a Send that cannot land. -->
             <p class="help" id="close-no-send" hidden></p>
 
             <!-- The one-tap answer for the most common outcome, in its own
@@ -536,8 +569,9 @@
               <button class="btn btn--secondary btn--block" id="change-btn" type="button">Change my report</button>
               <a class="btn btn--ghost btn--block" href="leaderboard.html">Leaderboard</a>
             </div>
-            <!-- Why #change-btn is gone, once the deadline has passed or the
-                 night has been settled. It is written by renderReceipt() and
+            <!-- Why #change-btn is gone, once a hand-set closing time has
+                 passed or the night has been settled. Settling is the
+                 ordinary reason now. It is written by renderReceipt() and
                  lives in an element of its own ON PURPOSE: the explanation
                  used to be written into #receipt-sub, which every later
                  render rewrites, so opening the closing slip and closing it

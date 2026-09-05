@@ -108,9 +108,12 @@ function buildMail(row: Row, nightTitle: string, weekday: string, siteUrl: strin
   // in a public channel from memory, which named somebody who had already
   // reported and put the wrong figure on the rest.
   //
-  // Deliberately NO deadline sentence. There is no deadline any more, and the
+  // Deliberately NO deadline sentence. Nothing assigns one any more, and the
   // previous version invented one out of a null and told people to report
-  // "before tomorrow morning". Saying nothing beats saying something false.
+  // "before tomorrow morning". An organiser can still set one by hand on a
+  // single night, and report.html names that one off the row it can read;
+  // this mail never reads the column, so it has nothing true to say about
+  // one. Saying nothing beats saying something false.
   const lines = [
     `Hei ${row.pseudonym},`,
     '',
@@ -185,11 +188,33 @@ Deno.serve(async (req) => {
 
   const { data: night, error: nightErr } = await admin
     .from('nights')
-    .select('id,title,night_no,played_on,deleted_at,attendance_bonus')
+    .select('id,title,night_no,status,played_on,deleted_at,attendance_bonus')
     .eq('id', nightId)
     .single()
   if (nightErr || !night) return json({ error: 'no such night' }, 404)
   if (night.deleted_at) return json({ error: 'that night has been removed' }, 400)
+
+  // Settling is now the act that closes reporting, so a settled night has
+  // nothing to chase: these entries ARE the record, and the report screen
+  // refuses anybody but an organiser (P0003, P0001). The console hides the
+  // button in that state; a tab open since 19:00 does not know the night
+  // settled at 22:30, so the rule lives here too. The two statuses get
+  // different sentences: open_night refuses to reopen a void night, so
+  // telling an organiser to reopen one would be an instruction the server
+  // does not honour.
+  //
+  // A hand-set deadline that has passed is deliberately NOT guarded here: the
+  // night is still open, the proxy path still works, and report.html tells a
+  // member past one to show their numbers to an organiser instead. Refusing
+  // would take away a chase that still gets the number in.
+  if (night.status === 'settled' || night.status === 'void') {
+    return json({
+      error: 'night_closed',
+      message: night.status === 'settled'
+        ? 'That night is settled, so reporting is closed and the entries are already the record. Reopen it first if you want to chase anybody.'
+        : 'That night is void, so nothing on it counts and there is nobody to chase.',
+    }, 400)
+  }
 
   // 2. The recipient list, derived here, from the night id.
   const { data: entries, error: entErr } = await admin
