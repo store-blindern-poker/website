@@ -9,5 +9,16 @@
     "registrationUrl": "",
     "description": "The first tournament night of the Fall 2026 season. Everyone starts the season with 40,000 points, collects a 5,000-point attendance bonus at the door, and buys in for the night's chip stack. New players are very welcome, and we will get you up to speed before the first hand is dealt.",
     "status": "upcoming"
+  },
+  {
+    "id": "evt-f26-02",
+    "title": "Round 2",
+    "date": "2026-09-11",
+    "time": "18:00",
+    "location": "Venue still to be confirmed",
+    "locationUrl": "",
+    "registrationUrl": "",
+    "description": "The second tournament round of the Fall 2026 season. Same as always: a 5,000-point attendance bonus at the door, buy in for the night's stack, one top-up if you need it. Points carry over from Round 1, so newcomers are still very welcome and will be brought up to speed before the first hand.",
+    "status": "upcoming"
   }
 ]
