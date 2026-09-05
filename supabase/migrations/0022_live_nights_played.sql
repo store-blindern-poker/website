@@ -21,7 +21,7 @@
 -- reported" tag on the row is what explains why those two things sit
 -- together.
 --
--- Applied to production as 20260905xxxxxx_live_nights_played.
+-- Applied to production as 20260905114513_live_nights_played.
 
 alter table public.season_scores
   add column if not exists live_nights integer;

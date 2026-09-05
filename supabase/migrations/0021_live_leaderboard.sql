@@ -30,7 +30,7 @@
 -- moved is visible rather than flattering. Visibility, not enforcement: see
 -- the club's own habit of flagging chip imbalances and never blocking on them.
 --
--- Applied to production as 20260905090000_live_leaderboard.
+-- Applied to production as 20260905100727_live_leaderboard.
 
 alter table public.season_scores
   add column if not exists live_points  bigint,
