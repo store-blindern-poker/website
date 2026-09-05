@@ -1,12 +1,18 @@
 /* Store Blindern Poker: RSVP for upcoming nights, and the venue.
  *
  * Loaded (after js/config.js, js/vendor/supabase.js, js/sb.js and js/app.js)
- * by index.html and events.html. Self-contained: it adds behaviour to markup
- * js/app.js has already rendered and never edits or depends on that script.
+ * by index.html and events.html. It adds behaviour to markup js/app.js has
+ * already rendered, and the only thing it asks of that script is the ISO date
+ * written on each card. Where the date is missing the old title matching
+ * still runs, so an older cached js/app.js keeps working and this file never
+ * edits or breaks that one.
  *
  * Progressive enhancement, in this order:
- *   1. The page renders from data/events.json with no database at all. That
- *      is the baseline and it must never regress.
+ *   1. js/app.js has already drawn the cards, from v_upcoming_nights where
+ *      the database answered and from data/events.json where it did not. It
+ *      writes the ISO date of each card onto the card as data-night-date, so
+ *      finding the night a card belongs to is a lookup rather than a guess.
+ *      That baseline must never regress: the page is complete without us.
  *   2. If Supabase answers, an RSVP block is appended to each upcoming event
  *      card, the going count is added to the home page countdown, and the
  *      venue on a matched card is replaced by the one in the database, which
@@ -15,6 +21,13 @@
  *      warning and leave the page exactly as js/app.js left it. Every entry
  *      point is wrapped, every promise has a catch, nothing here can blank a
  *      list or stop the countdown.
+ *
+ * We read v_upcoming_nights ourselves rather than borrowing the rows
+ * js/app.js already has. Two small reads of an anon view are two independent
+ * failure domains, which is the fail soft posture the whole site takes; the
+ * alternative is a hard dependency between the file that draws the calendar
+ * and the file that owns reporting, and reporting is the one that must not
+ * break at 20:25 on a Friday.
  *
  * The privacy split is deliberate and lives in the queries, not in the CSS:
  *   - v_upcoming_nights is anon-readable and carries the night itself: the
@@ -167,11 +180,17 @@
   /* ------------------------------------------------------------------
    * Matching a rendered card back to a database night
    *
-   * js/app.js builds the event cards and is not ours to edit, so a card
-   * carries no ISO date. Both the card and data/events.json come from the
-   * same file in the same page load, and the title is copied verbatim, so
-   * an exact title match is reliable. The day + month cell is the backstop
-   * when two events share a title.
+   * js/app.js stamps every card it draws with data-night-date, so the normal
+   * path is to read it. That stamp is what makes a database-only night work
+   * at all: the two passes below both walk data/events.json, so a card for a
+   * night that exists only in the console would match nothing, get no
+   * night_id, and be handed no RSVP control, which is exactly the night this
+   * whole change exists to support.
+   *
+   * The title and day-plus-month passes stay, unchanged, for any card
+   * without a stamp: a browser holding a cached older js/app.js keeps
+   * working. Nothing is consumed from `events` by the stamped branch, so
+   * those passes still see every row.
    *
    * From the ISO date to the night is exact: nights has UNIQUE
    * (season_id, played_on), and v_upcoming_nights only holds future nights,
@@ -184,6 +203,15 @@
 
     for (i = 0; i < cards.length; i++) {
       var card = cards[i];
+      var stamp = isoOf(card.getAttribute('data-night-date'));
+      if (isoParts(stamp)) {
+        // Left on the card so the match is inspectable in devtools, same as
+        // the passes below.
+        card.setAttribute('data-rsvp-date', stamp);
+        pairs.push({ card: card, iso: stamp });
+        continue;
+      }
+
       var titleEl = card.querySelector('.event-card__title');
       var dayEl = card.querySelector('.event-card__day');
       var monEl = card.querySelector('.event-card__month');
@@ -308,7 +336,10 @@
         roomLink.className = 'event-link';
         roomLink.setAttribute('target', '_blank');
         roomLink.setAttribute('rel', 'noopener');
-        roomLink.textContent = 'Find the room ↗';
+        // 8599 is the north east arrow js/app.js writes as &#8599; on the
+        // cards it builds. Spelled as a code point because this file is
+        // ASCII, and so that the two renders cannot drift apart.
+        roomLink.textContent = 'Find the room ' + String.fromCharCode(8599);
         links.appendChild(roomLink);
       }
       roomLink.setAttribute('href', href);
@@ -566,7 +597,13 @@
 
     var sessionP = S.getSession().catch(function () { return null; });
     var nightsP = fetchNights();
-    var jsonP = fetchEventsJson();
+    // The file is now only the backstop for an unstamped card, so a 404 on it
+    // must not take down every RSVP block on the page. It used to sit in this
+    // Promise.all with no catch of its own.
+    var jsonP = fetchEventsJson().catch(function (err) {
+      warn('events.json unavailable, using card stamps only', err);
+      return [];
+    });
     var cardsP = whenPresent(list, function () {
       return !!list.querySelector('.event-card');
     }, WAIT_MS);
@@ -663,17 +700,28 @@
   /* ------------------------------------------------------------------
    * index.html: the going count next to the countdown.
    *
-   * The countdown decides which event is next, in js/app.js. We read its
-   * title back out of the DOM rather than repeating that rule here, so the
+   * The countdown decides which event is next, in js/app.js. We read the
+   * answer back out of the DOM rather than repeating that rule here, so the
    * two can never disagree. If the countdown never fills, neither do we.
+   *
+   * js/app.js writes the ISO date onto #countdown-section before it writes
+   * the name, so the stamp is always there by the time the name appears.
+   * Matching the name back against data/events.json is the fallback and no
+   * longer the route: it finds nothing for a night that exists only in the
+   * database, and the landing page would then lose its headcount and its
+   * room on exactly the nights this change exists for.
    * ------------------------------------------------------------------ */
   function initIndex() {
     var out = document.getElementById('countdown-going');
     var nameEl = document.getElementById('countdown-name');
+    var section = document.getElementById('countdown-section');
     if (!out || !nameEl) { return; }
 
     var nightsP = fetchNights();
-    var jsonP = fetchEventsJson();
+    var jsonP = fetchEventsJson().catch(function (err) {
+      warn('events.json unavailable, using the countdown stamp only', err);
+      return [];
+    });
     var readyP = whenPresent(nameEl, function () {
       return normText(nameEl.textContent) !== '';
     }, WAIT_MS);
@@ -682,11 +730,14 @@
       var nights = res[0];
       var events = Array.isArray(res[1]) ? res[1] : [];
       var want = normText(nameEl.textContent);
-      var iso = null;
+      var stamp = section ? isoOf(section.getAttribute('data-night-date')) : '';
+      var iso = isoParts(stamp) ? stamp : null;
       var i;
 
-      for (i = 0; i < events.length; i++) {
-        if (normText(events[i].title) === want) { iso = isoOf(events[i].date); break; }
+      if (!iso) {
+        for (i = 0; i < events.length; i++) {
+          if (normText(events[i].title) === want) { iso = isoOf(events[i].date); break; }
+        }
       }
       if (!iso) { return; }
 

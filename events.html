@@ -55,41 +55,48 @@
             <div class="section__label">Coming up</div>
             <h2 class="section__title" id="upcoming-title">Upcoming nights</h2>
           </div>
+          <!-- Shown by js/app.js only when the list below came from the
+               committed file instead of the database. A room that is
+               probably right beats no room at 17:55 on a Friday, and an
+               unlabelled probably-right room is how somebody ends up outside
+               a locked Abelstua, so the list keeps the room and this line
+               says where it came from. Same idea as #leaderboard-status. -->
+          <div class="notice" id="events-status" role="status" hidden></div>
+
           <div id="events-upcoming" class="events-list" aria-live="polite">
-            <!-- Rendered from data/events.json by js/app.js. Static fallback below.
+            <!-- Rendered by js/app.js, from v_upcoming_nights where the
+                 database answers and from data/events.json where it does
+                 not. Creating a night in admin.html puts it here at the next
+                 reload: there is no file to edit and no deploy. The file is
+                 the last saved copy, not the source, which is the whole
+                 point of the change that introduced this comment.
 
-                 The room is the one thing on these cards that the JSON no
-                 longer owns. js/rsvp.js matches each card to its night in
-                 v_upcoming_nights and replaces the location and the map link
-                 with what the database holds, because an organiser can change
-                 that from admin.html in seconds while this file needs a commit
-                 and a deploy. A night whose location is empty or "TBD" renders
-                 as "Venue still to be confirmed" rather than falling back to
-                 the room below, which by then may be last term's.
+                 The room comes from the database on both paths. js/rsvp.js
+                 matches each card to its night and reapplies the location
+                 and the map link, because an organiser can change those from
+                 admin.html in seconds. A night whose location is empty or
+                 "TBD" renders as "Venue still to be confirmed" rather than
+                 falling back to a room that by then may be last term's.
 
-                 So the location and the map link in the fallback markup are
-                 the no-JavaScript answer only. If they go stale, fix the room
-                 in the console first; this file is the backstop. -->
+                 The noscript block below is the only layer that survives
+                 everything, JavaScript off and the database down at once, so
+                 it is the layer that must never lie. It used to name a
+                 specific night in a specific room, which meant it was wrong
+                 by the Saturday and wrong for the rest of the week. It now
+                 says only what is true every week. -->
 
             <noscript>
-              <article class="event-card">
-                <div class="event-card__date">
-                  <div class="event-card__day">4</div>
-                  <div class="event-card__month">Sep</div>
-                  <div class="event-card__weekday">Fri</div>
-                </div>
-                <div class="event-card__info">
-                  <h3 class="event-card__title">Fall 2026: Season Opener, Round 1</h3>
-                  <div class="event-card__meta">
-                    <span>18:00 to 20:30</span>
-                    <span>Blindern Campus, Nils Henrik Abels Hus, Abelstua</span>
-                  </div>
-                  <div class="event-card__links">
-                    <a class="event-link" href="https://link.mazemap.com/BgdNsCdA" target="_blank" rel="noopener">Find the room ↗</a>
-                  </div>
-                </div>
-                <span class="badge badge--gold event-card__badge">Upcoming</span>
-              </article>
+              <div class="empty-state">
+                <div class="empty-state__icon">&#9824;</div>
+                <p class="empty-state__text">
+                  The calendar is read live from the club database, so it
+                  needs JavaScript. We play most Fridays during term, 18:00
+                  to 20:30, on Blindern campus, and the room is confirmed
+                  each week. Turn JavaScript on for the dates and the room,
+                  or ask on the club
+                  <a class="link-gold" href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener">Discord</a>.
+                </p>
+              </div>
             </noscript>
           </div>
 
@@ -159,14 +166,24 @@
             <div class="section__label">Season so far</div>
             <h2 class="section__title" id="past-title">Past nights</h2>
             <p class="section__description">
-              Every played round of the current season, most recent first.
+              Played rounds of the current season, most recent first. This
+              section is not read live from the club database yet, so a night
+              played recently can be missing from it. The
+              <a href="leaderboard.html" class="link-gold">leaderboard</a>
+              counts every settled night either way.
             </p>
           </div>
           <div id="events-past" class="events-list" aria-live="polite">
-            <!-- Rendered from data/events.json by js/app.js. -->
+            <!-- Rendered by js/app.js from data/events.json, and from
+                 nothing else. v_upcoming_nights cannot serve this section:
+                 it holds only future, unsettled nights, and a played night
+                 is settled. The honest answer is a second anon readable
+                 view, and until it exists this section only knows about
+                 nights somebody committed to the file. js/app.js says so at
+                 length above renderEvents. -->
             <noscript>
               <div class="empty-state">
-                <p class="empty-state__text">The Fall 2026 season has not started yet. Played nights will appear here.</p>
+                <p class="empty-state__text">Played nights from this season are listed here when JavaScript is on.</p>
               </div>
             </noscript>
           </div>
@@ -224,9 +241,13 @@
 
   </div>
 
-  <!-- js/app.js renders the event list from data/events.json and is the
-       baseline: everything below is an enhancement that fails silently.
-       Load order is the dependency graph, there is no build step. -->
+  <!-- js/app.js renders the event list, preferring v_upcoming_nights and
+       falling back to data/events.json, and is the baseline: js/rsvp.js
+       below is an enhancement that fails silently. Load order is the
+       dependency graph, there is no build step. js/app.js runs before
+       js/sb.js and waits for DOMContentLoaded before its first query, so
+       that it can borrow the one client js/sb.js makes rather than standing
+       up a second one. -->
   <script src="js/config.js" defer></script>
   <script src="js/vendor/supabase.js" defer></script>
   <script src="js/app.js" defer></script>
