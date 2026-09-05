@@ -42,20 +42,17 @@ function json(body: unknown, status = 200) {
   })
 }
 
-/* Oslo time, in the words the rest of the club uses. */
-function osloWhen(iso: string | null): string {
-  if (!iso) return 'tomorrow morning'
+/* The night's own day, in Oslo, for "Thanks for playing Round 1 on Friday".
+ * played_on is a bare calendar date. Read as UTC midnight it lands at 01:00
+ * or 02:00 Oslo, which is the same day, because Oslo is never behind UTC. */
+function osloWeekday(playedOn: string | null): string {
+  if (!playedOn) return 'Friday'
   try {
-    const d = new Date(iso)
-    const t = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hour12: false,
-    }).format(d)
-    const day = new Intl.DateTimeFormat('en-GB', {
+    return new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Europe/Oslo', weekday: 'long',
-    }).format(d)
-    return `${t} on ${day}`
+    }).format(new Date(playedOn))
   } catch {
-    return 'tomorrow morning'
+    return 'Friday'
   }
 }
 
@@ -102,36 +99,41 @@ interface Row {
   reminder_sent_at: string | null
 }
 
-function buildMail(row: Row, nightTitle: string, deadline: string, siteUrl: string) {
-  const subject = 'Your chips from tonight are not recorded yet'
+function buildMail(row: Row, nightTitle: string, weekday: string, siteUrl: string) {
+  const subject = `We are missing your chip count from ${nightTitle}`
   const reportUrl = `${siteUrl}/report`
 
-  // The number is the whole point of writing to somebody individually
-  // rather than posting a list. Silence is not zero, it is a loss, and
-  // saying so plainly is the difference between a nudge and a nag.
+  // The member's OWN number is the whole reason to write to somebody
+  // individually rather than post a list. Round 1 was chased by naming people
+  // in a public channel from memory, which named somebody who had already
+  // reported and put the wrong figure on the rest.
+  //
+  // Deliberately NO deadline sentence. There is no deadline any more, and the
+  // previous version invented one out of a null and told people to report
+  // "before tomorrow morning". Saying nothing beats saying something false.
   const lines = [
     `Hei ${row.pseudonym},`,
     '',
-    `You checked in at ${nightTitle} tonight, but we do not have your final chip count.`,
+    `Thanks for playing ${nightTitle} on ${weekday}.`,
     '',
-    `You took ${fmt(row.chips_taken)} chips. If we do not hear from you before ${deadline}, tonight goes down as zero chips returned, which lands as ${fmt(row.points_if_silent)} points.`,
+    'One thing is missing: we never got your final chip count.',
     '',
-    `Report it here: ${reportUrl}`,
+    `You took ${fmt(row.chips_taken)} chips. Until we know what you finished with, the night goes down as zero chips returned, which works out at ${fmt(row.points_if_silent)} points.`,
     '',
-    'If you busted out, say so. It is one tap, and it is still worth doing: the attendance bonus is yours either way.',
+    reportUrl,
     '',
-    'Cheers,',
+    'See you at the next one,',
     'Store Blindern Poker',
   ]
   const text = lines.join('\n')
 
   const html = [
     `<p>Hei ${escapeHtml(row.pseudonym)},</p>`,
-    `<p>You checked in at ${escapeHtml(nightTitle)} tonight, but we do not have your final chip count.</p>`,
-    `<p>You took <strong>${fmt(row.chips_taken)}</strong> chips. If we do not hear from you before ${escapeHtml(deadline)}, tonight goes down as zero chips returned, which lands as <strong>${fmt(row.points_if_silent)}</strong> points.</p>`,
-    `<p><a href="${escapeHtml(reportUrl)}">Report it here</a></p>`,
-    '<p>If you busted out, say so. It is one tap, and it is still worth doing: the attendance bonus is yours either way.</p>',
-    '<p>Cheers,<br>Store Blindern Poker</p>',
+    `<p>Thanks for playing ${escapeHtml(nightTitle)} on ${escapeHtml(weekday)}.</p>`,
+    '<p>One thing is missing: we never got your final chip count.</p>',
+    `<p>You took <strong>${fmt(row.chips_taken)}</strong> chips. Until we know what you finished with, the night goes down as zero chips returned, which works out at <strong>${fmt(row.points_if_silent)}</strong> points.</p>`,
+    `<p><a href="${escapeHtml(reportUrl)}">${escapeHtml(reportUrl)}</a></p>`,
+    '<p>See you at the next one,<br>Store Blindern Poker</p>',
   ].join('\n')
 
   return { subject, text, html }
@@ -183,7 +185,7 @@ Deno.serve(async (req) => {
 
   const { data: night, error: nightErr } = await admin
     .from('nights')
-    .select('id,title,night_no,reports_close_at,deleted_at,attendance_bonus')
+    .select('id,title,night_no,played_on,deleted_at,attendance_bonus')
     .eq('id', nightId)
     .single()
   if (nightErr || !night) return json({ error: 'no such night' }, 404)
@@ -259,7 +261,7 @@ Deno.serve(async (req) => {
   }
 
   const nightTitle = night.title || `Night ${night.night_no}`
-  const deadline = osloWhen(night.reports_close_at)
+  const weekday = osloWeekday(night.played_on)
 
   const sentIds: string[] = []
   const failed: { pseudonym: string; reason: string }[] = []
@@ -268,7 +270,7 @@ Deno.serve(async (req) => {
   // provider that rate limits a burst would otherwise fail half of them
   // for no reason worth explaining to an organiser.
   for (const row of rows) {
-    const mail = buildMail(row, nightTitle, deadline, siteUrl)
+    const mail = buildMail(row, nightTitle, weekday, siteUrl)
     const reason = await sendOne(apiKey, from, row.email!, mail.subject, mail.text, mail.html)
     if (reason === null) sentIds.push(row.member_id)
     else failed.push({ pseudonym: row.pseudonym, reason })
