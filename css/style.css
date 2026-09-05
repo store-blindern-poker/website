@@ -107,14 +107,14 @@
      .countdown__going-num   Its numeral. Mono, tabular. The line keeps its
                              height while empty, so filling it shifts nothing.
 
-   BANK SLIPS AND TOP-UP (section 24). Used only by report.html + js/report.js.
+   BANK SLIPS AND RE-BUY (section 24). Used only by report.html + js/report.js.
 
      .slip                   Full-screen takeover, same pattern as the night
                              code: the phone is shown to the organiser at the
                              chip bank. Toggle with [hidden]. Contains, top to
                              bottom: band, kicker, give-line, amount, unit,
                              note, age, clock, night, close.
-     .slip--reshow           A re-rendered slip for a buy-in or top-up already
+     .slip--reshow           A re-rendered slip for a buy-in or re-buy already
                              issued. The kicker goes clay, which is the only
                              alarm colour on a slip, so the bank can tell a
                              fresh slip from an old one.
@@ -124,7 +124,7 @@
                              the number: GIVE CHIPS OUT (brass) or TAKE CHIPS
                              BACK (felt). The one brass fill on a give slip;
                              a take slip has none. className is rebuilt by JS.
-     .slip__kicker           What the slip is for ("BUY-IN", "TOP-UP"). Mono,
+     .slip__kicker           What the slip is for ("BUY-IN", "RE-BUY"). Mono,
                              uppercase, brass; clay under --reshow.
      .slip__give             "GIVE <pseudonym>". Sans 600, big.
      .slip__amount           THE number. Giant mono, brass, tabular.
@@ -140,9 +140,9 @@
      .slip__close            The one obvious close. Full-width-ish button at
                              the bottom, 56px.
 
-     .topup-quote            "You can take up to 7,000." Display face, the
+     .rebuy-quote            "You can take up to 7,000." Display face, the
                              numeral in <span class="mono"> goes brass.
-     .topup-done             Quiet one-liner recording a bank top-up, with an
+     .rebuy-done             Quiet one-liner recording a bank re-buy, with an
                              inline .link-gold re-show button.
      .report-deadline        "You can report until 09:00 tomorrow." Centred
                              help line under the report form.
@@ -1057,7 +1057,7 @@ select.input {
   outline-offset: 2px;
 }
 
-/* Choice group (for example "Did you top up tonight?") */
+/* Choice group (for example "Did you re-buy tonight?") */
 .choice-row {
   display: flex;
   gap: var(--space-sm);
@@ -3526,7 +3526,7 @@ select.input {
 }
 
 /* ==========================================================================
-   24. BANK SLIPS AND TOP-UP FLOW
+   24. BANK SLIPS AND RE-BUY FLOW
    A slip is the phone screen a player holds up at the chip bank. It is read
    at arm's length in a dim room: one giant mono number, the pseudonym, what
    the number is for, and a live clock so last week's screenshot cannot pass
@@ -3700,10 +3700,10 @@ select.input {
   border-color: var(--border-loud);
 }
 
-/* ---- Top-up flow on the report screen --------------------------------- */
+/* ---- Re-buy flow on the report screen --------------------------------- */
 
 /* "You can take up to 7,000." The answer to the whole trip to the bank. */
-.topup-quote {
+.rebuy-quote {
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 600;
@@ -3713,16 +3713,16 @@ select.input {
   margin-bottom: var(--space-md);
 }
 
-.topup-quote .mono { color: var(--brass); }
+.rebuy-quote .mono { color: var(--brass); }
 
-/* Quiet record of a top-up already taken. A line, not a card in a card. */
-.topup-done {
+/* Quiet record of a re-buy already taken. A line, not a card in a card. */
+.rebuy-done {
   font-size: 0.9rem;
   line-height: 1.55;
   color: var(--cream-dim);
 }
 
-.topup-done .mono {
+.rebuy-done .mono {
   font-weight: 500;
   color: var(--cream);
 }
@@ -3731,7 +3731,7 @@ select.input {
    chrome, this restores the 48px tap height an inline link button loses.
    inline-flex + min-height grows only its own line box, so the sentence
    above it keeps its rhythm. */
-.topup-done .link-gold {
+.rebuy-done .link-gold {
   display: inline-flex;
   align-items: center;
   min-height: var(--tap-target);

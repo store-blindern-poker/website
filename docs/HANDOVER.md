@@ -98,7 +98,7 @@ sheets are filled in every night regardless of whether the site works.**
 type; put that on the venue TV. Scanning the QR opens
 `https://storeblindernpoker.org/report?n=CODE` with the code pre-filled;
 everyone else types the 5 characters (case doesn't matter). The code is
-required **only at check-in**; top-up and final-stack reporting never ask
+required **only at check-in**; re-buy and final-stack reporting never ask
 again, and admin proxy check-ins bypass it entirely. Technical note: the
 code is *generated server-side* when the night row is created and stored in
 `nights.code`. Members can never read it through the API (the column is

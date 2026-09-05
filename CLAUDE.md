@@ -30,5 +30,5 @@ motion on named properties, and no cookie-cutter card grids.
 - Legal: STORE BLINDERN POKER, org.nr 936 041 973, a registered student association at the University of Oslo (Brønnøysund, 27 Aug 2025).
 - Contact: it@storeblindernpoker.org. Domain: storeblindernpoker.org. Hosting: Cloudflare Pages from main, no build step.
 - Nights run Fridays about 18:00 to 20:30, Blindern campus. Beginner course and beginner table at the welcome rounds.
-- Season = semester. Everyone starts at 40,000 points. Nightly: 5,000 attendance bonus, buy-in up to the night's stack (default 10,000), one top-up rebuy, report your final stack. Points never go below zero.
+- Season = semester. Everyone starts at 40,000 points. Nightly: 5,000 attendance bonus, buy-in up to the night's stack (default 10,000), one re-buy, report your final stack. Points never go below zero.
 - The champion wins a custom season chip, small prizes, and bragging rights.

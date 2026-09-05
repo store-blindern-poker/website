@@ -36,9 +36,17 @@ so nothing has to be finished in the room.
 
 ## During the night
 
-- Top-ups: the player shows a **TOP-UP** slip with a number. Count out that many chips.
-  A slip marked **RE-SHOW** in red is an old one being shown again, not a new top-up.
-- One top-up per player per night. The app enforces it; you do not have to remember.
+- Re-buys: the player shows a **Re-buy** slip with a number. Count out that many chips.
+  A slip marked **re-show** is an old one being shown again, not a new re-buy. The slip
+  also says how old it is, in words.
+- **No slip, no chips.** This holds at the buy-in and at the re-buy both, and the re-buy
+  is where it matters most. Round 1 finished with more chips coming back than went out,
+  and the likeliest cause was chips handed over without the console booking them. This
+  is not about trusting people. It is about the count adding up at the end, so that a
+  real problem is visible instead of hidden in the noise.
+- **Somebody is always at the bank.** A playing bank is fine: hold the role at the table
+  and step out of the hand when a slip arrives. What is not fine is an unattended box.
+- One re-buy per player per night. The app enforces it; you do not have to remember.
 - The paper sheet on each table is the real backup. Keep it up to date even when the app
   is working. It costs nothing and it has saved every club that ever did it.
 

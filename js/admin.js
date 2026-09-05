@@ -11,7 +11,7 @@
  * report_entry(p_night_id, p_final_stack, p_rebuy_chips, p_member_id,
  * p_note), add_adjustment(p_night_id, p_member_id, p_delta_points, p_kind,
  * p_reason), get_night_code(p_night_id) for the TV takeover,
- * void_rebuy(p_night_id, p_member_id) to undo a bank top-up whose slip was
+ * void_rebuy(p_night_id, p_member_id) to undo a bank re-buy whose slip was
  * never honoured, is_super_admin() once at boot, and for super admins only
  * grant_admin(p_member_id) / revoke_admin(p_member_id).
  * Reads: v_seasons, nights (named columns, never *), entries, adjustments,
@@ -385,10 +385,10 @@
           ? '<span class="badge badge--ok">reported' +
             (e.reported_via !== 'self' ? ' · ' + S.escapeHtml(e.reported_via) : '') + '</span>'
           : '<span class="badge badge--warn">not reported</span>';
-        // rebuy_at set = the top-up was issued live at the bank, so the
+        // rebuy_at set = the re-buy was issued live at the bank, so the
         // number is the server's record, not somebody's memory. Those rows
         // get the badge and the undo: void_rebuy exists precisely because a
-        // recorded top-up may never have been handed over.
+        // recorded re-buy may never have been handed over.
         var bank = !!e.rebuy_at;
         return '<tr>' +
           '<td>' + S.escapeHtml(pseudonymOf(e.member_id)) + '</td>' +
@@ -399,7 +399,7 @@
           '<td>' + status +
             (bank
               ? ' <button type="button" class="btn btn--ghost" style="padding: 6px 10px;"' +
-                ' data-void-member="' + S.escapeHtml(e.member_id) + '">Void top-up…</button>'
+                ' data-void-member="' + S.escapeHtml(e.member_id) + '">Void re-buy…</button>'
               : '') + '</td>' +
         '</tr>';
       }).join('');
@@ -1722,7 +1722,7 @@
       item.rebuy = rebuy;
       item.final = finalStack;
       if (!member) { item.error = 'unknown pseudonym'; }
-      else if (rebuy === null) { item.error = 'bad top-up number'; }
+      else if (rebuy === null) { item.error = 'bad re-buy number'; }
       else if (finalStack === null) { item.error = 'bad final stack'; }
       else { item.ok = true; }
       plan.push(item);
@@ -1800,10 +1800,10 @@
   });
 
   /* ------------------------------------------------------------------
-   * Void a bank top-up
+   * Void a bank re-buy
    *
-   * The undo for a slip that was never handed over: the member tapped
-   * "take top-up", the record was written, and then the queue moved on or
+   * The undo for a slip that was never handed over: the member tapped the
+   * re-buy button, the record was written, and then the queue moved on or
    * the chip case was empty. void_rebuy() is admin-only server-side; the
    * button renders on any entry whose rebuy_at is set.
    * ------------------------------------------------------------------ */
@@ -1815,15 +1815,15 @@
     var entry = ctx.entries.filter(function (en) { return en.member_id === memberId; })[0];
     if (!entry) { return; }
     var ok = window.confirm(
-      'Void the recorded top-up of ' + S.fmt(entry.rebuy_chips) + ' chips for ' +
+      'Void the recorded re-buy of ' + S.fmt(entry.rebuy_chips) + ' chips for ' +
       pseudonymOf(memberId) + '?\n\nOnly do this if the chips were never actually ' +
       'handed over. Their slip stays on their phone but stops counting.');
     if (!ok) { return; }
     btn.disabled = true;
-    msg($('entries-msg'), 'Voiding the top-up…', 'busy');
+    msg($('entries-msg'), 'Voiding the re-buy…', 'busy');
     rpc('void_rebuy', { p_night_id: ctx.night.id, p_member_id: memberId })
       .then(function () {
-        msg($('entries-msg'), 'Top-up voided for ' + pseudonymOf(memberId) + ' ✓', 'ok');
+        msg($('entries-msg'), 'Re-buy voided for ' + pseudonymOf(memberId) + ' ✓', 'ok');
         return loadEntries();
       })
       .catch(function (err) {

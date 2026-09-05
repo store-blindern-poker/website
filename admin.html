@@ -431,7 +431,7 @@
                   <tr>
                     <th scope="col">Player</th>
                     <th scope="col" class="num">Buy-in</th>
-                    <th scope="col" class="num">Top-up</th>
+                    <th scope="col" class="num">Re-buy</th>
                     <th scope="col" class="num">Final</th>
                     <th scope="col">Status</th>
                   </tr>
@@ -468,7 +468,7 @@
                 </tbody>
               </table>
             </div>
-            <!-- Speaks for the entries table above it: the void top-up
+            <!-- Speaks for the entries table above it: the void re-buy
                  action reports here. Sits outside the table so a re-render
                  never wipes an error mid-read. -->
             <p class="form-msg" id="entries-msg" role="status" aria-live="polite"
@@ -495,11 +495,11 @@
                          autocomplete="off" autocapitalize="off" placeholder="Start typing…">
                 </div>
                 <div class="field">
-                  <label class="label" for="proxy-report-rebuy">Top-up: chips you handed over</label>
+                  <label class="label" for="proxy-report-rebuy">Re-buy: chips you handed over</label>
                   <input class="input input--numeric" id="proxy-report-rebuy" type="text"
                          inputmode="numeric" value="0">
                   <p class="help">The number of chips they received, not the stack they were
-                  holding before. Leave it at 0 if they never topped up.</p>
+                  holding before. Leave it at 0 if they never took a re-buy.</p>
                 </div>
                 <div class="field">
                   <label class="label" for="proxy-report-final">Final stack: chips in front of them at the end</label>
@@ -518,9 +518,9 @@
             <div class="card" style="margin-bottom: var(--space-lg);">
               <h3 class="card__title">Bulk paste from the paper sheet</h3>
               <p class="card__text" style="margin-bottom: var(--space-md);">
-                One player per line: <code>pseudonym, top-up, final&nbsp;stack</code>,
-                where the top-up is the chips they were handed, not the stack
-                they were holding first (two values means top-up 0:
+                One player per line: <code>pseudonym, re-buy, final&nbsp;stack</code>,
+                where the re-buy is the chips they were handed, not the stack
+                they were holding first (two values means re-buy 0:
                 <code>pseudonym, final</code>).
                 Commas, semicolons or tabs all work.
               </p>
@@ -539,7 +539,7 @@
                   <thead>
                     <tr>
                       <th scope="col">Player</th>
-                      <th scope="col" class="num">Top-up</th>
+                      <th scope="col" class="num">Re-buy</th>
                       <th scope="col" class="num">Final</th>
                       <th scope="col">Check</th>
                     </tr>

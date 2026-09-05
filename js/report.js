@@ -2,13 +2,13 @@
  *
  * A member on a phone, on flaky campus wifi, as the night winds up around
  * 20:30, must be able to:
- *   check in → play → top up → close the round → hand the chips back.
+ *   check in → play → re-buy → close the round → hand the chips back.
  * ONE number is asked for. Everything else on the screen is a fact already
  * on record.
  *
  * The screen is a hub with three errands hanging off it. #state-report is
  * home: it states what is on record and offers the buy-in slip, the bank and
- * the way out. The top-up and the closing count each get their own state, so
+ * the way out. The re-buy and the closing count each get their own state, so
  * each screen carries exactly one instruction and exactly one brass action.
  * The h1 is that instruction, in the imperative, rewritten on every state
  * change: "You are checked in" is not something an anxious first timer can
@@ -29,7 +29,7 @@
  * Check-in is gated by the night code, VALIDATED SERVER-SIDE by check_in()
  * (the client cannot read nights.code, so it never verifies locally): the
  * QR on the venue TV opens /report?n=CODE pre-filled; others type the 5
- * characters. The code is required at CHECK-IN ONLY, top-up and
+ * characters. The code is required at CHECK-IN ONLY, re-buy and
  * final-stack reporting hang off the existing entry with no re-entry.
  *
  * Server RPCs used: check_in(p_night_id, p_code), report_entry(p_night_id,
@@ -40,9 +40,9 @@
  *
  * THE BANK. Chips only change hands against a SLIP: a full-screen takeover
  * with one giant number, the pseudonym, and a live clock (so a screenshot
- * cannot pass as fresh). Buy-in slip after check-in; top-up slip after
+ * cannot pass as fresh). Buy-in slip after check-in; re-buy slip after
  * take_rebuy; closing slip after the report, which is the only one that
- * counts chips BACK. A top-up is therefore always something already on
+ * counts chips BACK. A re-buy is therefore always something already on
  * record, so the report NEVER asks about one, it only ever states it. Two
  * ways it gets on record: rebuy_at set means the bank issued it and there is
  * a slip to re-show; rebuy_chips set with rebuy_at null means an organiser
@@ -66,7 +66,7 @@
    * with no console error and no visual clue on a phone at 20:30. */
   var states = ['state-config', 'state-loading', 'state-nopseudonym',
                 'state-nonight', 'state-checkin', 'state-report',
-                'state-topup', 'state-close',
+                'state-rebuy', 'state-close',
                 'state-receipt', 'state-settled'];
 
   /* ------------------------------------------------------------------
@@ -79,7 +79,7 @@
    * focus() on the element that is already document.activeElement is a no-op
    * in Chrome, it only scrolled when the member had just typed in a field.
    * That is why "it jumps back to the top" looked intermittent and why it hit
-   * the top-up and the final stack, the two flows that start in an input.
+   * the re-buy and the final stack, the two flows that start in an input.
    * ------------------------------------------------------------------ */
 
   /* Bring a step into view under the fixed nav. NO behavior key on purpose:
@@ -166,13 +166,13 @@
     'state-nopseudonym': { order: 'Pick your pseudonym.', sub: 'It is the only name ever shown in public.' },
     'state-nonight':     { order: 'No round tonight.', sub: '' },
     'state-checkin':     { order: 'Type tonight\'s code.', sub: 'It is on the screen at the front, five characters.' },
-    'state-topup':       { order: 'Count your chips.', sub: 'Count everything in front of you right now, then type the total.' },
+    'state-rebuy':       { order: 'Count your chips.', sub: 'Count everything in front of you right now, then type the total.' },
     'state-close':       { order: 'Count your chips.', sub: 'Count everything in front of you and type the total.' },
     'state-settled':     { order: 'Tonight is settled.', sub: '' }
   };
 
   /* Club custom, not a database column, and deliberately not a gate. It also
-   * appears verbatim in the #topup-open copy in report.html: change both or
+   * appears verbatim in the #rebuy-open copy in report.html: change both or
    * neither. Nothing anywhere compares it to a clock. */
   var BREAK_TIME_TEXT = 'around 19:15';
 
@@ -258,12 +258,12 @@
       return { order: 'Count your chips.',
                sub: 'The round is over. Count what is in front of you and report the total.' };
     }
-    // A member who has already topped up must not read a line offering one
+    // A member who has already taken a re-buy must not read a line offering one
     // at 19:20. The offer card disappears in the same breath; this is the
     // heading agreeing with it.
     if (recordedRebuy() > 0) {
       return { order: 'Go and play.',
-               sub: 'Your top-up is on record. Close the round when you are done.' };
+               sub: 'Your re-buy is on record. Close the round when you are done.' };
     }
     // rebuy_cap_chips 0: the season points are all in play, so the bank has
     // nothing for this member and never had tonight. Sending them to it at
@@ -271,16 +271,16 @@
     // below says the same thing in full.
     if (ctx.entry && !ctx.entry.rebuy_cap_chips) {
       return { order: 'Go and play.',
-               sub: 'Your points are all in play, so there is no top-up tonight.' };
+               sub: 'Your points are all in play, so there is no re-buy tonight.' };
     }
     return { order: 'Go and play.',
              /* "The bank OPENS at" reads as a start time, and there is no
               * start time: take_rebuy has no time gate and the button is
               * live from 18:00. A member reading this at 18:10 concluded
               * the bank was shut, which is the opposite of the rule, and it
-              * contradicted the top-up card 600px below saying there is
+              * contradicted the re-buy card 600px below saying there is
               * nothing to miss. Says when it usually happens instead. */
-             sub: 'Most people top up at the first break, ' + BREAK_TIME_TEXT + '.' };
+             sub: 'Most people re-buy at the first break, ' + BREAK_TIME_TEXT + '.' };
   }
 
   function receiptOrder() {
@@ -377,20 +377,20 @@
   var offerNight = null;
   var offerEntry = null;
 
-  /* Non-null rebuy_at means the BANK issued the top-up, so there is a slip
+  /* Non-null rebuy_at means the BANK issued the re-buy, so there is a slip
    * to re-show and the server defends the number against this client. */
   function bankMode() {
     return !!(ctx.entry && ctx.entry.rebuy_at);
   }
 
-  /* The top-up on record, whoever put it there. This is the only top-up
+  /* The re-buy on record, whoever put it there. This is the only re-buy
    * figure this screen ever reads, shows or sends. */
   function recordedRebuy() {
     return (ctx.entry && ctx.entry.rebuy_chips) || 0;
   }
 
   /* An organiser typed it into admin.html after handing chips across the
-   * table: a real top-up with no slip behind it. Worth stating, and worth
+   * table: a real re-buy with no slip behind it. Worth stating, and worth
    * never overwriting. */
   function organiserRebuy() {
     return !bankMode() && recordedRebuy() > 0;
@@ -414,7 +414,7 @@
   /* A deadline was set by hand for this night and it has passed. False all
    * night when there is none, which is why nothing that needs to know whether
    * a send can still land may read this alone: sendRefused() is that
-   * question. It is NOT the top-up break, which is guidance and never a
+   * question. It is NOT the re-buy break, which is guidance and never a
    * gate. */
   function reportingClosedOn(n) {
     var t = deadlineAtFor(n);
@@ -510,7 +510,7 @@
    * Outbox sender: one rpc call, honest error classification.
    * ------------------------------------------------------------------ */
 
-  /* The top-up on record can change AFTER a report is queued. An organiser
+  /* The re-buy on record can change AFTER a report is queued. An organiser
    * hands chips across the table at 20:33 and types the number into
    * admin.html while this phone is still retrying on bad wifi, which is the
    * same bad wifi the outbox exists for, so the two go together more often
@@ -583,8 +583,8 @@
            (ctx.member ? ctx.member.id : 'anon');
   }
 
-  /* A draft is the one number being typed, nothing else. Top-ups live at
-   * the bank, so there is never a top-up worth drafting. */
+  /* A draft is the one number being typed, nothing else. Re-buys live at
+   * the bank, so there is never a re-buy worth drafting. */
   function saveDraft() {
     try {
       window.localStorage.setItem(draftKey(), JSON.stringify({
@@ -597,7 +597,7 @@
 
   /* Normalised on the way out, so a draft written by the old two-field
    * form (which carried a typed `rebuy`) restores its final stack and its
-   * stale top-up is dropped on the floor rather than resurrected. */
+   * stale re-buy is dropped on the floor rather than resurrected. */
   function loadDraft() {
     try {
       var raw = window.localStorage.getItem(draftKey());
@@ -685,7 +685,7 @@
     var html =
       ledgerRow('Attendance bonus', '+' + S.fmt(bonus), { plus: true }) +
       ledgerRow('Buy-in', '−' + S.fmt(buyin), { minus: true }) +
-      ledgerRow(bankMode() ? 'Top-up (bank)' : 'Top-up',
+      ledgerRow(bankMode() ? 'Re-buy (bank)' : 'Re-buy',
                 rebuy > 0 ? '−' + S.fmt(rebuy) : '0', { minus: rebuy > 0 }) +
       ledgerRow('Final stack', '+' + S.fmt(finalStack), { plus: finalStack > 0 }) +
       ledgerRow(isDefaultNight() ? 'Net for tonight' : 'Net for that round',
@@ -711,11 +711,11 @@
   var wakeLock = null;        // Screen Wake Lock sentinel, where supported
 
   /* Which way the chips move, read first and read from arm's length. Buy-in
-   * and top-up are chips leaving the bank, so the slip says GIVE. Closing is
+   * and re-buy are chips leaving the bank, so the slip says GIVE. Closing is
    * chips coming back, so it says COLLECT FROM and counts in chips back. */
-  var SLIP_KICKER    = { buyin: 'Buy-in', topup: 'Top-up', closing: 'Closing' };
-  var SLIP_DIRECTION = { buyin: 'GIVE',   topup: 'GIVE',   closing: 'COLLECT FROM' };
-  var SLIP_UNIT      = { buyin: 'chips',  topup: 'chips',  closing: 'chips back' };
+  var SLIP_KICKER    = { buyin: 'Buy-in', rebuy: 'Re-buy', closing: 'Closing' };
+  var SLIP_DIRECTION = { buyin: 'GIVE',   rebuy: 'GIVE',   closing: 'COLLECT FROM' };
+  var SLIP_UNIT      = { buyin: 'chips',  rebuy: 'chips',  closing: 'chips back' };
 
   /* Colour is faster than a word at four metres in bad light, and the words
    * carry the same information independently, so a colour-blind organiser
@@ -724,11 +724,11 @@
    * dimmed phone at 20:35. */
   var SLIP_BAND = {
     buyin:   { text: 'GIVE CHIPS OUT',  cls: 'slip__band--give' },
-    topup:   { text: 'GIVE CHIPS OUT',  cls: 'slip__band--give' },
+    rebuy:   { text: 'GIVE CHIPS OUT',  cls: 'slip__band--give' },
     closing: { text: 'TAKE CHIPS BACK', cls: 'slip__band--take' }
   };
 
-  var SLIP_AGE_VERB = { buyin: 'Checked in', topup: 'Taken at the bank', closing: 'Reported' };
+  var SLIP_AGE_VERB = { buyin: 'Checked in', rebuy: 'Taken at the bank', closing: 'Reported' };
 
   /* Date.now() minus a server timestamp, so a phone twenty minutes fast prints
    * "checked in 20 minutes ago" on a fresh slip. It is clamped so it can never
@@ -814,7 +814,7 @@
     S.show(note, true);
   }
 
-  /* opts: { kind: 'buyin' | 'topup' | 'closing', amount, note (string html-safe
+  /* opts: { kind: 'buyin' | 'rebuy' | 'closing', amount, note (string html-safe
    * parts built here), becomes (number|null), reshow (bool), issuedAt
    * (iso|null) } */
   function openSlip(opts) {
@@ -948,7 +948,7 @@
     if (back === document.body || back === document.documentElement) { back = null; }
     // Put the card that button belongs to under the nav. The receipt's own
     // headline used to sit behind the fixed nav at the exact moment it was
-    // the whole point of the screen, and the next errand after a top-up slip
+    // the whole point of the screen, and the next errand after a re-buy slip
     // was 19px below the fold.
     if (back && document.contains(back)) {
       // The escalated receipt inverts that rule. There the h1 reads "Show
@@ -1008,16 +1008,16 @@
     });
   }
 
-  function openTopupSlip(reshow) {
+  function openRebuySlip(reshow) {
     var e = ctx.entry;
-    // The guard that stops an organiser-recorded top-up from ever printing a
+    // The guard that stops an organiser-recorded re-buy from ever printing a
     // slip for chips the bank never issued.
     if (!e || !e.rebuy_at) { return; }
     var becomes = (e.rebuy_stack_before !== null && e.rebuy_stack_before !== undefined)
       ? e.rebuy_stack_before + (e.rebuy_chips || 0)
       : null;
     openSlip({
-      kind: 'topup',
+      kind: 'rebuy',
       amount: e.rebuy_chips || 0,
       becomes: becomes,
       reshow: !!reshow,
@@ -1047,7 +1047,7 @@
   }
 
   $('buyin-slip-btn').addEventListener('click', function () { openBuyinSlip(true); });
-  $('topup-reshow-btn').addEventListener('click', function () { openTopupSlip(true); });
+  $('rebuy-reshow-btn').addEventListener('click', function () { openRebuySlip(true); });
   $('closing-slip-btn').addEventListener('click', function () { openClosingSlip(true); });
   // The same slip from home. Reporting, tapping Change my report, then Not
   // yet used to land on a hub with no route back to the one artefact the
@@ -1399,7 +1399,7 @@
     $('report-buyin').textContent = S.fmt(e.buyin_chips) + ' chips';
 
     // Five-way, because "10,000 chips" alone cannot tell an allowance from a
-    // top-up already taken, and the difference is what the member walks to
+    // re-buy already taken, and the difference is what the member walks to
     // the bank on.
     var cap;
     if (bankMode()) {
@@ -1441,7 +1441,7 @@
     // organiser to count chips out goes.
     S.show($('buyin-slip-btn'), isDefaultNight());
 
-    renderTopup();
+    renderRebuy();
     renderCloseCta();
     // showState resolves the standing order on the way in. Re-rendering in
     // place has to ask for it, or the h1 keeps yesterday's instruction over
@@ -1459,7 +1459,7 @@
 
     // Prefill the one input: server row wins if already reported, else the
     // local draft, else whatever is already in the field (which is what lets
-    // "Change my report" preload the last number). A top-up, if any, is
+    // "Change my report" preload the last number). A re-buy, if any, is
     // stated by the bank card above and is never something this form fills in.
     var draft = loadDraft();
     if (e.reported) {
@@ -1721,10 +1721,10 @@
     }
   }
 
-  function enterTopup() {
-    S.show($('topup-flow'), true);   // renderTopup hid it on the way home
-    topupReset();
-    showState('state-topup');
+  function enterRebuy() {
+    S.show($('rebuy-flow'), true);   // renderRebuy hid it on the way home
+    rebuyReset();
+    showState('state-rebuy');
   }
 
   /* Only ever reached by a deliberate tap. It never touches #final-input,
@@ -1798,173 +1798,174 @@
   });
 
   /* ------------------------------------------------------------------
-   * Top-up at the bank. count your chips → rebuy_quote → pick an amount
+   * Re-buy at the bank. count your chips → rebuy_quote → pick an amount
    * → take_rebuy → slip. Every branch ends in a message or a slip;
    * nothing is ever left spinning.
    * ------------------------------------------------------------------ */
-  var topupQuote = null;   // last rebuy_quote result, while step 2 is up
+  var rebuyQuote = null;   // last rebuy_quote result, while step 2 is up
 
   /* Set the moment this page load fires its first "Take it", and never
    * cleared. On a slow connection a second tap gets away before the first
    * answer lands; take_rebuy is row-locked, so the later taps come back
-   * P0023 and route through topupAlreadyDone. That refusal is one tap
+   * P0023 and route through rebuyAlreadyDone. That refusal is one tap
    * landing twice, not somebody looking at a slip for the second time, so
    * the slip it opens is this member's FIRST slip. Clay RE-SHOW is the one
    * alarm colour on the slip and it must never point at a member who did
    * nothing but tap a laggy button, while an organiser reads it across the
    * table. A genuine re-show comes from "Show the slip again" and calls
-   * openTopupSlip(true) directly, so it still reads RE-SHOW. */
-  var topupTakenHere = false;
+   * openRebuySlip(true) directly, so it still reads RE-SHOW. */
+  var rebuyTakenHere = false;
 
-  /* The faces, and #topup-flow is the one that now lives in #state-topup:
+  /* The faces, and #rebuy-flow is the one that now lives in #state-rebuy:
    * this list spans two state divs on purpose. */
-  function topupFace(name) {
-    ['topup-open', 'topup-flow', 'topup-done', 'topup-organiser',
-     'topup-closed', 'topup-settled', 'topup-none', 'topup-over']
+  function rebuyFace(name) {
+    ['rebuy-open', 'rebuy-flow', 'rebuy-done', 'rebuy-organiser',
+     'rebuy-closed', 'rebuy-settled', 'rebuy-none', 'rebuy-over']
       .forEach(function (id) { S.show($(id), id === name); });
-    S.show($('topup-card'), !!name);
+    S.show($('rebuy-card'), !!name);
   }
 
-  /* #topup-over is the one face two branches share, and the two are not
+  /* #rebuy-over is the one face two branches share, and the two are not
    * saying the same thing. On tonight's round, once it stops being open,
    * there are chips in front of the reader and counting them is the next
    * thing to do. On a round played last Friday there are none, and "count
    * your chips" would be the stale instruction this screen keeps having to
    * take out. The tonight wording is also the markup's pre-render default in
    * report.html: change both or neither. */
-  var TOPUP_OVER_TONIGHT = 'The round is over, so the bank has stopped ' +
-    'issuing top-ups. Reporting is still open: count your chips and close ' +
+  var REBUY_OVER_TONIGHT = 'The round is over, so the bank has stopped ' +
+    'issuing re-buys. Reporting is still open: count your chips and close ' +
     'the round below.';
-  var TOPUP_OVER_OLDER = 'That round is over, so the bank packed up with it. ' +
+  var REBUY_OVER_OLDER = 'That round is over, so the bank packed up with it. ' +
     'Reporting for it is still open: send the total you finished it with.';
 
-  function renderTopup() {
+  function renderRebuy() {
     var e = ctx.entry;
-    if (!e) { topupFace(null); return; }
+    if (!e) { rebuyFace(null); return; }
     if (e.rebuy_at) {
       // The bank issued it: a quiet record, and the slip on demand.
-      $('topup-done-amount').textContent = S.fmt(recordedRebuy());
+      $('rebuy-done-amount').textContent = S.fmt(recordedRebuy());
       var t = new Date(e.rebuy_at);
-      $('topup-done-time').textContent = isNaN(t) ? '…' : osloClock(t, false);
-      topupFace('topup-done');
+      $('rebuy-done-time').textContent = isNaN(t) ? '…' : osloClock(t, false);
+      rebuyFace('rebuy-done');
     } else if (organiserRebuy()) {
       // Recorded by hand. No slip to show, and no second helping: offering
       // the bank here would let take_rebuy overwrite the organiser's number.
-      $('topup-organiser-amount').textContent = S.fmt(recordedRebuy());
-      topupFace('topup-organiser');
+      $('rebuy-organiser-amount').textContent = S.fmt(recordedRebuy());
+      rebuyFace('rebuy-organiser');
     } else if (nightSettled()) {
-      // A settled night used to fall through to #topup-over, whose copy says
+      // A settled night used to fall through to #rebuy-over, whose copy says
       // "Reporting is still open", which is the one thing it is not. It does
-      // NOT get #topup-closed either: take_rebuy shuts the bank at status
+      // NOT get #rebuy-closed either: take_rebuy shuts the bank at status
       // <> 'open', which is close_reporting, so on a settled night the bank
       // shut BEFORE reporting did and that card's first clause would be
       // backwards. Its own face, saying the true thing.
-      topupFace('topup-settled');
+      rebuyFace('rebuy-settled');
     } else if (reportingClosed()) {
       // A hand-set deadline has passed. Asked BEFORE the open-night branch,
       // because the night status can still read 'open' past it and the offer
       // would come back with it. Withdrawing the offer here is a club choice,
       // not the server's: take_rebuy has no deadline guard, so the copy on
-      // #topup-closed states the club's position and not the server's. The
+      // #rebuy-closed states the club's position and not the server's. The
       // card says why it is gone: a member who watched a button disappear
       // goes hunting for it, which is the ambiguity this screen exists to
       // remove.
-      topupFace('topup-closed');
+      rebuyFace('rebuy-closed');
     } else if (!isDefaultNight()) {
       // An older night, in either status it can still be reached in.
       // take_rebuy tests the STATUS and nothing else, so on one still reading
       // 'open' the bank would really issue chips against a round that
-      // finished days ago: a member on last week's hub taps Top up, walks to
+      // finished days ago: a member on last week's hub taps Re-buy, walks to
       // the bank, and an organiser counts out chips for a round that is over.
       // Asked BEFORE the status branch for exactly the reason the
       // reportingClosed() branch above is. Withdrawing the offer is the
       // club's position, not the server's.
-      $('topup-over-text').textContent = TOPUP_OVER_OLDER;
-      topupFace('topup-over');
+      $('rebuy-over-text').textContent = REBUY_OVER_OLDER;
+      rebuyFace('rebuy-over');
     } else if (ctx.night && ctx.night.status === 'open') {
       // No allowance: the season points are all in play, so there is no offer
       // to make and never was tonight. The card used to vanish outright,
       // which left a 1-2-3 list reading 1, 3, with a two word status row four
       // lines up as the only trace. Same treatment as the closed bank: say
       // which reason it was.
-      if (!e.rebuy_cap_chips) { topupFace('topup-none'); return; }
-      topupFace('topup-open');
+      if (!e.rebuy_cap_chips) { rebuyFace('rebuy-none'); return; }
+      rebuyFace('rebuy-open');
     } else {
       // TONIGHT's night, reconciling or beyond: the bank has packed up, while
       // reporting is still running. It gets its own face for the same reason.
       // The text is restated rather than left to the markup, because the
       // branch above shares this face and writes different words into it.
-      $('topup-over-text').textContent = TOPUP_OVER_TONIGHT;
-      topupFace('topup-over');
+      $('rebuy-over-text').textContent = REBUY_OVER_TONIGHT;
+      rebuyFace('rebuy-over');
     }
   }
 
-  function topupReset() {
-    topupQuote = null;
-    S.show($('topup-step-count'), true);
-    S.show($('topup-step-quote'), false);
-    msg($('topup-msg'), '', '');
+  function rebuyReset() {
+    rebuyQuote = null;
+    S.show($('rebuy-step-count'), true);
+    S.show($('rebuy-step-quote'), false);
+    msg($('rebuy-msg'), '', '');
   }
 
-  /* The bank flow said "already topped up" (this phone raced its own second
-   * tap, or an organiser entered it). The recorded row is the truth: fetch
-   * it, re-render, and open its slip. Marked RE-SHOW only when the top-up on
-   * record was not this page load's own doing. */
-  function topupAlreadyDone() {
+  /* The bank flow refused with P0023: a re-buy is already on record (this
+   * phone raced its own second tap, or an organiser entered it). The
+   * recorded row is the truth: fetch it, re-render, and open its slip.
+   * Marked RE-SHOW only when the re-buy on record was not this page
+   * load's own doing. */
+  function rebuyAlreadyDone() {
     return S.myEntry(ctx.night.id, ctx.member.id).then(function (row) {
       if (row) { ctx.entry = row; }
       enterReport();
-      if (bankMode()) { openTopupSlip(!topupTakenHere); }
+      if (bankMode()) { openRebuySlip(!rebuyTakenHere); }
     }).catch(function () {
-      msg($('topup-msg'),
-          'A top-up is already recorded for you tonight. Reload to see it, or ask an organiser.',
+      msg($('rebuy-msg'),
+          'A re-buy is already recorded for you tonight. Reload to see it, or ask an organiser.',
           'error');
     });
   }
 
-  function topupError(err) {
+  function rebuyError(err) {
     var code = err && err.code;
-    if (code === 'P0023') { return topupAlreadyDone(); }
+    if (code === 'P0023') { return rebuyAlreadyDone(); }
     var text;
     if (code === 'P0022') {
       text = 'You are not checked in to tonight\'s round. Check in first.';
     } else if (code === 'P0001') {
-      // The flow stays on screen ON PURPOSE: #topup-msg lives inside
-      // #topup-flow, and renderTopup() here would hide the flow and the
+      // The flow stays on screen ON PURPOSE: #rebuy-msg lives inside
+      // #rebuy-flow, and renderRebuy() here would hide the flow and the
       // explanation with it. The offer disappears on the next reload.
       text = 'The night is no longer open, so the bank is closed. An organiser can still help.';
     } else if (code === 'P0024') {
-      text = 'No top-up is available: nothing fits between your stack and tonight\'s ceiling.';
+      text = 'No re-buy is available: nothing fits between your stack and tonight\'s ceiling.';
     } else if (code === 'P0025') {
       text = S.friendlyError(err) + ' Go back and check the chip count.';
     } else {
       text = S.friendlyError(err);
     }
-    msg($('topup-msg'), text, 'error');
+    msg($('rebuy-msg'), text, 'error');
     return Promise.resolve();
   }
 
-  $('topup-start-btn').addEventListener('click', function () { enterTopup(); });
+  $('rebuy-start-btn').addEventListener('click', function () { enterRebuy(); });
 
-  $('topup-cancel-btn').addEventListener('click', function () {
-    topupReset();
+  $('rebuy-cancel-btn').addEventListener('click', function () {
+    rebuyReset();
     enterReport();
   });
 
-  $('topup-stack-input').addEventListener('input', function () {
-    msg($('topup-msg'), '', '');
+  $('rebuy-stack-input').addEventListener('input', function () {
+    msg($('rebuy-msg'), '', '');
   });
 
-  $('topup-quote-btn').addEventListener('click', function () {
-    var stack = S.parseChips($('topup-stack-input').value);
+  $('rebuy-quote-btn').addEventListener('click', function () {
+    var stack = S.parseChips($('rebuy-stack-input').value);
     if (stack === null) {
-      msg($('topup-msg'), 'Count the chips in front of you and type the total. 0 counts.', 'error');
-      goToStep($('topup-step-count'), $('topup-stack-input'));
+      msg($('rebuy-msg'), 'Count the chips in front of you and type the total. 0 counts.', 'error');
+      goToStep($('rebuy-step-count'), $('rebuy-stack-input'));
       return;
     }
-    var btn = $('topup-quote-btn');
+    var btn = $('rebuy-quote-btn');
     btn.setAttribute('aria-busy', 'true');
-    msg($('topup-msg'), '', '');
+    msg($('rebuy-msg'), '', '');
     S.client().rpc('rebuy_quote', { p_night_id: ctx.night.id, p_current_stack: stack })
       .then(function (r) {
         if (r.error) { throw r.error; }
@@ -1972,29 +1973,29 @@
         if (!q || !q.eligible) {
           var reason = q && q.reason;
           if (reason === 'holding_full_stack') {
-            msg($('topup-msg'),
+            msg($('rebuy-msg'),
                 'You are holding tonight\'s full stack (' + S.fmt(q.stack_size) +
-                '), so there is nothing to top up.', 'error');
+                '), so there is no re-buy to take.', 'error');
           } else if (reason === 'no_points_left') {
-            msg($('topup-msg'),
-                'Your season points are spent, so there is no top-up left tonight. You still play what you hold.',
+            msg($('rebuy-msg'),
+                'Your season points are spent, so there is no re-buy left tonight. You still play what you hold.',
                 'error');
           } else {
-            msg($('topup-msg'), 'No top-up is available right now.', 'error');
+            msg($('rebuy-msg'), 'No re-buy is available right now.', 'error');
           }
           return;
         }
-        topupQuote = q;
-        $('topup-max-line').innerHTML = 'You can take up to <span class="mono">' +
+        rebuyQuote = q;
+        $('rebuy-max-line').innerHTML = 'You can take up to <span class="mono">' +
           S.escapeHtml(S.fmt(q.max_topup)) + '</span>.';
-        $('topup-amount-input').value = String(q.max_topup);
-        topupBecomes();
-        S.show($('topup-step-count'), false);
-        S.show($('topup-step-quote'), true);
+        $('rebuy-amount-input').value = String(q.max_topup);
+        rebuyBecomes();
+        S.show($('rebuy-step-count'), false);
+        S.show($('rebuy-step-quote'), true);
         // A step change inside one state, so the order line is set here and
         // not by showState.
         setOrder('Choose how much to take.',
-                 'One top-up per night, points for chips 1:1, up to tonight\'s stack.');
+                 'One re-buy per night, points for chips 1:1, up to tonight\'s stack.');
         // The quote step goes under the nav and the step is announced from
         // the field it is about: "Chips to take (edit to take less), edit
         // text, 4000". Until now this step change moved neither scroll nor
@@ -2006,80 +2007,80 @@
         // focus ring was being painted off the top of the screen. The two
         // other ways into this step, a bad amount and the back button, land
         // on this same field, so the step now has one landing place.
-        goToStep($('topup-step-quote'), $('topup-amount-input'));
+        goToStep($('rebuy-step-quote'), $('rebuy-amount-input'));
       })
-      .catch(topupError)
+      .catch(rebuyError)
       .finally(function () { btn.removeAttribute('aria-busy'); });
   });
 
-  function topupBecomes() {
-    var el = $('topup-becomes');
-    if (!topupQuote) { el.textContent = ''; return; }
-    var amount = S.parseChips($('topup-amount-input').value);
+  function rebuyBecomes() {
+    var el = $('rebuy-becomes');
+    if (!rebuyQuote) { el.textContent = ''; return; }
+    var amount = S.parseChips($('rebuy-amount-input').value);
     if (amount === null || amount <= 0) {
       el.textContent = 'Type how many chips to take.';
       return;
     }
-    if (amount > topupQuote.max_topup) {
+    if (amount > rebuyQuote.max_topup) {
       el.textContent = 'That is over the ceiling: the most you can take is ' +
-        S.fmt(topupQuote.max_topup) + '.';
+        S.fmt(rebuyQuote.max_topup) + '.';
       return;
     }
     el.innerHTML = 'Your stack becomes <span class="mono">' +
-      S.escapeHtml(S.fmt(topupQuote.current_stack + amount)) + '</span>.';
+      S.escapeHtml(S.fmt(rebuyQuote.current_stack + amount)) + '</span>.';
   }
 
-  $('topup-amount-input').addEventListener('input', function () {
-    msg($('topup-msg'), '', '');
-    topupBecomes();
+  $('rebuy-amount-input').addEventListener('input', function () {
+    msg($('rebuy-msg'), '', '');
+    rebuyBecomes();
   });
 
-  $('topup-back-btn').addEventListener('click', function () {
-    topupReset();
-    setOrder(ORDER_DEFAULTS['state-topup'].order, ORDER_DEFAULTS['state-topup'].sub);
-    goToStep($('topup-step-count'), $('topup-stack-input'));
+  $('rebuy-back-btn').addEventListener('click', function () {
+    rebuyReset();
+    setOrder(ORDER_DEFAULTS['state-rebuy'].order, ORDER_DEFAULTS['state-rebuy'].sub);
+    goToStep($('rebuy-step-count'), $('rebuy-stack-input'));
   });
 
-  $('topup-confirm-btn').addEventListener('click', function () {
-    if (!topupQuote) { return; }
-    var amount = S.parseChips($('topup-amount-input').value);
+  $('rebuy-confirm-btn').addEventListener('click', function () {
+    if (!rebuyQuote) { return; }
+    var amount = S.parseChips($('rebuy-amount-input').value);
     if (amount === null || amount <= 0) {
-      msg($('topup-msg'), 'Type how many chips to take, 1 or more.', 'error');
-      goToStep($('topup-step-quote'), $('topup-amount-input'));
+      msg($('rebuy-msg'), 'Type how many chips to take, 1 or more.', 'error');
+      goToStep($('rebuy-step-quote'), $('rebuy-amount-input'));
       return;
     }
-    if (amount > topupQuote.max_topup) {
-      msg($('topup-msg'), 'The most you can take is ' + S.fmt(topupQuote.max_topup) +
+    if (amount > rebuyQuote.max_topup) {
+      msg($('rebuy-msg'), 'The most you can take is ' + S.fmt(rebuyQuote.max_topup) +
           '. Lower the amount.', 'error');
-      goToStep($('topup-step-quote'), $('topup-amount-input'));
+      goToStep($('rebuy-step-quote'), $('rebuy-amount-input'));
       return;
     }
-    var btn = $('topup-confirm-btn');
+    var btn = $('rebuy-confirm-btn');
     btn.setAttribute('aria-busy', 'true');
-    msg($('topup-msg'), '', '');
+    msg($('rebuy-msg'), '', '');
     // From here on a P0023 belongs to this tap, not to a slip already seen.
-    topupTakenHere = true;
+    rebuyTakenHere = true;
     // take_rebuy is row-locked server-side: a double tap cannot issue two.
     // p_current_stack is the server's own echo from the quote, never the live
     // field, so editing the count after quoting cannot slip past the ceiling.
     S.client().rpc('take_rebuy', {
       p_night_id: ctx.night.id,
-      p_current_stack: topupQuote.current_stack,
+      p_current_stack: rebuyQuote.current_stack,
       p_amount: amount
     })
       .then(function (r) {
         if (r.error) { throw r.error; }
         ctx.entry = Array.isArray(r.data) ? r.data[0] : r.data;
-        topupReset();
-        S.show($('topup-flow'), false);
-        // Quiet: the top-up slip takes the screen on the next line.
+        rebuyReset();
+        S.show($('rebuy-flow'), false);
+        // Quiet: the re-buy slip takes the screen on the next line.
         enterReport(true);  // re-reads the draft, restates the bank fact
         // This is where the reader is put down when the slip is dismissed,
         // so it is not a dead call. dismissSlip does the placing.
-        $('topup-reshow-btn').focus({ preventScroll: true });
-        openTopupSlip(false);
+        $('rebuy-reshow-btn').focus({ preventScroll: true });
+        openRebuySlip(false);
       })
-      .catch(topupError)
+      .catch(rebuyError)
       .finally(function () { btn.removeAttribute('aria-busy'); });
   });
 
@@ -2111,7 +2112,7 @@
       return;
     }
 
-    // The top-up on record, sent back unchanged. No member ever types this
+    // The re-buy on record, sent back unchanged. No member ever types this
     // number, so it cannot disagree with the slip. Sending a bare 0 instead
     // would be silent destruction: report_entry keeps the bank's number
     // (rebuy_at set) but happily overwrites an organiser's (rebuy_at null).
@@ -2195,10 +2196,10 @@
   /* ---------------- receipt + organiser card ---------------- */
 
   /* The final stack is this phone's number, so a queued job (not yet sent)
-   * is the freshest version of it. The top-up never is: it belongs to the
+   * is the freshest version of it. The re-buy never is: it belongs to the
    * server, and a job can be older than the record, which is how a phone
    * that reported before its owner reached the bank ends up printing a
-   * confident "Top-up (bank) 0" on a receipt. The record always wins. */
+   * confident "Re-buy (bank) 0" on a receipt. The record always wins. */
   function reportedNumbers() {
     var job = myJob();
     if (job) {
@@ -2325,7 +2326,7 @@
         '<div><span class="organiser-payload__label">Night</span>' +
           S.escapeHtml((ctx.night.title || 'Night ' + ctx.night.night_no) +
             ' · ' + ctx.night.played_on) + '</div>' +
-        '<div><span class="organiser-payload__label">Top-up (chips)</span>' +
+        '<div><span class="organiser-payload__label">Re-buy (chips)</span>' +
           S.fmt(nums.rebuy) + '</div>' +
         '<div><span class="organiser-payload__label">Final stack (chips)</span>' +
           S.fmt(nums.final) + '</div>';
@@ -2447,7 +2448,7 @@
     // "Tonight is settled" is false about a night played a week ago, and this
     // screen is reachable for one: refreshCtx settles the night under a
     // member who switched to it. showState has just written the default
-    // order, so this overwrites it, the way the top-up quote step does.
+    // order, so this overwrites it, the way the re-buy quote step does.
     if (isDefaultNight()) {
       $('settled-title').textContent = 'Tonight is settled';
     } else {
@@ -2457,8 +2458,8 @@
   }
 
   /* ------------------------------------------------------------------
-   * Boot. It never lands on state-topup or state-close: both are reachable
-   * only by a deliberate tap, so a reload mid top-up discards a quote that
+   * Boot. It never lands on state-rebuy or state-close: both are reachable
+   * only by a deliberate tap, so a reload mid re-buy discards a quote that
    * was stale the moment the page went away, and a reload mid count returns
    * to the hub with the draft already in the field and the note saying so.
    * ------------------------------------------------------------------ */
@@ -2495,7 +2496,7 @@
         // NEVER re-render these two: a member typing a chip count must not
         // have the screen move under their thumb, and enterClose would re-run
         // the draft precedence over what they are typing.
-        if (!$('state-close').hidden || !$('state-topup').hidden) {
+        if (!$('state-close').hidden || !$('state-rebuy').hidden) {
           nightBanner();
           // #close-intro and #deadline-line are statements of fact, and
           // #review-btn is a route to a send, so all three follow the server.
@@ -2632,7 +2633,7 @@
     });
   }
 
-  /* Screens the card must never appear on. state-close and state-topup carry
+  /* Screens the card must never appear on. state-close and state-rebuy carry
    * exactly one instruction each and are the two screens refreshCtx already
    * refuses to disturb, because a thumb is mid count on them.
    *
@@ -2641,7 +2642,7 @@
    * will carry it, and the symptom is two things stacked on a phone at 20:30
    * with nothing in the console. */
   var CARD_HIDE_ON = ['state-config', 'state-loading', 'state-nopseudonym',
-                      'state-close', 'state-topup'];
+                      'state-close', 'state-rebuy'];
 
   /* The sentence under the card's title. It leads with the points, because
    * that is what the reminder mail led with and it is the whole reason this
@@ -2835,7 +2836,7 @@
   function resetNightState() {
     lastReported = null;
     reviewed = null;
-    topupQuote = null;
+    rebuyQuote = null;
     hubSig = null;
     syncSig = null;
     // The 30 second throttle belongs to the night being left.
@@ -2848,7 +2849,7 @@
     $('code-input').value = '';
     msg($('final-msg'), '', '');
     msg($('checkin-msg'), '', '');
-    msg($('topup-msg'), '', '');
+    msg($('rebuy-msg'), '', '');
     S.show($('review-panel'), false);
     S.show($('report-form'), true);
     // showState places and announces only on a REAL change, and a switch can
@@ -2893,7 +2894,7 @@
   function switchNight(n, entry) {
     if (!n) { return; }
     if (!$('slip').hidden) { return; }
-    if (!$('state-close').hidden || !$('state-topup').hidden) { return; }
+    if (!$('state-close').hidden || !$('state-rebuy').hidden) { return; }
     // Leaving tonight: keep the freshest entry we have for it, because that
     // is what the way back will be entered with.
     if (isDefaultNight() && ctx.night) { defaultEntry = ctx.entry; }

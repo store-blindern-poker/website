@@ -237,7 +237,7 @@
              every phone stops retrying with nothing on screen to show it.
 
              Hierarchy, top to bottom: a quiet status card (mono figures, no
-             heading weight), the bank card while the bank is open or a top-up
+             heading weight), the bank card while the bank is open or a re-buy
              is on record, then the way out. No brass at all while the night is
              open: a member who has checked in is playing, and this screen must
              not push them toward the exit. -->
@@ -247,21 +247,21 @@
             <dl class="kv" style="margin: 0;">
               <dt>Attendance bonus</dt><dd id="report-bonus">…</dd>
               <dt>Buy-in booked</dt><dd id="report-buyin">…</dd>
-              <dt>Top-up</dt><dd id="report-cap">…</dd>
+              <dt>Re-buy</dt><dd id="report-cap">…</dd>
               <dt>Reported</dt><dd id="report-reported">…</dd>
             </dl>
             <button class="btn btn--secondary btn--block" id="buyin-slip-btn"
                     type="button" style="margin-top: var(--space-md);">Show my buy-in slip</button>
           </div>
 
-          <!-- Bank top-up. Seven faces live here, one visible at a time:
-               #topup-open       the offer, while the night is open and no top-up
-               #topup-done       the bank's own record + the slip again
-               #topup-organiser  a top-up an organiser recorded by hand
-               #topup-closed     a hand-set closing time has passed
-               #topup-settled    the organisers have settled the night
-               #topup-none       no allowance left, so there is nothing to offer
-               #topup-over       the round is over, so the bank has packed up
+          <!-- Bank re-buy. Seven faces live here, one visible at a time:
+               #rebuy-open       the offer, while the night is open and no re-buy
+               #rebuy-done       the bank's own record + the slip again
+               #rebuy-organiser  a re-buy an organiser recorded by hand
+               #rebuy-closed     a hand-set closing time has passed
+               #rebuy-settled    the organisers have settled the night
+               #rebuy-none       no allowance left, so there is nothing to offer
+               #rebuy-over       the round is over, so the bank has packed up
 
                Step 2 must never simply VANISH out of a 1-2-3 list. Every
                reason the offer is gone gets a face saying which reason it
@@ -269,40 +269,42 @@
                hunting for it, and the hunt happens at the bank with a queue
                behind them.
 
-               The eighth face, #topup-flow, now lives in #state-topup below,
-               so topupFace()'s hardcoded id list spans two state divs.
-               enterTopup() re-shows the flow on purpose and renderTopup()
+               The eighth face, #rebuy-flow, now lives in #state-rebuy below,
+               so rebuyFace()'s hardcoded id list spans two state divs.
+               enterRebuy() re-shows the flow on purpose and renderRebuy()
                hides it again on the way home. -->
-          <div class="card step-anchor" id="topup-card" hidden style="margin-bottom: var(--space-lg);">
-            <div id="topup-open" hidden>
-              <div class="section__label">2 · The top-up</div>
+          <div class="card step-anchor" id="rebuy-card" hidden style="margin-bottom: var(--space-lg);">
+            <div id="rebuy-open" hidden>
+              <div class="section__label">2 · The re-buy</div>
               <!-- The break time also lives in BREAK_TIME_TEXT in
                    js/report.js. Change both or neither. It is guidance, never
                    a gate: nothing here compares it to a clock and no copy
                    anywhere says early, late, missed or closed. -->
               <p class="card__text" style="margin-bottom: var(--space-md);">
-                One top-up per night, points for chips <span class="mono">1:1</span>,
+                One re-buy per night, points for chips <span class="mono">1:1</span>,
                 and it can only bring you back to tonight's stack. Most people
                 take it at the first break, around <span class="mono">19:15</span>,
-                when everybody is at the bank anyway. The bank is open now.
+                when everybody is at the bank anyway. The bank is open now. Tap below
+                and show the slip when you collect: chips only leave the
+                bank against a slip.
               </p>
-              <button class="btn btn--secondary btn--block" id="topup-start-btn" type="button">Top up at the bank</button>
+              <button class="btn btn--secondary btn--block" id="rebuy-start-btn" type="button">Re-buy at the bank</button>
             </div>
 
-            <div id="topup-done" hidden>
-              <div class="section__label">2 · Top-up done</div>
-              <p class="topup-done">
-                Topped up at the bank: <span class="mono" id="topup-done-amount">…</span> chips
-                at <span class="mono" id="topup-done-time">…</span>.
-                <button class="link-gold" id="topup-reshow-btn" type="button">Show the slip again</button>
+            <div id="rebuy-done" hidden>
+              <div class="section__label">2 · Re-buy done</div>
+              <p class="rebuy-done">
+                Re-buy taken at the bank: <span class="mono" id="rebuy-done-amount">…</span> chips
+                at <span class="mono" id="rebuy-done-time">…</span>.
+                <button class="link-gold" id="rebuy-reshow-btn" type="button">Show the slip again</button>
               </p>
             </div>
 
-            <div id="topup-organiser" hidden>
-              <div class="section__label">2 · Top-up done</div>
-              <p class="topup-done">
-                Top-up recorded by an organiser:
-                <span class="mono" id="topup-organiser-amount">…</span> chips.
+            <div id="rebuy-organiser" hidden>
+              <div class="section__label">2 · Re-buy done</div>
+              <p class="rebuy-done">
+                Re-buy recorded by an organiser:
+                <span class="mono" id="rebuy-organiser-amount">…</span> chips.
                 Chips crossed the table without the app, so there is no slip
                 for this one. If the number is wrong, tell an organiser.
               </p>
@@ -317,30 +319,30 @@
                  not put words in the server's mouth. The face is here so the
                  step does not simply vanish: a member who watched a button
                  disappear goes hunting for it. The night status can still
-                 read 'open' past a hand-set time, which is why renderTopup()
+                 read 'open' past a hand-set time, which is why renderRebuy()
                  asks reportingClosed() before it asks the status. -->
-            <div id="topup-closed" hidden>
+            <div id="rebuy-closed" hidden>
               <div class="section__label">2 · The bank has shut</div>
-              <p class="topup-done">
-                Reporting has closed for tonight, so there is no top-up to
+              <p class="rebuy-done">
+                Reporting has closed for tonight, so there is no re-buy to
                 take now. An organiser can still sort out anything that is
                 wrong.
               </p>
             </div>
 
             <!-- The organisers have settled the night. Its own face rather
-                 than #topup-closed, because on a settled night the bank shut
+                 than #rebuy-closed, because on a settled night the bank shut
                  BEFORE reporting did: take_rebuy refuses any status other
                  than 'open', so close_reporting is what shut it, and
-                 #topup-closed's copy, which gives reporting closing as the
+                 #rebuy-closed's copy, which gives reporting closing as the
                  reason the bank is shut, would have the order backwards here.
                  Reached from the hub after a member taps "Not yet, back to
                  tonight" on a close screen that settled under them. -->
-            <div id="topup-settled" hidden>
+            <div id="rebuy-settled" hidden>
               <div class="section__label">2 · The night is settled</div>
-              <p class="topup-done">
+              <p class="rebuy-done">
                 The night has been settled, so the bank has shut and there is
-                no top-up to take. If something in your numbers is wrong, tell
+                no re-buy to take. If something in your numbers is wrong, tell
                 an organiser: a settled night can be corrected and settled
                 again.
               </p>
@@ -351,11 +353,11 @@
                  tonight. The status strip above states the same fact in two
                  words; this is the step saying it in a sentence instead of
                  leaving a hole between 1 and 3. -->
-            <div id="topup-none" hidden>
-              <div class="section__label">2 · No top-up tonight</div>
-              <p class="topup-done">
+            <div id="rebuy-none" hidden>
+              <div class="section__label">2 · No re-buy tonight</div>
+              <p class="rebuy-done">
                 Your season points are all in play already, so there is no
-                top-up allowance left for tonight. Nothing is wrong: play the
+                re-buy allowance left for tonight. Nothing is wrong: play the
                 stack you have. An organiser can talk it through if this looks
                 off.
               </p>
@@ -364,18 +366,18 @@
             <!-- The night has moved off 'open' and the bank has packed up,
                  while reporting is still running. This is the normal end of a
                  night now that reports_close_at is NULL by default. Distinct
-                 from #topup-closed, which is a hand-set closing time, from
-                 #topup-settled, which is the settle, and from #topup-none,
+                 from #rebuy-closed, which is a hand-set closing time, from
+                 #rebuy-settled, which is the settle, and from #rebuy-none,
                  which is the allowance. -->
-            <!-- Two branches of renderTopup() share this face and they need
+            <!-- Two branches of renderRebuy() share this face and they need
                  different words, so the paragraph carries an id and both
                  branches write it. This is the wording for TONIGHT's round
                  once it stops being open, and it is duplicated as
-                 TOPUP_OVER_TONIGHT in js/report.js: change both or neither. -->
-            <div id="topup-over" hidden>
+                 REBUY_OVER_TONIGHT in js/report.js: change both or neither. -->
+            <div id="rebuy-over" hidden>
               <div class="section__label">2 · The bank has packed up</div>
-              <p class="topup-done" id="topup-over-text">
-                The round is over, so the bank has stopped issuing top-ups.
+              <p class="rebuy-done" id="rebuy-over-text">
+                The round is over, so the bank has stopped issuing re-buys.
                 Reporting is still open: count your chips and close the round
                 below.
               </p>
@@ -411,30 +413,30 @@
           </div>
         </div>
 
-        <!-- STATE: the top-up, moved out of the hub so its brass primary is
-             the only brass on the screen. #topup-msg must stay INSIDE
-             #topup-flow and OUTSIDE both step divs: topupReset() swaps the two
-             steps without touching the message, and topupError's P0001 branch
+        <!-- STATE: the re-buy, moved out of the hub so its brass primary is
+             the only brass on the screen. #rebuy-msg must stay INSIDE
+             #rebuy-flow and OUTSIDE both step divs: rebuyReset() swaps the two
+             steps without touching the message, and rebuyError's P0001 branch
              leaves the flow up on purpose so the explanation survives. -->
-        <div id="state-topup" hidden>
+        <div id="state-rebuy" hidden>
           <div class="card">
-            <div class="section__label">2 · The top-up</div>
-            <h2 class="card__title">Top up at the bank</h2>
+            <div class="section__label">2 · The re-buy</div>
+            <h2 class="card__title">Re-buy at the bank</h2>
             <p class="card__text" style="margin-bottom: var(--space-md);">
               Count what is in front of you, then take what you want. One
-              top-up per night.
+              re-buy per night.
             </p>
 
-            <div id="topup-flow" hidden>
-              <div id="topup-step-count" class="step-anchor">
+            <div id="rebuy-flow" hidden>
+              <div id="rebuy-step-count" class="step-anchor">
                 <div class="field" style="margin-bottom: var(--space-sm);">
-                  <label class="label" for="topup-stack-input">Chips in front of you right now</label>
-                  <input class="input input--numeric" id="topup-stack-input" type="text"
+                  <label class="label" for="rebuy-stack-input">Chips in front of you right now</label>
+                  <input class="input input--numeric" id="rebuy-stack-input" type="text"
                          inputmode="numeric" pattern="[0-9]*" autocomplete="off"
                          placeholder="e.g. 3 200">
                 </div>
-                <button class="btn btn--primary btn--block btn--lg" id="topup-quote-btn" type="button">See what I can take</button>
-                <button class="btn btn--ghost btn--block" id="topup-cancel-btn" type="button"
+                <button class="btn btn--primary btn--block btn--lg" id="rebuy-quote-btn" type="button">See what I can take</button>
+                <button class="btn btn--ghost btn--block" id="rebuy-cancel-btn" type="button"
                         style="margin-top: var(--space-sm);">Never mind</button>
                 <p class="help">
                   Next: we show your ceiling, then you choose. Nothing is taken
@@ -442,14 +444,14 @@
                 </p>
               </div>
 
-              <div id="topup-step-quote" class="step-anchor" hidden>
-                <p class="topup-quote" id="topup-max-line">…</p>
+              <div id="rebuy-step-quote" class="step-anchor" hidden>
+                <p class="rebuy-quote" id="rebuy-max-line">…</p>
                 <div class="field" style="margin-bottom: var(--space-sm);">
-                  <label class="label" for="topup-amount-input">Chips to take (edit to take less)</label>
-                  <input class="input input--numeric" id="topup-amount-input" type="text"
+                  <label class="label" for="rebuy-amount-input">Chips to take (edit to take less)</label>
+                  <input class="input input--numeric" id="rebuy-amount-input" type="text"
                          inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                 </div>
-                <p class="help" id="topup-becomes" style="margin-bottom: var(--space-md);"></p>
+                <p class="help" id="rebuy-becomes" style="margin-bottom: var(--space-md);"></p>
                 <!-- take_rebuy has already written the row by the time the
                      slip appears, so the club's record is safe. The CHIPS
                      have not moved: nobody at the bank counts anything out
@@ -458,21 +460,21 @@
                      database flag, and not one of the words early, late,
                      missed or closed. It must stay ONE line at 390px, or it
                      pushes the primary off the fold. -->
-                <p class="help not-done" id="topup-not-done" style="margin-bottom: var(--space-md);">Not done until the slip is on screen.</p>
-                <button class="btn btn--primary btn--block btn--lg" id="topup-confirm-btn" type="button">Take it: show the slip</button>
-                <button class="btn btn--ghost btn--block" id="topup-back-btn" type="button"
+                <p class="help not-done" id="rebuy-not-done" style="margin-bottom: var(--space-md);">Not done until the slip is on screen.</p>
+                <button class="btn btn--primary btn--block btn--lg" id="rebuy-confirm-btn" type="button">Take it: show the slip</button>
+                <button class="btn btn--ghost btn--block" id="rebuy-back-btn" type="button"
                         style="margin-top: var(--space-sm);">Back to the chip count</button>
                 <p class="help">
-                  Next: a top-up slip. The bank counts your chips out from it.
+                  Next: a re-buy slip. The bank counts your chips out from it.
                 </p>
               </div>
 
-              <p class="form-msg" id="topup-msg" role="status" aria-live="polite"></p>
+              <p class="form-msg" id="rebuy-msg" role="status" aria-live="polite"></p>
             </div>
           </div>
         </div>
 
-        <!-- STATE: closing the round. ONE input. The buy-in and any top-up
+        <!-- STATE: closing the round. ONE input. The buy-in and any re-buy
              were recorded when they happened, against a slip, so the only
              thing left to ask for is the number nobody else can know: what is
              in front of you.
@@ -503,7 +505,7 @@
               <h2 class="card__title" id="final-card-title" tabindex="-1">Your final chip stack</h2>
               <p class="card__text" style="margin-bottom: var(--space-md);">
                 Count everything in front of you and type the total. That is the
-                only number we need: your buy-in and any top-up are already on
+                only number we need: your buy-in and any re-buy are already on
                 record.
               </p>
               <div class="field" style="margin-bottom: var(--space-sm);">
@@ -650,7 +652,7 @@
         </div>
 
         <p class="help" style="margin-top: var(--space-xl); text-align: center;">
-          How the points work (buy-ins, top-ups, the bonus) is on the
+          How the points work (buy-ins, re-buys, the bonus) is on the
           <a class="link-gold" href="rules.html">rules page</a>. If anything
           here misbehaves, the paper sheet on your table is always enough.
         </p>
@@ -694,7 +696,7 @@
        case: the organiser reads ONE number and counts chips. The live clock
        is the freshness proof; a screenshot's clock stands still.
 
-       Three kinds, one grammar. Buy-in and top-up are chips leaving the bank,
+       Three kinds, one grammar. Buy-in and re-buy are chips leaving the bank,
        so the give line reads GIVE and the unit is "chips". Closing is chips
        coming back, so it reads COLLECT FROM and the unit is "chips back". The
        kicker, the verb and the unit all agree, because handing chips out to
