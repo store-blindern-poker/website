@@ -103,6 +103,13 @@
     'rsvp.none': 'Ingen har svart ennå.',
     'rsvp.you': 'deg',
     'rsvp.signin': 'Logg inn for å svare',
+
+    /* A path, not a sentence. login.html is at the site root, so a page in
+     * /no/ climbs out to reach it, and ?next= names the Norwegian events
+     * page so signing in comes back here. Both spellings are allowlisted in
+     * safeNextPage. */
+    'rsvp.login.href': '../login.html?next=no/events.html',
+
     'rsvp.claim': 'Velg et pseudonym for å svare',
     'rsvp.checking': 'Sjekker kontoen din.',
     'rsvp.hint.tap': 'Ett trykk. Du kan endre det senere.',
