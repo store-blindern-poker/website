@@ -1,0 +1,35 @@
+# Line endings.
+#
+# Every text file in this repository is stored with LF endings, and that is
+# already true of every file committed so far. Without this file, whether you
+# get LF or CRLF in your working copy depends on your own core.autocrlf, which
+# is why the same checkout here currently holds LF HTML next to CRLF CSS, and
+# why git kept warning that it would swap one for the other.
+#
+# eol=lf settles it: LF in the repository and LF on disk, on every machine.
+# That matches what Cloudflare serves, and it means a diff only ever shows
+# lines somebody actually changed. Nothing needs CRLF here; there are no
+# batch or shell scripts in this repo.
+#
+# Adding this changes no committed content. It was verified with
+# "git add --renormalize ." reporting nothing to stage.
+
+* text=auto eol=lf
+
+# Binary. Git usually detects these on its own, but saying so is safer than
+# trusting detection: a font or a photograph run through line ending
+# conversion is a corrupt file, not a messy diff.
+
+*.woff2 binary
+*.woff  binary
+*.ttf   binary
+*.otf   binary
+
+*.jpg   binary
+*.jpeg  binary
+*.png   binary
+*.webp  binary
+*.gif   binary
+*.ico   binary
+
+*.pdf   binary
