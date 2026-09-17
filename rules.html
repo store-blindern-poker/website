@@ -3,10 +3,157 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rules - Store Blindern Poker</title>
+  <title>Rules and points system - Store Blindern Poker</title>
   <meta name="description" content="How the Store Blindern Poker points system works: the 40,000-point season, the nightly attendance bonus, the one re-buy rule, and why no money is ever involved.">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+
+  <!-- ===== Discovery: canonical, crawling, social previews ===== -->
+  <link rel="canonical" href="https://storeblindernpoker.org/rules">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="theme-color" content="#0c0c0d">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Store Blindern Poker">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:url" content="https://storeblindernpoker.org/rules">
+  <meta property="og:title" content="Rules and points system - Store Blindern Poker">
+  <meta property="og:description" content="How the points work: the 40,000-point season, the 5,000-point attendance bonus, the one re-buy rule, and why no money is ever involved.">
+  <meta property="og:image" content="https://storeblindernpoker.org/assets/img/og-rules.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Stacks of poker chips on green felt, sorted by denomination">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Rules and points system - Store Blindern Poker">
+  <meta name="twitter:description" content="The 40,000-point season, the 5,000-point attendance bonus, the one re-buy rule, and why no money is ever involved.">
+  <meta name="twitter:image" content="https://storeblindernpoker.org/assets/img/og-rules.jpg">
+
+  <!-- ===== Structured data =====
+       The FAQPage below mirrors the "Common questions" list in the body
+       of this page word for word. Google requires the pairs to be
+       visible to a reader, and an answer engine that quotes an answer
+       nobody can find on the page is worse than one that quotes
+       nothing. If you edit one, edit both. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://storeblindernpoker.org/rules#webpage",
+        "url": "https://storeblindernpoker.org/rules",
+        "name": "Rules and points system - Store Blindern Poker",
+        "description": "How the Store Blindern Poker points system works: the 40,000-point season, the nightly attendance bonus, the one re-buy rule, and why no money is ever involved.",
+        "isPartOf": { "@id": "https://storeblindernpoker.org/#website" },
+        "about": { "@id": "https://storeblindernpoker.org/#organization" },
+        "inLanguage": "en"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://storeblindernpoker.org/" },
+          { "@type": "ListItem", "position": 2, "name": "Rules", "item": "https://storeblindernpoker.org/rules" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://storeblindernpoker.org/rules#faq",
+        "isPartOf": { "@id": "https://storeblindernpoker.org/rules#webpage" },
+        "inLanguage": "en",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does Store Blindern Poker play for money?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. The club is points-only. There is no entry fee, no buy-in in kroner, no pot, no prize money, and no way to convert points into anything at all. Points cannot be bought, sold, transferred or cashed out. They exist on the leaderboard and reset every semester."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is it gambling?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Nothing of value is staked and nothing of value can be won. Chips are bought with season points, points come only from turning up and playing, and they can never leave the leaderboard. With money off the table, poker is what it is at its best: a game of skill, probability, patience and reading people."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does it cost to take part?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Nothing. There is no membership fee and nothing to pay on the night. Chips, cards and tables are provided. You bring yourself."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to know how to play poker?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Complete beginners are the point, not the exception. Welcome rounds open with a short beginner's course, there is a beginner table, and you will have the rules down before the first blinds go up."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "When and where do you play?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Texas Hold'em every Friday during term, roughly 18:00 to 20:30, on Blindern campus at the University of Oslo. The room is confirmed each week and published on the events page."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Who can join?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Any student. Members come from every faculty and from Norway, France, Belgium, Germany, the Czech Republic, Singapore, South Korea and Japan, among others. Nights are played in English."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I join in the middle of a semester?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Everyone starts on 40,000 points, including anyone who joins mid-season, so it is never too late to enter the race."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do the points work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Every member starts the season with 40,000 points. Each Friday you collect a 5,000-point attendance bonus, pay a buy-in in points equal to the night's chip stack (normally 10,000), play, and bank whatever chips you finish with. Your points can never go below zero."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the one re-buy rule?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Once per night you may exchange points for extra chips at 1:1, but only enough to bring you back up to the night's stack size, and never more points than you hold. Sit on a full stack or more and you cannot re-buy at all."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if I miss a Friday?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Nothing. There is no penalty and no decay: your points wait for you. The attendance bonus simply makes turning up the most profitable habit in the club."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens at the end of a season?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The top players meet at the final table, a champion is crowned, and every balance resets to 40,000 for the next season. The champion keeps the title and a custom season chip for good, under the pseudonym it was won under."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -369,6 +516,103 @@
           with your final stack and an organiser will enter it by hand.
         </p>
 
+        <!-- Common questions.
+             The answers here are deliberately self-contained: each one
+             reads correctly on its own, lifted out of the page and away
+             from the rest of the site, because that is how an answer
+             engine will use it. The same eleven pairs are mirrored in the
+             FAQPage block in the head of this file, word for word. Change
+             one and change the other, or the markup starts describing a
+             page that no longer exists. -->
+        <h2 id="faq">Common questions</h2>
+        <dl class="deflist">
+          <dt>Does Store Blindern Poker play for money?</dt>
+          <dd>
+            No. The club is points-only. There is no entry fee, no buy-in in
+            kroner, no pot, no prize money, and no way to convert points into
+            anything at all. Points cannot be bought, sold, transferred or
+            cashed out. They exist on the leaderboard and reset every semester.
+          </dd>
+
+          <dt>Is it gambling?</dt>
+          <dd>
+            No. Nothing of value is staked and nothing of value can be won.
+            Chips are bought with season points, points come only from turning
+            up and playing, and they can never leave the leaderboard. With
+            money off the table, poker is what it is at its best: a game of
+            skill, probability, patience and reading people.
+          </dd>
+
+          <dt>What does it cost to take part?</dt>
+          <dd>
+            Nothing. There is no membership fee and nothing to pay on the
+            night. Chips, cards and tables are provided. You bring yourself.
+          </dd>
+
+          <dt>Do I need to know how to play poker?</dt>
+          <dd>
+            No. Complete beginners are the point, not the exception. Welcome
+            rounds open with a short beginner's course, there is a beginner
+            table, and you will have the rules down before the first blinds go
+            up.
+          </dd>
+
+          <dt>When and where do you play?</dt>
+          <dd>
+            Texas Hold'em every Friday during term, roughly
+            <span class="mono">18:00</span> to <span class="mono">20:30</span>,
+            on Blindern campus at the University of Oslo. The room is confirmed
+            each week and published on the
+            <a href="events.html" class="link-gold">events page</a>.
+          </dd>
+
+          <dt>Who can join?</dt>
+          <dd>
+            Any student. Members come from every faculty and from Norway,
+            France, Belgium, Germany, the Czech Republic, Singapore, South
+            Korea and Japan, among others. Nights are played in English.
+          </dd>
+
+          <dt>Can I join in the middle of a semester?</dt>
+          <dd>
+            Yes. Everyone starts on <span class="mono">40,000</span> points,
+            including anyone who joins mid-season, so it is never too late to
+            enter the race.
+          </dd>
+
+          <dt>How do the points work?</dt>
+          <dd>
+            Every member starts the season with <span class="mono">40,000</span>
+            points. Each Friday you collect a <span class="mono">5,000</span>-point
+            attendance bonus, pay a buy-in in points equal to the night's chip
+            stack (normally <span class="mono">10,000</span>), play, and bank
+            whatever chips you finish with. Your points can never go below zero.
+          </dd>
+
+          <dt>What is the one re-buy rule?</dt>
+          <dd>
+            Once per night you may exchange points for extra chips at
+            <span class="mono">1:1</span>, but only enough to bring you back up
+            to the night's stack size, and never more points than you hold. Sit
+            on a full stack or more and you cannot re-buy at all.
+          </dd>
+
+          <dt>What happens if I miss a Friday?</dt>
+          <dd>
+            Nothing. There is no penalty and no decay: your points wait for you.
+            The attendance bonus simply makes turning up the most profitable
+            habit in the club.
+          </dd>
+
+          <dt>What happens at the end of a season?</dt>
+          <dd>
+            The top players meet at the final table, a champion is crowned, and
+            every balance resets to <span class="mono">40,000</span> for the
+            next season. The champion keeps the title and a custom season chip
+            for good, under the pseudonym it was won under.
+          </dd>
+        </dl>
+
         <div class="notice" style="margin-top: var(--space-xl);">
           <p>
             Questions about a rule, a result, or your score? Grab a board
@@ -405,7 +649,7 @@
           wagered, staked or exchanged at our events, and this site never
           processes payments.
         </p>
-        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo · Photographs by Hennesy</span>
       </div>
     </footer>
     <!-- =============== End shared chrome: footer =============== -->

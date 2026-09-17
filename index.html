@@ -3,10 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Store Blindern Poker</title>
+  <title>Store Blindern Poker, student poker at the University of Oslo</title>
   <meta name="description" content="Store Blindern Poker, the student poker association at the University of Oslo. Weekly Texas Hold'em nights, a semester-long points tournament, and no money, ever.">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+
+  <!-- ===== Discovery: canonical, crawling, social previews =====
+       Cloudflare Pages serves every page at its extensionless URL and
+       307s the .html form to it, so the canonical is always the clean
+       one. Internal links keep the .html spelling because login.js
+       parses ?next= against it; the canonical is what search engines
+       record either way. -->
+  <link rel="canonical" href="https://storeblindernpoker.org/">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="theme-color" content="#0c0c0d">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Store Blindern Poker">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:url" content="https://storeblindernpoker.org/">
+  <meta property="og:title" content="Store Blindern Poker, the student poker club at the University of Oslo">
+  <meta property="og:description" content="Weekly Texas Hold'em nights on Blindern campus, a semester-long points tournament, and no money, ever. Open to every student, beginners included.">
+  <meta property="og:image" content="https://storeblindernpoker.org/assets/img/og-cover.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Poker chips on green felt, with the club's founder chip in the middle">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Store Blindern Poker, the student poker club at the University of Oslo">
+  <meta name="twitter:description" content="Weekly Texas Hold'em nights on Blindern campus, a semester-long points tournament, and no money, ever.">
+  <meta name="twitter:image" content="https://storeblindernpoker.org/assets/img/og-cover.jpg">
+
+  <!-- ===== Structured data =====
+       One @graph so every page can point at the same @id instead of
+       repeating the club. Answer engines read this to say what the club
+       is; the "no money" line is here on purpose, because "is this
+       gambling" is the first thing anyone asks about a student poker
+       club, and the answer should not depend on a crawler reading prose. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://storeblindernpoker.org/#organization",
+        "name": "Store Blindern Poker",
+        "alternateName": "SBP",
+        "url": "https://storeblindernpoker.org/",
+        "email": "it@storeblindernpoker.org",
+        "foundingDate": "2025",
+        "description": "Store Blindern Poker is a student poker association at the University of Oslo. Members play Texas Hold'em on Blindern campus every Friday during term and compete on a semester-long leaderboard. The club is points-only: there is no entry fee, no buy-in in kroner, no pot and no prize money, and points cannot be bought, sold, transferred or cashed out.",
+        "image": "https://storeblindernpoker.org/assets/img/og-cover.jpg",
+        "sameAs": [
+          "https://www.facebook.com/groups/1353698180088990/",
+          "https://discord.gg/XjdnedqTC"
+        ],
+        "identifier": {
+          "@type": "PropertyValue",
+          "name": "Organisasjonsnummer",
+          "value": "936 041 973"
+        },
+        "location": {
+          "@type": "Place",
+          "name": "Blindern campus, University of Oslo",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Oslo",
+            "addressRegion": "Oslo",
+            "addressCountry": "NO"
+          }
+        },
+        "areaServed": {
+          "@type": "City",
+          "name": "Oslo"
+        },
+        "knowsAbout": [
+          "Texas Hold'em",
+          "Pot-Limit Omaha",
+          "Poker strategy",
+          "Student associations at the University of Oslo"
+        ],
+        "isAccessibleForFree": true
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://storeblindernpoker.org/#website",
+        "url": "https://storeblindernpoker.org/",
+        "name": "Store Blindern Poker",
+        "inLanguage": "en",
+        "publisher": { "@id": "https://storeblindernpoker.org/#organization" }
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://storeblindernpoker.org/#webpage",
+        "url": "https://storeblindernpoker.org/",
+        "name": "Store Blindern Poker, the student poker club at the University of Oslo",
+        "description": "Weekly Texas Hold'em nights on Blindern campus, a semester-long points tournament, and no money, ever.",
+        "isPartOf": { "@id": "https://storeblindernpoker.org/#website" },
+        "about": { "@id": "https://storeblindernpoker.org/#organization" },
+        "primaryImageOfPage": "https://storeblindernpoker.org/assets/img/og-cover.jpg",
+        "inLanguage": "en"
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -377,7 +476,7 @@
           wagered, staked or exchanged at our events, and this site never
           processes payments.
         </p>
-        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo</span>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo · Photographs by Hennesy</span>
       </div>
     </footer>
     <!-- =============== End shared chrome: footer =============== -->
