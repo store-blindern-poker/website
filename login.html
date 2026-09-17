@@ -6,6 +6,20 @@
   <title>Member login - Store Blindern Poker</title>
   <meta name="description" content="Sign in to Store Blindern Poker to check in, report your chips and follow your season points. Points only.">
   <meta name="robots" content="noindex">
+  <!-- ===== Fonts =====
+       We serve these ourselves, so the only thing left in the way is
+       discovery: without a preload the browser cannot know a font exists
+       until it has fetched and parsed the stylesheet. These are the faces
+       that paint in the first screen, so they start downloading alongside
+       the stylesheet instead of one round trip behind it.
+
+       crossorigin is required even though these are same origin. Fonts are
+       fetched in anonymous CORS mode, and a preload without it is treated as
+       a different request than the one @font-face makes, so the file is
+       downloaded twice. Do not remove it. -->
+  <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
 </head>
