@@ -64,7 +64,19 @@
     return;
   }
 
-  var LOGIN_HREF = 'login.html?next=events.html';
+  /* Where "Sign in to RSVP" goes.
+   *
+   * This is set on every block at render time and overwrites whatever the
+   * <template> in the page said, so the page cannot fix it locally. It has
+   * to be right here or it is wrong everywhere.
+   *
+   * It is a translated value rather than a translated string because the
+   * two languages need different paths, not different words: login.html
+   * sits at the site root, so the Norwegian pages in /no/ have to climb out
+   * of the directory to reach it, and the ?next= has to name the Norwegian
+   * events page or signing in lands you on the English one. Both spellings
+   * are in the safeNextPage allowlist in js/sb.js. */
+  var LOGIN_HREF = I18N.t('rsvp.login.href', 'login.html?next=events.html');
   var MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var WAIT_MS = 20000;
