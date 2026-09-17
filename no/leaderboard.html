@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nb">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Season leaderboard - Store Blindern Poker</title>
-  <meta name="description" content="Season standings at Store Blindern Poker. Everyone starts on 40,000 points, only pseudonyms are shown, and the board counts every settled night of the semester.">
-  <link rel="stylesheet" href="css/style.css">
+  <title>Ledertavle for sesongen - Store Blindern Poker</title>
+  <meta name="description" content="Stillingen for sesongen hos Store Blindern Poker. Alle starter på 40 000 poeng, bare pseudonymer vises, og tavlen teller hver kveld som er gjort opp.">
+  <link rel="stylesheet" href="../css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
 
-  <!-- ===== Discovery: canonical, crawling, social previews ===== -->
-  <link rel="canonical" href="https://storeblindernpoker.org/leaderboard">
+  <!-- ===== Discovery: canonical, language pairs, social previews ===== -->
+  <link rel="canonical" href="https://storeblindernpoker.org/no/leaderboard">
   <link rel="alternate" hreflang="en" href="https://storeblindernpoker.org/leaderboard">
   <link rel="alternate" hreflang="nb" href="https://storeblindernpoker.org/no/leaderboard">
   <link rel="alternate" hreflang="x-default" href="https://storeblindernpoker.org/leaderboard">
@@ -18,17 +18,18 @@
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Store Blindern Poker">
-  <meta property="og:locale" content="en_GB">
-  <meta property="og:url" content="https://storeblindernpoker.org/leaderboard">
-  <meta property="og:title" content="Season leaderboard - Store Blindern Poker">
-  <meta property="og:description" content="Season standings at Store Blindern Poker. Every member starts on 40,000 points, only pseudonyms are shown, and the board counts every settled night of the semester.">
+  <meta property="og:locale" content="nb_NO">
+  <meta property="og:locale:alternate" content="en_GB">
+  <meta property="og:url" content="https://storeblindernpoker.org/no/leaderboard">
+  <meta property="og:title" content="Ledertavle for sesongen - Store Blindern Poker">
+  <meta property="og:description" content="Alle starter på 40 000 poeng, bare pseudonymer vises, og tavlen teller hver kveld som er gjort opp.">
   <meta property="og:image" content="https://storeblindernpoker.org/assets/img/og-leaderboard.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Custom season winner chips lined up on the felt">
+  <meta property="og:image:alt" content="Egne sesongsjetonger på rekke på filten">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Season leaderboard - Store Blindern Poker">
-  <meta name="twitter:description" content="Every member starts on 40,000 points, only pseudonyms are shown, and the board counts every settled night of the semester.">
+  <meta name="twitter:title" content="Ledertavle for sesongen - Store Blindern Poker">
+  <meta name="twitter:description" content="Alle starter på 40 000 poeng, bare pseudonymer vises, og tavlen teller hver kveld som er gjort opp.">
   <meta name="twitter:image" content="https://storeblindernpoker.org/assets/img/og-leaderboard.jpg">
 
   <script type="application/ld+json">
@@ -37,19 +38,19 @@
     "@graph": [
       {
         "@type": "WebPage",
-        "@id": "https://storeblindernpoker.org/leaderboard#webpage",
-        "url": "https://storeblindernpoker.org/leaderboard",
-        "name": "Season leaderboard - Store Blindern Poker",
-        "description": "Season standings at Store Blindern Poker. Every member starts on 40,000 points and the board counts every settled night of the semester.",
+        "@id": "https://storeblindernpoker.org/no/leaderboard#webpage",
+        "url": "https://storeblindernpoker.org/no/leaderboard",
+        "name": "Ledertavle for sesongen - Store Blindern Poker",
+        "description": "Stillingen for sesongen hos Store Blindern Poker. Alle starter på 40 000 poeng, og tavlen teller hver kveld som er gjort opp.",
         "isPartOf": { "@id": "https://storeblindernpoker.org/#website" },
         "about": { "@id": "https://storeblindernpoker.org/#organization" },
-        "inLanguage": "en"
+        "inLanguage": "nb"
       },
       {
         "@type": "BreadcrumbList",
         "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://storeblindernpoker.org/" },
-          { "@type": "ListItem", "position": 2, "name": "Leaderboard", "item": "https://storeblindernpoker.org/leaderboard" }
+          { "@type": "ListItem", "position": 1, "name": "Hjem", "item": "https://storeblindernpoker.org/no/" },
+          { "@type": "ListItem", "position": 2, "name": "Ledertavle", "item": "https://storeblindernpoker.org/no/leaderboard" }
         ]
       }
     ]
@@ -57,26 +58,27 @@
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main">Hopp til innhold</a>
 
   <div class="page-wrapper">
 
     <!-- ================= Shared chrome: header (identical on every page) ================= -->
-    <nav class="nav" aria-label="Main navigation">
+    <nav class="nav" aria-label="Hovednavigasjon">
       <div class="container nav__inner">
         <a href="index.html" class="nav__brand">
           <span class="nav__brand-icon">♠</span>
           Store Blindern Poker
         </a>
         <div class="nav__links">
-          <a href="index.html" class="nav__link">Home</a>
-          <a href="events.html" class="nav__link">Events</a>
-          <a href="leaderboard.html" class="nav__link nav__link--active" aria-current="page">Leaderboard</a>
-          <a href="rules.html" class="nav__link">Rules</a>
-          <a href="login.html" class="nav__link">Member login</a>
+          <a href="index.html" class="nav__link">Hjem</a>
+          <a href="events.html" class="nav__link">Arrangementer</a>
+          <a href="leaderboard.html" class="nav__link nav__link--active" aria-current="page">Ledertavle</a>
+          <a href="rules.html" class="nav__link">Regler</a>
+          <a href="../login.html" class="nav__link">Logg inn</a>
+          <a href="../leaderboard.html" class="nav__link" lang="en" hreflang="en">English</a>
         </div>
-        <a href="report.html" class="nav__cta">Report</a>
-        <button class="nav__toggle" aria-label="Menu" aria-expanded="false">
+        <a href="../report.html" class="nav__cta">Rapporter</a>
+        <button class="nav__toggle" aria-label="Meny" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
       </div>
@@ -85,11 +87,11 @@
 
     <header class="page-header">
       <div class="container">
-        <h1 class="page-header__title">Leaderboard</h1>
+        <h1 class="page-header__title">Ledertavle</h1>
         <p class="page-header__subtitle">
-          The Fall 2026 season standings. Everyone starts the season on
-          <span class="mono">40,000</span> points; only pseudonyms are ever
-          shown here.
+          Stillingen for sesongen. Alle starter sesongen på
+          <span class="mono">40 000</span> poeng, og det er bare pseudonymer
+          som vises her.
         </p>
       </div>
     </header>
@@ -98,30 +100,32 @@
 
       <section class="section" style="padding-top: 0;" aria-labelledby="standings-title">
         <div class="container">
-          <h2 class="section__title visually-hidden" id="standings-title">Season standings</h2>
+          <h2 class="section__title visually-hidden" id="standings-title">Stillingen for sesongen</h2>
 
-          <!-- Podium for the top three, filled by js/app.js once the first
-               night has been settled; hidden until then. -->
-          <!-- Provisional banner. Filled by js/app.js from v_leaderboard_pending,
-               hidden whenever every night that touches the standings is settled.
-               It is the first thing on the page on purpose: a number that can
-               still move should say so before anybody reads it. -->
+          <!-- Fylles av js/app.js fra v_leaderboard_pending, skjult så lenge
+               hver kveld som rører stillingen er gjort opp. Den står først på
+               sida med vilje: et tall som fortsatt kan flytte seg bør si fra
+               før noen leser det. -->
           <div class="notice" id="leaderboard-provisional" role="status" hidden
                style="margin-bottom: var(--space-lg);"></div>
 
           <div id="leaderboard-podium" class="podium" style="display:none;"></div>
 
-          <!-- Pre-season notice. js/app.js hides this the moment live
-               standings arrive from the database. -->
+          <!-- Vises før sesongens første kveld er gjort opp. js/app.js skjuler
+               den i det stillingen kommer fra databasen.
+
+               Den engelske utgaven navngir en dato her ("The season starts 4
+               September"), som er feil fra og med dagen etter. Denne sier det
+               samme uten datoen, så den er riktig hele semesteret. -->
           <div id="leaderboard-placeholder" class="notice" style="margin-bottom: var(--space-xl);">
             <div>
-              <h3 class="card__title">The season starts 4 September</h3>
+              <h3 class="card__title">Sesongen har ikke startet ennå</h3>
               <p class="card__text">
-                Standings appear here after the first Friday night of Fall 2026
-                is played and settled. Every member begins on
-                <strong style="color: var(--cream);"><span class="mono">40,000</span> points</strong>.
-                Join mid-season and you start on 40,000 too, so it is never too
-                late to enter the race.
+                Stillingen dukker opp her så snart sesongens første fredag er
+                spilt og gjort opp. Alle medlemmer begynner på
+                <strong style="color: var(--cream);"><span class="mono">40 000</span> poeng</strong>.
+                Blir du med midt i sesongen, starter du på 40 000 du også, så
+                det er aldri for sent å bli med i kampen.
               </p>
             </div>
           </div>
@@ -130,39 +134,28 @@
             <table class="table leaderboard" aria-describedby="leaderboard-status">
               <thead>
                 <tr>
-                  <th scope="col">Rank</th>
-                  <th scope="col">Player</th>
-                  <th scope="col" class="num">Points</th>
-                  <th scope="col" class="num">Nights</th>
+                  <th scope="col">Plass</th>
+                  <th scope="col">Spiller</th>
+                  <th scope="col" class="num">Poeng</th>
+                  <th scope="col" class="num">Kvelder</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-body">
-                <!-- Empty state. js/app.js replaces the whole tbody once rows
-                     exist, and deliberately leaves this alone when the season
-                     has no settled nights yet, so it must read as a finished
-                     state, never as something still loading. The brass
-                     top-three rank rule is cancelled in the stylesheet for any
-                     td[colspan], so this row is not flagged as first place. -->
+                <!-- Tomtilstand. js/app.js bytter ut hele tbody når det
+                     finnes rader, og lar denne stå når sesongen ikke har noen
+                     oppgjorte kvelder ennå, så den må leses som en ferdig
+                     tilstand og aldri som noe som fortsatt laster. -->
                 <tr>
                   <td colspan="4" style="padding: var(--space-2xl) var(--space-lg); color: var(--cream-mute);">
-                    Awaiting the first settled night of the season.
+                    Venter på den første oppgjorte kvelden i sesongen.
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <!-- Loading state, inert until script clones it. A <template>
-               renders nothing, which is deliberate: js/app.js leaves
-               #leaderboard-body untouched when the query returns no rows, so
-               statically rendered skeleton rows would shimmer forever on a
-               pre-season leaderboard. To turn it on, one line in js/app.js
-               immediately before fetchLiveLeaderboard(), once someone owns
-               that file:
-                 var sk = document.getElementById('leaderboard-skeleton');
-                 if (sk) { leaderboardBody.innerHTML = sk.innerHTML; }
-               Every path that finds rows already overwrites the tbody. The
-               no-rows path must restore the empty-state row above. -->
+          <!-- Lastetilstand, inaktiv til et skript kloner den. Se den engelske
+               sida for hvorfor den er avslått. -->
           <template id="leaderboard-skeleton">
             <tr aria-hidden="true">
               <td><span class="skeleton skeleton--rank"></span></td>
@@ -197,23 +190,22 @@
           </template>
 
           <p class="data-status" id="leaderboard-status" aria-live="polite">
-            Standings update after each night is settled by the organisers.
+            Stillingen oppdateres etter at hver kveld er gjort opp av arrangørene.
           </p>
         </div>
       </section>
 
-      <!-- Photo break -->
       <div class="photo-break" aria-hidden="true">
         <picture>
           <source type="image/webp"
-                  srcset="assets/img/season-winner-chips@480.webp 480w,
-                          assets/img/season-winner-chips@960.webp 960w,
-                          assets/img/season-winner-chips.webp 1920w"
+                  srcset="../assets/img/season-winner-chips@480.webp 480w,
+                          ../assets/img/season-winner-chips@960.webp 960w,
+                          ../assets/img/season-winner-chips.webp 1920w"
                   sizes="100vw">
-          <img src="assets/img/season-winner-chips@960.jpg"
-               srcset="assets/img/season-winner-chips@480.jpg 480w,
-                       assets/img/season-winner-chips@960.jpg 960w,
-                       assets/img/season-winner-chips.jpg 1920w"
+          <img src="../assets/img/season-winner-chips@960.jpg"
+               srcset="../assets/img/season-winner-chips@480.jpg 480w,
+                       ../assets/img/season-winner-chips@960.jpg 960w,
+                       ../assets/img/season-winner-chips.jpg 1920w"
                sizes="100vw"
                alt="" loading="lazy">
         </picture>
@@ -222,31 +214,33 @@
       <section class="section" aria-labelledby="how-points-title">
         <div class="container">
           <div class="section__header">
-            <div class="section__label">How the numbers move</div>
-            <h2 class="section__title" id="how-points-title">Points in one minute</h2>
+            <div class="section__label">Slik beveger tallene seg</div>
+            <h2 class="section__title" id="how-points-title">Poengene på ett minutt</h2>
           </div>
+
           <dl class="deflist deflist--lead">
-            <dt>Show up: <span class="num">+5,000</span></dt>
+            <dt>Møt opp: <span class="num">+5 000</span></dt>
             <dd>
-              Every night starts with an attendance bonus, credited before
-              anything else. Consistency is the most reliable way up this
-              leaderboard.
+              Hver kveld starter med en oppmøtebonus, kreditert før alt annet.
+              Å møte opp jevnt er den sikreste veien oppover på denne tavlen.
             </dd>
-            <dt>Play the night</dt>
+            <dt>Spill kvelden</dt>
             <dd>
-              Your buy-in comes off your points; your final chip stack goes
-              back on. Finish above what you paid in and the night was a win.
+              Innkjøpet ditt trekkes fra poengene dine, og sluttstabelen din
+              legges tilbake. Ender du over det du betalte inn, var kvelden en
+              seier.
             </dd>
-            <dt>Champions are forever</dt>
+            <dt>Mestere er for alltid</dt>
             <dd>
-              The leaderboard resets to <span class="mono">40,000</span> each
-              semester, but season champions keep their title for good: the
-              hall of fame is permanent.
+              Ledertavlen nullstilles til <span class="mono">40 000</span> hvert
+              semester, men sesongmestere beholder tittelen for godt: hall of
+              fame er permanent.
             </dd>
           </dl>
+
           <p class="help" style="margin-top: var(--space-xl);">
-            The full points system, including the one re-buy rule and a worked
-            example, lives on the <a href="rules.html" class="link-gold">rules page</a>.
+            Hele poengsystemet, inkludert regelen om ett gjenkjøp og et regnet
+            eksempel, står på <a href="rules.html" class="link-gold">reglene</a>.
           </p>
         </div>
       </section>
@@ -258,11 +252,11 @@
       <div class="container footer__inner">
         <div class="footer__brand">♠ Store Blindern Poker</div>
         <div class="footer__links">
-          <a href="events.html" class="footer__link">Events</a>
-          <a href="leaderboard.html" class="footer__link">Leaderboard</a>
-          <a href="rules.html" class="footer__link">Rules</a>
-          <a href="login.html" class="footer__link">Member login</a>
-          <a href="privacy.html" class="footer__link">Privacy</a>
+          <a href="index.html" class="footer__link">Hjem</a>
+          <a href="events.html" class="footer__link">Arrangementer</a>
+          <a href="rules.html" class="footer__link">Regler</a>
+          <a href="../login.html" class="footer__link">Logg inn</a>
+          <a href="../privacy.html" class="footer__link">Personvern</a>
           <a href="mailto:it@storeblindernpoker.org" class="footer__link">it@storeblindernpoker.org</a>
         </div>
         <div class="footer__socials">
@@ -274,20 +268,20 @@
           </a>
         </div>
         <p class="footer__nomoney">
-          Store Blindern Poker is a points-only association. No money is
-          wagered, staked or exchanged at our events, and this site never
-          processes payments.
+          Store Blindern Poker er en forening som kun spiller for poeng. Det
+          spilles, satses eller utveksles aldri penger på arrangementene våre,
+          og dette nettstedet håndterer aldri betaling.
         </p>
-        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · A student association at the University of Oslo · Photographs by Hennesy</span>
+        <span class="footer__text">© 2026 Store Blindern Poker · org.nr 936 041 973 · En studentforening ved Universitetet i Oslo · Foto av Hennesy</span>
       </div>
     </footer>
     <!-- =============== End shared chrome: footer =============== -->
 
   </div>
 
-  <!-- Order matters: config, then the vendored Supabase bundle, then app.js -->
-  <script src="js/config.js" defer></script>
-  <script src="js/vendor/supabase.js" defer></script>
-  <script src="js/app.js" defer></script>
+  <script src="../js/i18n.js" defer></script>
+  <script src="../js/config.js" defer></script>
+  <script src="../js/vendor/supabase.js" defer></script>
+  <script src="../js/app.js" defer></script>
 </body>
 </html>

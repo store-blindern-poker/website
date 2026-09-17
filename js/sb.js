@@ -17,6 +17,12 @@
 (function () {
   'use strict';
 
+  /* Language, or English if js/i18n.js did not load. See that file: t()
+   * returns its English argument unchanged on an English page, so nothing
+   * here depends on a translation being present. */
+  var I18N = window.SBP_I18N ||
+    { lang: 'en', locale: 'en-GB', t: function (k, en) { return en; } };
+
   var cfg = window.SBP_CONFIG || {};
   var _client = null;
 
@@ -436,7 +442,7 @@
 
   function fmt(n) {
     if (n === null || n === undefined || isNaN(Number(n))) { return '…'; }
-    try { return Number(n).toLocaleString('en-GB'); } catch (e) { return String(n); }
+    try { return Number(n).toLocaleString(I18N.locale); } catch (e) { return String(n); }
   }
 
   function fmtSigned(n) {
@@ -494,8 +500,24 @@
   }
 
   /* Sanitise a ?next= page value: bare known page names only. */
+  /* Where ?next= is allowed to send somebody after they sign in.
+   *
+   * An exact-match allowlist, not a pattern: every entry is a literal
+   * relative path with no scheme, no host and no "..", so there is nothing
+   * to talk our way past. Anything unrecognised goes to report.html, which
+   * is what most people following a login link wanted anyway.
+   *
+   * The no/ entries are the Norwegian pages. They are spelled out rather
+   * than matched with a prefix for exactly the reason above: a rule like
+   * "starts with no/" is a rule somebody can end up satisfying with
+   * no/../../elsewhere. login.html sits at the root, so these resolve from
+   * there without a leading slash. */
   function safeNextPage(raw) {
-    var allowed = ['report.html', 'admin.html', 'leaderboard.html', 'index.html', 'events.html', 'rules.html'];
+    var allowed = [
+      'report.html', 'admin.html', 'leaderboard.html', 'index.html',
+      'events.html', 'rules.html',
+      'no/index.html', 'no/events.html', 'no/leaderboard.html', 'no/rules.html'
+    ];
     return allowed.indexOf(raw) !== -1 ? raw : 'report.html';
   }
 

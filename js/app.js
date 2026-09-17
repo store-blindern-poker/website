@@ -77,9 +77,18 @@
    * database decide what exists, and to demote the file to what it is good
    * at, being readable when nothing else answers.
    * ------------------------------------------------------------------ */
-  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  /* Language, or English if js/i18n.js did not load. t() is the identity
+   * function on an English page, so every string below reads as it always
+   * did and the English pages do not depend on that file at all. */
+  var I18N = window.SBP_I18N ||
+    { lang: 'en', locale: 'en-GB', t: function (k, en) { return en; },
+      months: function () { return null; }, weekdays: function () { return null; } };
+
+  // The English arrays stay as the fallback, so a browser without a locale
+  // database still gets a date badge rather than "undefined".
+  var MONTHS = I18N.months(false) || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var WEEKDAYS = I18N.weekdays(false) || ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // The club's standing hours, for a night the database knows about and the
   // file does not. See nightToEvent: nights has no time column.
@@ -90,7 +99,7 @@
   // withTimeout for why a hang needs its own answer.
   var DB_TIMEOUT_MS = 2500;
 
-  var TBD_TEXT = 'Venue still to be confirmed';
+  var TBD_TEXT = I18N.t('events.venue.tbd', 'Venue still to be confirmed');
 
   function eventDate(ev) {
     // Events happen in Oslo; the audience reads the site in Oslo. Local time
@@ -239,7 +248,7 @@
   }
 
   function fetchEventsJson() {
-    return fetch('data/events.json', { cache: 'no-cache' })
+    return fetch('/data/events.json', { cache: 'no-cache' })
       .then(function (r) {
         if (!r.ok) { throw new Error('events.json: HTTP ' + r.status); }
         return r.json();
@@ -433,20 +442,48 @@
     });
   }
 
-  var WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  var MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-                     'August', 'September', 'October', 'November', 'December'];
+  var WEEKDAYS_LONG = I18N.weekdays(true) ||
+    ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var MONTHS_LONG = I18N.months(true) ||
+    ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+     'August', 'September', 'October', 'November', 'December'];
 
+  /* "Friday 18 September 2026", and in Norwegian "fredag 18. september
+   * 2026".
+   *
+   * Intl does the whole string rather than us gluing four pieces together,
+   * because the differences are not just the words. Norwegian keeps the
+   * weekday and month lowercase and puts a point after the day number, and
+   * a version of this that concatenated capitalised names with spaces got
+   * all three wrong at once. The manual build stays as the fallback for a
+   * browser with no locale data. */
   function formatDateLong(ev) {
     var d = eventDate(ev);
-    return WEEKDAYS_LONG[d.getDay()] + ' ' + d.getDate() + ' ' +
-           MONTHS_LONG[d.getMonth()] + ' ' + d.getFullYear();
+
+    /* English keeps the hand-built string it always had. Intl's en-GB
+     * would render "Friday, 18 September 2026" with a comma the club has
+     * never written, and the English pages are the ones almost everybody
+     * lands on, so they should not quietly change punctuation because the
+     * site gained a second language. */
+    if (I18N.lang === 'en') {
+      return WEEKDAYS_LONG[d.getDay()] + ' ' + d.getDate() + ' ' +
+             MONTHS_LONG[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    try {
+      return new Intl.DateTimeFormat(I18N.locale, {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      }).format(d);
+    } catch (e) {
+      return WEEKDAYS_LONG[d.getDay()] + ' ' + d.getDate() + ' ' +
+             MONTHS_LONG[d.getMonth()] + ' ' + d.getFullYear();
+    }
   }
 
   // "18:00 to 20:30" when an event declares an end, otherwise just the start.
   function timeRange(ev) {
     if (!ev.time) { return ''; }
-    return ev.endTime ? ev.time + ' to ' + ev.endTime : ev.time;
+    return ev.endTime ? ev.time + ' ' + I18N.t('time.to', 'to') + ' ' + ev.endTime : ev.time;
   }
 
   /* ------------------------------------------------------------------
@@ -506,7 +543,7 @@
         if (diff <= 0) {
           if (link) { link.classList.add('countdown--live'); }
           var label = countdownSection.querySelector('.countdown__label');
-          if (label) { label.textContent = 'Happening now'; }
+          if (label) { label.textContent = I18N.t('board.now', 'Happening now'); }
           els.d.textContent = els.h.textContent = els.m.textContent = els.s.textContent = '00';
           clearInterval(timer);
           return;
@@ -543,18 +580,22 @@
   function renderEventCard(ev, past) {
     var d = eventDate(ev);
     var badge = past
-      ? '<span class="badge badge--muted event-card__badge">Past</span>'
-      : '<span class="badge badge--gold event-card__badge">Upcoming</span>';
+      ? '<span class="badge badge--muted event-card__badge">' +
+        I18N.t('events.badge.past', 'Past') + '</span>'
+      : '<span class="badge badge--gold event-card__badge">' +
+        I18N.t('events.badge.upcoming', 'Upcoming') + '</span>';
     var venue = venueOf(ev);
     var href = venue ? mapHref(ev.locationUrl) : '';
     var links = '';
     if (href) {
       links += '<a class="event-link" href="' + escapeHtml(href) +
-        '" target="_blank" rel="noopener">Find the room &#8599;</a>';
+        '" target="_blank" rel="noopener">' +
+        I18N.t('events.link.room', 'Find the room') + ' &#8599;</a>';
     }
     if (ev.registrationUrl) {
       links += '<a class="event-link" href="' + escapeHtml(ev.registrationUrl) +
-        '" target="_blank" rel="noopener">Sign up &#8599;</a>';
+        '" target="_blank" rel="noopener">' +
+        I18N.t('events.link.signup', 'Sign up') + ' &#8599;</a>';
     }
     var timeStr = escapeHtml(timeRange(ev)) +
       (ev.timeNote ? ' <span class="badge badge--muted">' + escapeHtml(ev.timeNote) + '</span>' : '');
@@ -597,11 +638,12 @@
    * applied to the calendar. */
   function showFallbackNotice() {
     if (!eventsStatus) { return; }
-    eventsStatus.innerHTML = '<div><strong>This is the last saved copy of the calendar.</strong> ' +
+    eventsStatus.innerHTML = '<div>' + I18N.t('events.fallback.notice',
+      '<strong>This is the last saved copy of the calendar.</strong> ' +
       'We could not reach the live schedule, so a room or a time may have ' +
       'changed since it was saved. The club ' +
       '<a class="link-gold" href="https://discord.gg/XjdnedqTC" target="_blank" rel="noopener">Discord</a> ' +
-      'has the current answer.</div>';
+      'has the current answer.') + '</div>';
     eventsStatus.hidden = false;
   }
 
@@ -646,6 +688,19 @@
    * language anywhere, and isAccessibleForFree says the true thing
    * without inventing a price in kroner for a night that has none.
    */
+  /* The canonical URL of the page we are on, for the Event url below.
+   *
+   * Read from the canonical tag rather than hardcoded, because there are
+   * now two events pages, /events and /no/events, and an Event that told
+   * search engines the Norwegian page was the English one would be
+   * pointing half its readers at a language they did not ask for. The
+   * canonical is already per page and already correct; this just uses it. */
+  function pageUrl() {
+    var link = document.querySelector('link[rel="canonical"]');
+    var href = link && link.getAttribute('href');
+    return href || location.href.split('#')[0].split('?')[0];
+  }
+
   function emitEventSchema(upcoming) {
     var old = document.getElementById('events-schema');
     if (old && old.parentNode) { old.parentNode.removeChild(old); }
@@ -673,7 +728,7 @@
         eventStatus: 'https://schema.org/EventScheduled',
         eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
         isAccessibleForFree: true,
-        url: 'https://storeblindernpoker.org/events',
+        url: pageUrl(),
         image: 'https://storeblindernpoker.org/assets/img/og-events.jpg',
         organizer: { '@id': 'https://storeblindernpoker.org/#organization' },
         location: {
@@ -713,7 +768,9 @@
       upcomingList.innerHTML = upcoming.length
         ? upcoming.map(function (ev) { return renderEventCard(ev, false); }).join('')
         : '<div class="empty-state"><div class="empty-state__icon">&#9824;</div>' +
-          '<p class="empty-state__text">Nothing on the calendar right now. New nights are announced here and on Discord.</p></div>';
+          '<p class="empty-state__text">' + I18N.t('events.empty.upcoming',
+            'Nothing on the calendar right now. New nights are announced here and on Discord.') +
+          '</p></div>';
     }
     if (pastList) {
       // "They appear here once a night has been played" was a promise this
@@ -724,9 +781,11 @@
       pastList.innerHTML = past.length
         ? past.map(function (ev) { return renderEventCard(ev, true); }).join('')
         : '<div class="empty-state">' +
-          '<p class="empty-state__text">No played nights are listed here yet. ' +
-          'The <a class="link-gold" href="leaderboard.html">leaderboard</a> ' +
-          'has the standings for every night that has been settled.</p></div>';
+          '<p class="empty-state__text">' + I18N.t('events.empty.past',
+            'No played nights are listed here yet. ' +
+            'The <a class="link-gold" href="leaderboard.html">leaderboard</a> ' +
+            'has the standings for every night that has been settled.') +
+          '</p></div>';
     }
 
     // Last, and only on the events page: the structured data describes the
@@ -738,7 +797,9 @@
     loadEvents().then(renderEvents).catch(function (err) {
       console.warn('Events unavailable:', err);
       var msg = '<div class="empty-state"><p class="empty-state__text">' +
-        'Could not load the events list. Please refresh, or check the club Discord.</p></div>';
+        I18N.t('events.error',
+          'Could not load the events list. Please refresh, or check the club Discord.') +
+        '</p></div>';
       if (upcomingList) { upcomingList.innerHTML = msg; }
       if (pastList) { pastList.innerHTML = ''; }
     });
@@ -841,7 +902,7 @@
   }
 
   function fetchFallbackLeaderboard() {
-    fetch('data/leaderboard-fallback.json', { cache: 'no-cache' })
+    fetch('/data/leaderboard-fallback.json', { cache: 'no-cache' })
       .then(function (r) {
         if (!r.ok) { throw new Error('leaderboard-fallback.json: HTTP ' + r.status); }
         return r.json();
@@ -860,7 +921,7 @@
 
   function renderLeaderboard(rows, source, updated) {
     var fmt = function (n) {
-      try { return Number(n).toLocaleString('en-GB'); } catch (e) { return String(n); }
+      try { return Number(n).toLocaleString(I18N.locale); } catch (e) { return String(n); }
     };
 
     // Podium cards for the top three.
@@ -909,11 +970,11 @@
     var status = document.getElementById('leaderboard-status');
     if (status) {
       if (source === 'fallback') {
-        status.textContent = 'Shown from the last saved standings' +
+        status.textContent = I18N.t('board.saved', 'Shown from the last saved standings') +
           (updated ? ' (' + updated + ')' : '') +
           '. The live database is unreachable right now.';
       } else {
-        status.textContent = 'Live standings, updated after each night is settled.';
+        status.textContent = I18N.t('board.live', 'Live standings, updated after each night is settled.');
       }
     }
     var placeholder = document.getElementById('leaderboard-placeholder');

@@ -44,6 +44,12 @@
 (function () {
   'use strict';
 
+  /* Language, or English if js/i18n.js did not load. See that file: t()
+   * returns its English argument unchanged on an English page, so nothing
+   * here depends on a translation being present. */
+  var I18N = window.SBP_I18N ||
+    { lang: 'en', locale: 'en-GB', t: function (k, en) { return en; } };
+
   /* ------------------------------------------------------------------
    * Guards. If anything this module needs is missing, do nothing at all.
    * ------------------------------------------------------------------ */
@@ -150,7 +156,7 @@
   }
 
   function fetchEventsJson() {
-    return fetch('data/events.json', { cache: 'no-cache' }).then(function (r) {
+    return fetch('/data/events.json', { cache: 'no-cache' }).then(function (r) {
       if (!r.ok) { throw new Error('events.json: HTTP ' + r.status); }
       return r.json();
     });
@@ -266,7 +272,7 @@
    * change exists to stop.
    * ------------------------------------------------------------------ */
 
-  var TBD_TEXT = 'Venue still to be confirmed';
+  var TBD_TEXT = I18N.t('events.venue.tbd', 'Venue still to be confirmed');
 
   function venueText(night) {
     var v = String((night && night.location) || '').trim();
@@ -339,7 +345,7 @@
         // 8599 is the north east arrow js/app.js writes as &#8599; on the
         // cards it builds. Spelled as a code point because this file is
         // ASCII, and so that the two renders cannot drift apart.
-        roomLink.textContent = 'Find the room ' + String.fromCharCode(8599);
+        roomLink.textContent = I18N.t('events.link.room', 'Find the room') + ' ' + String.fromCharCode(8599);
         links.appendChild(roomLink);
       }
       roomLink.setAttribute('href', href);
@@ -367,9 +373,9 @@
     el.textContent = '';
     var num = document.createElement('span');
     num.className = numClass;
-    num.textContent = cap ? (String(n) + ' of ' + String(cap)) : String(n);
+    num.textContent = cap ? (String(n) + ' ' + I18N.t('rsvp.of', 'of') + ' ' + String(cap)) : String(n);
     el.appendChild(num);
-    el.appendChild(document.createTextNode(' going'));
+    el.appendChild(document.createTextNode(' ' + I18N.t('rsvp.going', 'going')));
   }
 
   function newBlock(night, tmpl, identity) {
@@ -469,10 +475,10 @@
 
     /* The way in, for people who are not signed in or have no pseudonym. */
     if (b.identity === 'anon') {
-      b.signin.textContent = 'Sign in to RSVP';
+      b.signin.textContent = I18N.t('rsvp.signin', 'Sign in to RSVP');
       b.signin.hidden = false;
     } else if (b.identity === 'noname') {
-      b.signin.textContent = 'Claim a pseudonym to RSVP';
+      b.signin.textContent = I18N.t('rsvp.claim', 'Claim a pseudonym to RSVP');
       b.signin.hidden = false;
     } else {
       b.signin.hidden = true;
@@ -480,15 +486,15 @@
 
     var hint = '';
     if (isChecking) {
-      hint = 'Checking your account.';
+      hint = I18N.t('rsvp.checking', 'Checking your account.');
     } else if (isMember && !b.locked) {
       if (full && b.mine !== 'going') {
-        hint = 'All ' + b.capacity + ' seats are taken. Check back in case '
-             + 'somebody drops out, or ask an organiser.';
+        hint = I18N.t('rsvp.full.a', 'All') + ' ' + b.capacity + ' '
+             + I18N.t('rsvp.full.b', 'seats are taken. Check back in case somebody drops out, or ask an organiser.');
       } else {
         hint = b.mine
-          ? 'Tap the same answer again to clear it.'
-          : 'One tap. You can change it later.';
+          ? I18N.t('rsvp.hint.clear', 'Tap the same answer again to clear it.')
+          : I18N.t('rsvp.hint.tap', 'One tap. You can change it later.');
       }
     }
     b.hint.textContent = hint;
@@ -513,7 +519,7 @@
           li.className = 'rsvp__who rsvp__who--me';
           var you = document.createElement('span');
           you.className = 'rsvp__you';
-          you.textContent = 'you';
+          you.textContent = I18N.t('rsvp.you', 'you');
           li.appendChild(you);
         }
         b.list.appendChild(li);
@@ -577,9 +583,9 @@
       b.notGoingCount = snap.notGoingCount;
       if (String(err && err.code) === 'P0020') {
         b.locked = true;
-        b.msgText = 'That night is closed for RSVPs now. Tell an organiser instead.';
+        b.msgText = I18N.t('rsvp.closed', 'That night is closed for RSVPs now. Tell an organiser instead.');
       } else {
-        b.msgText = 'Not saved: ' + S.friendlyError(err);
+        b.msgText = I18N.t('rsvp.notsaved', 'Not saved:') + ' ' + S.friendlyError(err);
       }
       b.msgKind = 'error';
       render(b);
@@ -650,7 +656,7 @@
           if (who.identity === 'unknown') {
             // Signed in, but we could not confirm the account. Say so rather
             // than leaving a control that would fail on the first tap.
-            b.msgText = 'Could not check your account. Reload the page to RSVP.';
+            b.msgText = I18N.t('rsvp.err.account', 'Could not check your account. Reload the page to RSVP.');
             b.msgKind = 'error';
           }
           render(b);
@@ -685,7 +691,7 @@
           b.identity = 'member';
           b.me = who.member.pseudonym;
           b.going = null;
-          b.msgText = 'Could not load who is going. Your own answer still saves.';
+          b.msgText = I18N.t('rsvp.err.list', 'Could not load who is going. Your own answer still saves.');
           b.msgKind = '';
           render(b);
         });
@@ -749,7 +755,7 @@
           if (n > 0) {
             setCountLine(out, n, cap, 'countdown__going-num');
           } else {
-            out.textContent = 'Nobody has answered yet.';
+            out.textContent = I18N.t('rsvp.none', 'Nobody has answered yet.');
           }
           // Same rule as the event cards: the database is the newer answer
           // about the room, including when the answer is "not confirmed".
@@ -798,16 +804,16 @@
   /* No leading space. The old code concatenated fragments blindly; joinSentences
    * owns the spacing now, and a fragment carrying its own would fight it the
    * next time somebody reorders the parts. */
-  var SIGN_IN_NOTE = 'You sign in first if you are not already.';
+  var SIGN_IN_NOTE = I18N.t('rsvp.signin.note', 'You sign in first if you are not already.');
   /* What stands in for a deadline when there is none, which is now the normal
    * case. It names an act rather than a clock. Settle is the ordinary closer;
    * a void or a removal also ends reporting, and report.html says the true
    * thing in both cases, so this line does not try to enumerate them. */
-  var OPEN_UNTIL_SETTLED = 'Reporting stays open until the organisers settle the night.';
+  var OPEN_UNTIL_SETTLED = I18N.t('rsvp.open', 'Reporting stays open until the organisers settle the night.');
 
   function osloHm(date) {
     try {
-      return new Intl.DateTimeFormat('en-GB', {
+      return new Intl.DateTimeFormat(I18N.locale, {
         timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hour12: false
       }).format(date);
     } catch (err) {
@@ -845,14 +851,21 @@
   function osloDayPhrase(t, now) {
     var key = osloDayKey(t);
     if (key === osloDayKey(now)) { return ''; }
-    if (key === osloDayKey(new Date(now.getTime() + 86400000))) { return ' tomorrow'; }
+    if (key === osloDayKey(new Date(now.getTime() + 86400000))) {
+      return ' ' + I18N.t('when.tomorrow', 'tomorrow');
+    }
+    /* "on Friday 19 September", "på fredag 19. september". The preposition
+     * is translated separately from the date because Intl already knows how
+     * to write the date in each language and does not know the sentence it
+     * is being dropped into. */
+    var on = I18N.t('when.on', 'on');
     try {
-      return ' on ' + new Intl.DateTimeFormat('en-GB', {
+      return ' ' + on + ' ' + new Intl.DateTimeFormat(I18N.locale, {
         timeZone: 'Europe/Oslo', weekday: 'long', day: 'numeric', month: 'long'
       }).format(t);
     } catch (err) {
       var p = isoParts(key);
-      return p ? (' on ' + p.d + ' ' + MONTH_ABBR[p.mo - 1]) : '';
+      return p ? (' ' + on + ' ' + p.d + ' ' + MONTH_ABBR[p.mo - 1]) : '';
     }
   }
 
@@ -953,7 +966,7 @@
     if (!p) { return 'That night'; }
     var d = new Date(Date.UTC(p.y, p.mo - 1, p.d));
     try {
-      return new Intl.DateTimeFormat('en-GB', {
+      return new Intl.DateTimeFormat(I18N.locale, {
         timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long'
       }).format(d);
     } catch (err) {
