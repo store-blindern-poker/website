@@ -1,0 +1,24 @@
+# Store Blindern Poker, storeblindernpoker.org
+#
+# We want to be found. The club exists to get people to a table on a
+# Friday, so search engines and assistants are welcome to read this site
+# and describe it. Nothing is disallowed below, on purpose.
+#
+# The member-only pages (login, report, admin, reset, unsubscribe) are kept
+# out of search with <meta name="robots" content="noindex"> in the page
+# itself, not with a Disallow line here. A crawler has to be able to fetch
+# a page to read the instruction not to index it, so blocking the path
+# would hide the instruction along with the page.
+#
+# Content-Signal is Cloudflare's convention for saying what a crawler may
+# do with what it reads. "search" and "ai-input" are granted because being
+# quoted in a search result or an assistant's answer is how a student finds
+# us. "ai-train" is deliberately left unset, which grants nothing and
+# forbids nothing: if the board ever wants to take a position on model
+# training, add ai-train=yes or ai-train=no to the line below.
+
+User-agent: *
+Content-Signal: search=yes, ai-input=yes
+Allow: /
+
+Sitemap: https://storeblindernpoker.org/sitemap.xml

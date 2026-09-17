@@ -1,5 +1,7 @@
 {
   "event": "Store Blindern Poker, Season 2 finale, 10 May 2026",
+  "photographer": "Hennesy",
+  "photographerNote": "All photographs in this folder were taken by Hennesy, credited by pseudonym in the site footer. Pseudonyms are the only public identity in this repo.",
   "note": "All selected images verified to contain no identifiable faces. People-photos require consent before publication.",
   "images": [
     {
@@ -146,5 +148,30 @@
       "outputBytes": 865479,
       "use": "Prizes section. Poker set, book, trophy chips. NOTE: champagne bottle in frame."
     }
-  ]
+  ],
+  "derived": {
+    "note": "Social preview images. Not new photographs: each is a 1200x630 centre crop of the listed slug above, made for og:image, which wants 1.91:1 while every photo here is 4:3. Credit and consent follow the source.",
+    "images": [
+      {
+        "slug": "og-cover",
+        "from": "hero-whiskey-chip",
+        "use": "Default social preview. Home, All in, Privacy."
+      },
+      {
+        "slug": "og-events",
+        "from": "community-cards",
+        "use": "Social preview for the events page."
+      },
+      {
+        "slug": "og-leaderboard",
+        "from": "season-winner-chips",
+        "use": "Social preview for the leaderboard."
+      },
+      {
+        "slug": "og-rules",
+        "from": "stack-denominations",
+        "use": "Social preview for the rules page."
+      }
+    ]
+  }
 }

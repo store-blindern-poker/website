@@ -625,6 +625,80 @@
    * settled appears nowhere at all, because it leaves the view on settle and
    * was never in the file. An absence is invisible, so nobody will report
    * it. */
+  /* Event structured data for the upcoming nights, built from the cards
+   * that were actually rendered.
+   *
+   * It is here, and not baked into events.html, for the same reason the
+   * list itself is not: the calendar is read live from the database, so
+   * anything written into the page by hand is a room and a date that
+   * somebody has to remember to change. A stale <h2> is a small problem.
+   * A stale Event block is a wrong room in the format search engines and
+   * assistants trust most, and it outlives the page that carried it,
+   * because a rich result can sit in an index for weeks. So this reads
+   * whichever source answered, file or database, and says only that.
+   *
+   * Upcoming nights only. Past nights come from data/events.json alone
+   * and that section already knows it is incomplete (see the comment
+   * above renderEvents); publishing an incomplete history as structured
+   * data would be asserting the gaps are real.
+   *
+   * No offers block, deliberately. The club rule is no currency
+   * language anywhere, and isAccessibleForFree says the true thing
+   * without inventing a price in kroner for a night that has none.
+   */
+  function emitEventSchema(upcoming) {
+    var old = document.getElementById('events-schema');
+    if (old && old.parentNode) { old.parentNode.removeChild(old); }
+    if (!upcoming || !upcoming.length) { return; }
+
+    var items = [];
+    for (var i = 0; i < upcoming.length; i++) {
+      var ev = upcoming[i];
+      var day = isoOf(ev.date);
+      if (!isIso(day)) { continue; }
+
+      // Local time, no offset. The nights are in Oslo and the reader may
+      // not be, and guessing an offset from the visitor's clock is how a
+      // night ends up an hour out in somebody's calendar.
+      var start = /^\d{2}:\d{2}$/.test(String(ev.time || '')) ? day + 'T' + ev.time : day;
+      var end = /^\d{2}:\d{2}$/.test(String(ev.endTime || '')) ? day + 'T' + ev.endTime : '';
+
+      // An unconfirmed room is still a confirmed campus, so the Place
+      // falls back to the campus rather than to nothing.
+      var venue = venueOf(ev);
+      var item = {
+        '@type': 'Event',
+        name: String(ev.title || 'Poker night'),
+        startDate: start,
+        eventStatus: 'https://schema.org/EventScheduled',
+        eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+        isAccessibleForFree: true,
+        url: 'https://storeblindernpoker.org/events',
+        image: 'https://storeblindernpoker.org/assets/img/og-events.jpg',
+        organizer: { '@id': 'https://storeblindernpoker.org/#organization' },
+        location: {
+          '@type': 'Place',
+          name: venue || 'Blindern campus, University of Oslo',
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: 'Oslo',
+            addressCountry: 'NO'
+          }
+        }
+      };
+      if (end) { item.endDate = end; }
+      if (ev.description) { item.description = String(ev.description); }
+      items.push(item);
+    }
+    if (!items.length) { return; }
+
+    var el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.id = 'events-schema';
+    el.textContent = JSON.stringify({ '@context': 'https://schema.org', '@graph': items });
+    document.head.appendChild(el);
+  }
+
   function renderEvents(res) {
     var events = res.list;
     var upcoming = events.filter(isUpcoming).sort(function (a, b) {
@@ -654,6 +728,10 @@
           'The <a class="link-gold" href="leaderboard.html">leaderboard</a> ' +
           'has the standings for every night that has been settled.</p></div>';
     }
+
+    // Last, and only on the events page: the structured data describes the
+    // list a reader can see, so it is written after the list exists.
+    if (upcomingList) { emitEventSchema(upcoming); }
   }
 
   function initEventsPage() {

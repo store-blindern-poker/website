@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Every public page, at the extensionless URL Cloudflare Pages serves and
+  the canonical tags point at. The member-only pages are not listed: they
+  are noindex, and a sitemap is a list of pages we want indexed.
+
+  lastmod is a promise, not decoration. Update the date on a page when you
+  change what that page says, and leave the others alone.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://storeblindernpoker.org/</loc>
+    <lastmod>2026-09-17</lastmod>
+  </url>
+  <url>
+    <loc>https://storeblindernpoker.org/events</loc>
+    <lastmod>2026-09-17</lastmod>
+  </url>
+  <url>
+    <loc>https://storeblindernpoker.org/leaderboard</loc>
+    <lastmod>2026-09-17</lastmod>
+  </url>
+  <url>
+    <loc>https://storeblindernpoker.org/rules</loc>
+    <lastmod>2026-09-17</lastmod>
+  </url>
+  <url>
+    <loc>https://storeblindernpoker.org/all-in</loc>
+    <lastmod>2026-09-17</lastmod>
+  </url>
+  <url>
+    <loc>https://storeblindernpoker.org/privacy</loc>
+    <lastmod>2026-09-17</lastmod>
+  </url>
+</urlset>
