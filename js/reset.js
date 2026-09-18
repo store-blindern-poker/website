@@ -238,9 +238,17 @@
     btn.disabled = true;
     msg(box, 'Sending…', 'busy');
 
-    // redirectTo must be on the allow list in the Supabase dashboard
-    // (Authentication, URL Configuration) or the mail arrives pointing at
-    // the site root and this page never sees the token.
+    /* redirectTo is a request, not an instruction. Supabase accepts it only
+     * if its hostname matches the project's Site URL or it matches the
+     * redirect allow list (Authentication, URL Configuration). Otherwise it
+     * silently substitutes the Site URL, still answers 200, and the mail
+     * goes out pointing somewhere this page is not.
+     *
+     * That is not hypothetical. The project shipped with the Site URL left
+     * at the GoTrue default, http://localhost:3000, so every reset link
+     * sent to a member pointed at their own machine. Nothing in the logs
+     * said "wrong": the send succeeded and the address was simply rewritten.
+     * See docs/HANDOVER.md 5.6 for the settings and how to check them. */
     c.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname
     }).then(function (r) {

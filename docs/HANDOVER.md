@@ -126,6 +126,37 @@ kept `TODO: where`, for `TODO: how long`.
 at 40,000 on first check-in, freeze the old season, export a final
 leaderboard snapshot for the hall of fame.
 
+### 5.6 Auth URL configuration (the one that broke reset links)
+
+Supabase decides for itself where an emailed link may point. It accepts the
+`redirectTo` the page asks for only when that hostname matches the project's
+**Site URL**, or when it matches the **Redirect URLs** allow list. Anything
+else is replaced by the Site URL without an error: the send still returns
+200, the member still gets mail, the link just goes to the wrong place.
+
+Dashboard → Authentication → URL Configuration:
+
+- **Site URL:** `https://storeblindernpoker.org` (no trailing slash, `https`)
+- **Redirect URLs:** `https://storeblindernpoker.org/**`, plus
+  `http://localhost:8788/**` for `wrangler pages dev`, plus the project's
+  `*.pages.dev` preview pattern if previews are used for sign-in testing.
+
+The default value is `http://localhost:3000`, and it was still the default
+into September 2026, corrected on 18 September 2026. Until then every
+reset and confirmation link the club had ever sent pointed at the member's
+own machine. Symptom as members report it: "the link in the email just
+opens localhost", or a browser that cannot connect at all.
+
+To check it without asking anyone to try: Dashboard → Logs → Auth, or the
+same query through the Supabase MCP tools. Each entry carries a `referer`
+field, which is the address the link will actually use after Supabase has
+had its say. If it reads `http://localhost:3000`, the setting is wrong,
+whatever the page asked for.
+
+Links already sent keep the address baked in, and clicking one spends the
+token. After changing the setting, anyone waiting on a link needs to ask
+for a fresh one.
+
 ## 6. Known debts and sharp edges
 
 - `TODO:` GitHub history of the *old* repository contained real-name files;
