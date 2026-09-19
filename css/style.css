@@ -4197,3 +4197,226 @@ select.input {
 @media (hover: hover) {
   .story__more a:hover { color: var(--brass-lift); }
 }
+
+/* ===========================================================================
+   What the round did to you: movement marks on the board
+   ===========================================================================
+   Two semantic colours and nothing else. --felt-lift and --clay-lift are the
+   palette's readable positive and negative, already contrast-checked against
+   --bg, so a gain and a loss never rely on the arrow alone to be told apart.
+   The muted dot is a held place, which is a result and deserves a mark; a
+   member with no earlier standing gets nothing, because we have nothing to
+   say about them yet. */
+
+.move {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  margin-left: var(--space-xs);
+  white-space: nowrap;
+}
+
+.move--up    { color: var(--felt-lift); }
+.move--down  { color: var(--clay-lift); }
+.move--level { color: var(--cream-mute); }
+
+/* Under the points, not beside them: the number is what the eye wants first
+   and the change is the footnote. Block so a long "+26,350" never pushes the
+   column wider on a phone. */
+.delta {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.delta--up    { color: var(--felt-lift); }
+.delta--down  { color: var(--clay-lift); }
+.delta--level { color: var(--cream-mute); }
+
+.board-open-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-md);
+}
+
+/* ===========================================================================
+   Display mode: the board on the screen in the room
+   ===========================================================================
+   Everything is sized in viewport units so one stylesheet serves a laptop
+   lid, a 1080p projector and whatever television the room has this term. The
+   row height is the exception: js/app.js computes it and writes
+   --board-row-h, because it also has to divide the available height into
+   whole rows, and a layout where CSS and JS each guess separately is a
+   layout that disagrees with itself at some screen size nobody tested. */
+
+.board {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background-color: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: 2.2vmin 2.6vmin;
+  --board-row-h: 48px;
+}
+
+.board[hidden] { display: none; }
+
+.board__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding-bottom: 1.4vmin;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.board__heading { display: flex; align-items: baseline; gap: 1.6vmin; flex-wrap: wrap; }
+
+.board__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.6vmin, 2.4rem);
+  color: var(--cream);
+  letter-spacing: -0.01em;
+}
+
+.board__sub {
+  font-family: var(--font-sans);
+  font-size: clamp(0.8rem, 1.5vmin, 1.3rem);
+  color: var(--brass);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.board__close {
+  font-family: var(--font-mono);
+  font-size: clamp(0.7rem, 1.2vmin, 1rem);
+  color: var(--cream-mute);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4em 0.9em;
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.board__close:hover { color: var(--cream); border-color: var(--border-loud); }
+
+.board__grid {
+  flex: 1 1 auto;
+  display: grid;
+  gap: 0 3vmin;
+  align-content: start;
+  padding-top: 1.2vmin;
+  min-height: 0;
+}
+
+.board-col { list-style: none; margin: 0; padding: 0; }
+
+.board-row {
+  display: grid;
+  grid-template-columns: 2.6em 1fr auto auto;
+  align-items: center;
+  gap: 0 1.2vmin;
+  height: var(--board-row-h);
+  padding: 0 0.6vmin;
+  border-bottom: 1px solid var(--border);
+}
+
+.board-row__rank {
+  font-family: var(--font-mono);
+  font-size: calc(var(--board-row-h) * 0.38);
+  color: var(--cream-mute);
+  text-align: right;
+}
+
+/* The name truncates; the 'not reported' badge does not. Putting the
+   ellipsis on the whole cell ate the badge from the right on any long
+   pseudonym, which hid exactly the rows this screen exists to chase. */
+.board-row__name {
+  font-family: var(--font-sans);
+  font-size: calc(var(--board-row-h) * 0.42);
+  color: var(--cream);
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.board-row__who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.board-row__points {
+  font-family: var(--font-mono);
+  font-size: calc(var(--board-row-h) * 0.42);
+  color: var(--cream);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The two marks sit on one line here rather than stacked: a wall board has
+   width to spare and height it cannot waste. A fixed min-width keeps the
+   points column from jittering as numbers arrive during the night. */
+.board-row__move {
+  min-width: 7.5em;
+  text-align: right;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.6em;
+}
+
+.board-row__move .delta { display: inline; margin-top: 0; font-size: calc(var(--board-row-h) * 0.3); }
+.board-row__move .move  { margin-left: 0; font-size: calc(var(--board-row-h) * 0.3); }
+
+/* The only brass on the screen. Three rows, so it still means something. */
+.board-row--top .board-row__rank,
+.board-row--top .board-row__name { color: var(--brass); }
+
+.board-row__pending {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: calc(var(--board-row-h) * 0.26);
+  color: var(--cream-mute);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.1em 0.5em;
+  margin-left: 0.6em;
+  white-space: nowrap;
+}
+
+.board__foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding-top: 1.2vmin;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: clamp(0.75rem, 1.5vmin, 1.4rem);
+  color: var(--cream-mute);
+}
+
+/* Loud on purpose while anybody is still out. This is the one number on the
+   screen that somebody in the room can act on before they go home. */
+.board__waiting--open {
+  color: var(--clay-lift);
+  border: 1px solid var(--clay-line);
+  background-color: var(--clay-fill);
+  border-radius: var(--radius);
+  padding: 0.3em 0.8em;
+}
+
+@media (max-width: 760px) {
+  .board { padding: var(--space-md); }
+  .board-row { grid-template-columns: 2.2em 1fr auto; }
+  .board-row__move { min-width: 0; grid-column: 1 / -1; justify-content: flex-start; }
+}

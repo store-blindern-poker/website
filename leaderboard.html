@@ -141,6 +141,13 @@
             </div>
           </div>
 
+          <!-- Revealed by js/app.js only once rows exist, so it can never open
+               onto an empty screen in front of a room. -->
+          <div class="board-open-row">
+            <button class="btn btn--ghost" id="board-display-open" type="button" hidden>
+              Big screen
+            </button>
+          </div>
           <div class="table-wrapper">
             <table class="table leaderboard" aria-describedby="leaderboard-status">
               <thead>
@@ -301,6 +308,25 @@
   </div>
 
   <!-- Order matters: config, then the vendored Supabase bundle, then app.js -->
+
+  <!-- Big-screen display, for the room at closing time. Why it pages rather
+       than scrolls, and why it packs into columns, is argued in js/app.js
+       under "Display mode". Hidden until the board has rows, so it can never
+       be opened onto an empty screen. -->
+  <div class="board" id="board-takeover" hidden>
+    <div class="board__head">
+      <div class="board__heading">
+        <span class="board__title">Season standings</span>
+        <span class="board__sub" id="board-sub"></span>
+      </div>
+      <button class="board__close" id="board-close" type="button">Esc</button>
+    </div>
+    <div class="board__grid" id="board-grid"></div>
+    <div class="board__foot">
+      <span class="board__waiting" id="board-waiting"></span>
+      <span class="board__pager" id="board-pager"></span>
+    </div>
+  </div>
   <script src="js/config.js" defer></script>
   <script src="js/vendor/supabase.js" defer></script>
   <script src="js/app.js" defer></script>

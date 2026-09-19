@@ -92,6 +92,26 @@
     'board.saved': 'Vist fra den sist lagrede stillingen',
     'board.now': 'Skjer nå',
 
+    /* The movement marks. "opp"/"ned" and "plasser" are read out by screen
+     * readers and never seen, so they stay lower case: they are glued after
+     * a number into "opp 3 plasser". */
+    'board.up': 'opp',
+    'board.down': 'ned',
+    'board.places': 'plasser',
+    'board.held': 'holdt plassen',
+    'board.moveLive': 'Bevegelse og poengendring er så langt i kveld, og ' +
+      'nullstilles når neste runde åpner.',
+    'board.moveSettled': 'Bevegelse og poengendring er fra forrige ' +
+      'oppgjorte runde.',
+
+    /* Display mode, the big screen in the room */
+    'board.notReported': 'ikke rapportert',
+    'board.tonight': 'Så langt i kveld',
+    'board.lastRound': 'Forrige oppgjorte runde',
+    'board.stillToReport': 'har ikke rapportert ennå',
+    'board.allReported': 'Alle har rapportert',
+    'board.page': 'Side',
+
     /* js/rsvp.js, the answer block on each upcoming night.
      *
      * "kommer" carries the headcount line: "7 kommer", "7 av 24 kommer".

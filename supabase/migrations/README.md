@@ -26,6 +26,10 @@ so the two should never drift.
 | `0018_unreported_reminders.sql` | `unreported_roster()`, `mark_reminded()`, the reminder button |
 | `0019_reporting_has_no_deadline.sql` | `reports_close_at` defaults to NULL; settling the night closes reporting |
 | `0020_round_announcements.sql` | One mail when a round opens, to this season's players, with an opt out |
+| `0021_live_leaderboard.sql` | The board moves as reports come in, and flags who has not reported |
+| `0022_live_nights_played.sql` | The nights count follows the live points instead of lagging a settle |
+| `0023_live_survives_recompute.sql` | Refresh the live columns after `recompute_season` rebuilds the table, not before |
+| `0024_leaderboard_movement.sql` | `points_delta` and `places_moved` on the board, rebased when a night opens |
 
 ## The rule that matters
 

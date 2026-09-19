@@ -838,6 +838,10 @@
         console.warn('Live leaderboard unavailable, trying fallback:', err);
         fetchFallbackLeaderboard();
       });
+    // Starts whatever the first read did. A page that fell back to the baked
+    // copy because the project was waking up should pick up the live board on
+    // its own a minute later, without anybody pressing reload.
+    startLbPolling();
   }
 
   /* The caveat above the board.
@@ -861,7 +865,12 @@
         .then(function (res) {
           if (res.error) { throw res.error; }
           var rows = (res.data || []).filter(function (r) { return r.unreported > 0; });
-          if (!rows.length) { return; }
+          // Hidden again when the last night settles. Before the board
+          // refreshed on a timer this could only ever appear, because the page
+          // was thrown away before the answer changed. It can now go from
+          // something to nothing while somebody is looking at it, and a
+          // caveat left above a settled board is a lie.
+          if (!rows.length) { box.hidden = true; return; }
           var parts = rows.map(function (r) {
             var name = r.title || ('Round ' + r.night_no);
             return escapeHtml(name) + ' is waiting on ' + r.unreported +
@@ -882,24 +891,80 @@
     }
   }
 
+  /* The two column lists exist because a deploy and a migration are separate
+   * acts here, and they land in whichever order somebody does them. Asking
+   * for a column the view does not have yet is a 400 on the whole request,
+   * which would drop the board to its baked fallback and make a missing
+   * arrow look like a database outage. So the read asks for the movement
+   * columns (migration 0024), and on any failure asks again without them.
+   * A board with no arrows is a small loss. A board that will not load is
+   * the page. */
+  var LB_COLS = 'rank,pseudonym,points,nights_played,pending,provisional';
+  var LB_COLS_MOVE = LB_COLS + ',delta_live,points_delta,places_moved';
+
   function fetchLiveLeaderboard() {
     var client = anonClient();
     if (!client) {
       return Promise.reject(new Error('Supabase not configured'));
     }
-    try {
+    function read(cols) {
       return client
         .from('v_leaderboard')
-        .select('rank,pseudonym,points,nights_played,pending,provisional')
+        .select(cols)
         .order('rank', { ascending: true })
         .then(function (res) {
           if (res.error) { throw res.error; }
           return res.data || [];
         });
+    }
+    try {
+      return read(LB_COLS_MOVE).catch(function (err) {
+        console.warn('Leaderboard movement columns unavailable, ' +
+                     'reading without them:', err);
+        return read(LB_COLS);
+      });
     } catch (err) {
       return Promise.reject(err);
     }
   }
+
+  /* ---------------- keeping it live ----------------
+   *
+   * Points move as people report, so a board left open on a phone at the
+   * table goes stale within minutes. It re-reads on a timer rather than over
+   * a realtime socket: a socket would mean opening replication on
+   * season_scores and holding a connection per visitor, which is a lot of
+   * machinery for a number that changes a few times an hour.
+   *
+   * A hidden tab polls nothing. Somebody's laptop left open on this page for
+   * a week should cost the club's free tier nothing at all, and the read on
+   * becoming visible again means they still see current numbers the moment
+   * they look. Every failure is swallowed and the last good board stays up.
+   */
+  var lbTimer = null;
+
+  function lbCadence() {
+    var el = boardEl();
+    // On the wall at closing time, worth the extra reads. Anywhere else, not.
+    return (el && !el.hidden) ? 20000 : 60000;
+  }
+
+  function refreshLeaderboard() {
+    if (document.hidden) { return; }
+    fetchLiveLeaderboard().then(function (rows) {
+      if (rows && rows.length) { renderLeaderboard(rows, 'live', null); }
+    }).catch(function () { /* keep whatever is on screen */ });
+    fetchPendingBanner();
+  }
+
+  function startLbPolling() {
+    if (lbTimer) { window.clearInterval(lbTimer); }
+    lbTimer = window.setInterval(refreshLeaderboard, lbCadence());
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && leaderboardBody) { refreshLeaderboard(); }
+  });
 
   function fetchFallbackLeaderboard() {
     fetch('/data/leaderboard-fallback.json', { cache: 'no-cache' })
@@ -919,10 +984,52 @@
       });
   }
 
+  function fmt(n) {
+    try { return Number(n).toLocaleString(I18N.locale); } catch (e) { return String(n); }
+  }
+
+  /* ---------------- what the round did to you ----------------
+   *
+   * Both numbers come from the view already decided (0024): while a night is
+   * open they describe that night so far, and once it is settled they
+   * describe it in full, until the next night opens and resets them to zero.
+   * Nothing here chooses a baseline, it only draws what it is handed.
+   *
+   * Zero and null are drawn differently on purpose. Zero is a result, they
+   * held their place, and gets the muted dot. Null means there is no earlier
+   * standing to measure against, which is true of a member on their first
+   * settled round, and gets nothing at all. Drawing "0" for both would claim
+   * we know something we do not. */
+  function moveChip(r) {
+    if (!r || r.places_moved === null || r.places_moved === undefined) { return ''; }
+    var n = Number(r.places_moved);
+    if (!n) {
+      return ' <span class="move move--level" aria-hidden="true">·</span>' +
+             '<span class="visually-hidden">' +
+             I18N.t('board.held', 'held their place') + '</span>';
+    }
+    var up = n > 0;
+    var word = up ? I18N.t('board.up', 'up') : I18N.t('board.down', 'down');
+    return ' <span class="move move--' + (up ? 'up' : 'down') + '">' +
+             '<span aria-hidden="true">' + (up ? '▲' : '▼') + ' ' + Math.abs(n) + '</span>' +
+             '<span class="visually-hidden">' + word + ' ' + Math.abs(n) + ' ' +
+             I18N.t('board.places', 'places') + '</span>' +
+           '</span>';
+  }
+
+  function deltaChip(r) {
+    if (!r || r.points_delta === null || r.points_delta === undefined) { return ''; }
+    var n = Number(r.points_delta);
+    if (!n) {
+      return '<span class="delta delta--level" aria-hidden="true">·</span>';
+    }
+    var up = n > 0;
+    return '<span class="delta delta--' + (up ? 'up' : 'down') + '">' +
+             (up ? '+' : '') + fmt(n) +
+           '</span>';
+  }
+
   function renderLeaderboard(rows, source, updated) {
-    var fmt = function (n) {
-      try { return Number(n).toLocaleString(I18N.locale); } catch (e) { return String(n); }
-    };
 
     // Podium cards for the top three.
     var podium = document.getElementById('leaderboard-podium');
@@ -959,10 +1066,10 @@
           + 'not reported</span>'
         : '';
       return '<tr>' +
-        '<td><span class="rank-number">' + escapeHtml(r.rank) + '</span></td>' +
+        '<td><span class="rank-number">' + escapeHtml(r.rank) + '</span>' + moveChip(r) + '</td>' +
         '<td><span class="player-cell"><span class="player-avatar">' + escapeHtml(initial) +
           '</span><span class="player-name">' + escapeHtml(r.pseudonym) + '</span>' + tag + '</span></td>' +
-        '<td class="num">' + fmt(r.points) + '</td>' +
+        '<td class="num">' + fmt(r.points) + deltaChip(r) + '</td>' +
         '<td class="num">' + fmt(r.nights_played) + '</td>' +
       '</tr>';
     }).join('');
@@ -974,10 +1081,231 @@
           (updated ? ' (' + updated + ')' : '') +
           '. The live database is unreachable right now.';
       } else {
-        status.textContent = I18N.t('board.live', 'Live standings, updated after each night is settled.');
+        // Says which round the arrows are about, because the same mark means
+        // two different things either side of a settle and a reader cannot
+        // tell from the arrow alone. Only added when there are arrows to
+        // explain: a view without the movement columns says what it always did.
+        var basis = '';
+        if (rows.length && rows[0].points_delta !== undefined) {
+          basis = ' ' + (rows[0].delta_live
+            ? I18N.t('board.moveLive',
+                'Movement and point changes are tonight so far, and reset when the next round opens.')
+            : I18N.t('board.moveSettled',
+                'Movement and point changes are from the last settled round.'));
+        }
+        status.textContent =
+          I18N.t('board.live', 'Live standings, updated after each night is settled.') + basis;
       }
     }
     var placeholder = document.getElementById('leaderboard-placeholder');
     if (placeholder) { placeholder.style.display = 'none'; }
+
+    lbRows = rows;
+    var openBtn = document.getElementById('board-display-open');
+    if (openBtn) { openBtn.hidden = false; }
+    if (!boardEl().hidden) { layoutBoard(); }
+  }
+
+  /* ------------------------------------------------------------------
+   * Display mode: the board on the screen in the room, at closing time.
+   *
+   * WHY IT PAGES RATHER THAN SCROLLS. The obvious build is a slow credits
+   * roll, and it is the wrong one. At 20:20 every person in the room is
+   * looking for exactly one name, their own. A list that is moving cannot be
+   * pointed at, cannot be photographed, and if you glance away you wait for
+   * the loop to come round again. A page that holds still for twelve seconds
+   * can be read, argued with, and photographed by the six people who want it
+   * for the group chat.
+   *
+   * WHY COLUMNS. Fifty names down one column is three screens of waiting. The
+   * same fifty in four columns is one screen and no waiting, at type still
+   * large enough to read from the back. So the layout takes the FEWEST
+   * columns that fit everybody, which keeps a twelve-player night from being
+   * spread thin across a wall, and only pages when even the widest layout
+   * runs out of room.
+   *
+   * WHY IT REFRESHES. This screen is up precisely when the numbers are still
+   * moving, so it re-reads every half minute. Somebody reporting from the
+   * corridor sees themselves appear, which is the whole argument for putting
+   * it on the wall in the first place.
+   *
+   * WHY THE NOT-REPORTED COUNT IS THE LOUDEST THING ON IT. At closing time
+   * the board's most useful job is not flattering the winner, it is getting
+   * the last eight people to send their stack before they walk to the tram.
+   * The standings are what people want; the count is what the club needs.
+   * ------------------------------------------------------------------ */
+  var lbRows = [];
+  var boardPage = 0;
+  var boardPages = 1;
+  var boardPageTimer = null;
+
+  function boardEl() { return document.getElementById('board-takeover'); }
+
+  function boardMeasure() {
+    var vh = window.innerHeight;
+    var vw = window.innerWidth;
+    // Tied to viewport height so the same page fills a laptop and a projector.
+    // The floor keeps a phone honest; the ceiling stops four rows filling a TV.
+    var rowH = Math.max(32, Math.min(76, Math.round(vh * 0.052)));
+
+    /* The space left for rows is MEASURED, not estimated. The header and
+     * footer are sized in vmin and wrap differently at every aspect ratio, so
+     * any fraction-of-the-viewport guess is wrong on some screen: too small
+     * and a row is cut in half at the bottom, too large and a projector shows
+     * fourteen names with a hand's width of empty felt under them. The grid
+     * is flex:1 with align-content:start, so it already holds exactly the
+     * space available whether or not anything is in it. Ask it. */
+    var grid = document.getElementById('board-grid');
+    var avail = (grid && grid.clientHeight) || Math.round(vh * 0.74);
+
+    var rowsPerCol = Math.max(5, Math.floor(avail / rowH));
+    var maxCols = vw >= 1800 ? 4 : vw >= 1200 ? 3 : vw >= 760 ? 2 : 1;
+
+    /* The fewest columns that still turn the fewest pages.
+     *
+     * Not simply the most columns that fit. Eighty-five players on a 1080p
+     * screen take two pages at four columns and two pages at three, and three
+     * columns give every name half as much room again before it has to be cut
+     * to "Den hvite q...". Widening a column is free when it costs no extra
+     * page, and the name is the thing people are actually scanning for.
+     *
+     * A twelve-player night therefore lands on one wide column rather than
+     * four thin ones with three names each, by the same rule. */
+    var total = Math.max(1, lbRows.length);
+    var best = Math.ceil(total / (rowsPerCol * maxCols));   // pages at the widest layout
+    var cols = maxCols;
+    for (var c = 1; c <= maxCols; c++) {
+      if (Math.ceil(total / (rowsPerCol * c)) <= best) { cols = c; break; }
+    }
+    return { rowH: rowH, rowsPerCol: rowsPerCol, cols: cols };
+  }
+
+  function boardRowHtml(r) {
+    var top = Number(r.rank) <= 3 ? ' board-row--top' : '';
+    var tag = r.pending
+      ? ' <span class="board-row__pending">' +
+        I18N.t('board.notReported', 'not reported') + '</span>'
+      : '';
+    return '<li class="board-row' + top + '">' +
+      '<span class="board-row__rank">' + escapeHtml(r.rank) + '</span>' +
+      '<span class="board-row__name">' +
+        '<span class="board-row__who">' + escapeHtml(r.pseudonym) + '</span>' + tag +
+      '</span>' +
+      '<span class="board-row__points">' + fmt(r.points) + '</span>' +
+      '<span class="board-row__move">' + deltaChip(r) + moveChip(r) + '</span>' +
+    '</li>';
+  }
+
+  function layoutBoard() {
+    var el = boardEl();
+    if (!el || el.hidden) { return; }
+    var grid = document.getElementById('board-grid');
+    var m = boardMeasure();
+    var perPage = m.rowsPerCol * m.cols;
+    boardPages = Math.max(1, Math.ceil(lbRows.length / perPage));
+    if (boardPage >= boardPages) { boardPage = 0; }
+
+    el.style.setProperty('--board-row-h', m.rowH + 'px');
+    grid.style.gridTemplateColumns = 'repeat(' + m.cols + ', 1fr)';
+
+    var start = boardPage * perPage;
+    var slice = lbRows.slice(start, start + perPage);
+    // Column-major: a ranked list has to read downwards, not across.
+    var cols = [];
+    for (var c = 0; c < m.cols; c++) {
+      cols.push(slice.slice(c * m.rowsPerCol, (c + 1) * m.rowsPerCol));
+    }
+    grid.innerHTML = cols.map(function (col) {
+      return '<ol class="board-col">' + col.map(boardRowHtml).join('') + '</ol>';
+    }).join('');
+
+    var pager = document.getElementById('board-pager');
+    if (pager) {
+      pager.textContent = boardPages > 1
+        ? I18N.t('board.page', 'Page') + ' ' + (boardPage + 1) + ' / ' + boardPages
+        : '';
+    }
+
+    var waiting = lbRows.filter(function (r) { return r.pending; }).length;
+    var nudge = document.getElementById('board-waiting');
+    if (nudge) {
+      nudge.textContent = waiting
+        ? waiting + ' ' + I18N.t('board.stillToReport', 'still to report')
+        : I18N.t('board.allReported', 'Everybody has reported');
+      nudge.className = 'board__waiting' + (waiting ? ' board__waiting--open' : '');
+    }
+
+    var sub = document.getElementById('board-sub');
+    if (sub && lbRows.length && lbRows[0].points_delta !== undefined) {
+      sub.textContent = lbRows[0].delta_live
+        ? I18N.t('board.tonight', 'Tonight so far')
+        : I18N.t('board.lastRound', 'Last settled round');
+    }
+
+    // Only run a timer when there is a second page to turn to.
+    if (boardPageTimer) { window.clearInterval(boardPageTimer); boardPageTimer = null; }
+    if (boardPages > 1) {
+      boardPageTimer = window.setInterval(function () {
+        boardPage = (boardPage + 1) % boardPages;
+        layoutBoard();
+      }, 12000);
+    }
+  }
+
+  function openBoard() {
+    var el = boardEl();
+    if (!el) { return; }
+    boardPage = 0;
+    // Plain .hidden, not SBP.show: leaderboard.html is one of the pages that
+    // loads app.js WITHOUT js/sb.js, so there is no window.SBP here to borrow.
+    el.hidden = false;
+    document.body.classList.add('no-scroll');
+    try {
+      if (el.requestFullscreen) { el.requestFullscreen().catch(function () {}); }
+    } catch (e) { /* the fixed overlay is already a takeover */ }
+    layoutBoard();
+    startLbPolling();   // faster cadence while it is on the wall
+    refreshLeaderboard();
+  }
+
+  function closeBoard() {
+    var el = boardEl();
+    if (!el) { return; }
+    el.hidden = true;
+    document.body.classList.remove('no-scroll');
+    if (boardPageTimer) { window.clearInterval(boardPageTimer); boardPageTimer = null; }
+    startLbPolling();   // back to the quiet cadence
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(function () {});
+      }
+    } catch (e) { /* fine */ }
+  }
+
+  if (boardEl()) {
+    var boardOpenBtn = document.getElementById('board-display-open');
+    if (boardOpenBtn) { boardOpenBtn.addEventListener('click', openBoard); }
+    var boardCloseBtn = document.getElementById('board-close');
+    if (boardCloseBtn) { boardCloseBtn.addEventListener('click', closeBoard); }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !boardEl().hidden) { closeBoard(); }
+      if (!boardEl().hidden && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+        boardPage = (boardPage + (e.key === 'ArrowRight' ? 1 : boardPages - 1)) % boardPages;
+        layoutBoard();
+      }
+    });
+    var boardResize;
+    window.addEventListener('resize', function () {
+      window.clearTimeout(boardResize);
+      boardResize = window.setTimeout(layoutBoard, 150);
+    });
+    // ?display goes straight to the wall, so an organiser can bookmark it on
+    // the machine wired to the screen and not hunt for a button at 20:15.
+    if (/(^|[?&])display(=|&|$)/.test(window.location.search)) {
+      afterScripts(function () {
+        if (lbRows.length) { openBoard(); }
+        else { window.setTimeout(function () { if (lbRows.length) { openBoard(); } }, 1200); }
+      });
+    }
   }
 })();

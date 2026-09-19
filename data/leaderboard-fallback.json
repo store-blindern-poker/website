@@ -1,7 +1,7 @@
 {
   "season": "Fall 2026",
   "updated": "2026-08-30",
-  "note": "Last-known-good leaderboard copy. Shown by leaderboard.html whenever the live v_leaderboard view is unreachable (offline, project paused, config unpatched). Refresh it after each settled night: export v_leaderboard (rank, pseudonym, points, nights_played) and commit. Pseudonyms only, never names.",
+  "note": "Last-known-good leaderboard copy. Shown by leaderboard.html whenever the live v_leaderboard view is unreachable (offline, project paused, config unpatched). Refresh it after each settled night: export v_leaderboard (rank, pseudonym, points, nights_played) and commit. points_delta and places_moved may be included and will be drawn if present; leaving them out simply shows the board without movement marks. Pseudonyms only, never names.",
   "rows": [
     {
       "rank": 1,
