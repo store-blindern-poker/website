@@ -1087,7 +1087,20 @@
                '" x2="' + (W - PAD) + '" y2="' + openY + '" vector-effect="non-scaling-stroke"/>' +
              '<polyline class="spark__line" points="' + pts.join(' ') +
                '" vector-effect="non-scaling-stroke"/>' +
-             '<circle class="spark__dot" cx="' + lastX + '" cy="' + lastY + '" r="2.1"/>' +
+             // A zero-length round-capped stroke, not a <circle>. The box is
+             // stretched by CSS with preserveAspectRatio="none", so x and y
+             // scale by different factors and a circle comes out an egg: mild
+             // in the table, obvious on the wall where the cell is narrower
+             // and taller than the viewBox. A stroke with non-scaling-stroke
+             // ignores the transform entirely and is round at every size.
+             // The 0.01 is insurance, not geometry. A truly zero-length
+             // subpath is specified to render as a dot under a round cap, and
+             // every engine we care about does, but it has historically been
+             // the sort of thing a renderer skips. A hundredth of a user unit
+             // is invisible and puts it beyond argument.
+             '<line class="spark__dot" x1="' + lastX + '" y1="' + lastY +
+               '" x2="' + (Number(lastX) + 0.01).toFixed(2) + '" y2="' + lastY +
+               '" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
            '</svg>';
   }
 
@@ -1100,7 +1113,32 @@
 
   function sparkFor(r) {
     if (!lbHistory) { return ''; }
-    return sparkline(lbHistory[histKey(r)] || null);
+    var s = lbHistory[histKey(r)];
+    if (!s) { return ''; }
+
+    /* TONIGHT IS ON THE LINE WHILE IT IS BEING PLAYED.
+     *
+     * balance_after is written by recompute_season, so the history view only
+     * grows when a night SETTLES. Left alone, that makes the row disagree
+     * with itself during a live night: the points climb, the delta climbs,
+     * and the line sits flat at last week. A ticker that ignores today is not
+     * a ticker.
+     *
+     * So while a round is open, the live total is appended as one more point.
+     * It is the same number the points column is already showing, so the two
+     * cannot contradict each other, and at settle the real value arrives from
+     * the view and replaces it with no visible change.
+     *
+     * Appended for everybody, including players who have not reported. Their
+     * live total is unchanged, so they get a flat last segment, which is
+     * exactly what their points column says. Appending only for reporters
+     * would leave the board with lines of two different lengths and no way to
+     * tell which was which.
+     *
+     * concat, not push: lbHistory is the cached read and must not grow a
+     * provisional point every time the board re-renders. */
+    if (r.delta_live) { s = s.concat([r.points]); }
+    return sparkline(s);
   }
 
   /* Its own read, like the pending banner, and just as disposable. The board
@@ -1419,13 +1457,26 @@
         (mv.down ? boardMoverHtml(mv.down, 'loss') : '');
     }
 
-    // Only run a timer when there is a second page to turn to.
-    if (boardPageTimer) { window.clearInterval(boardPageTimer); boardPageTimer = null; }
-    if (boardPages > 1) {
+    /* The page timer is started and stopped here but never RESTARTED, and
+     * that distinction is the whole point.
+     *
+     * layoutBoard runs on every refresh as well as every page turn, and the
+     * refresh lands whenever it lands. Clearing and recreating the interval
+     * each time meant a 20 second read kept resetting a 12 second timer, so
+     * pages turned at 12, then 32, then 52, drifting by however long it had
+     * been since the last poll. On a wall that reads as the board hanging.
+     *
+     * So: start it when there is a second page and nothing is running, stop
+     * it when there is not. Both idempotent, and a refresh that changes
+     * nothing leaves the rhythm alone. */
+    if (boardPages > 1 && !boardPageTimer) {
       boardPageTimer = window.setInterval(function () {
         boardPage = (boardPage + 1) % boardPages;
         layoutBoard();
       }, 12000);
+    } else if (boardPages <= 1 && boardPageTimer) {
+      window.clearInterval(boardPageTimer);
+      boardPageTimer = null;
     }
   }
 

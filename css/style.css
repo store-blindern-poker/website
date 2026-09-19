@@ -4510,6 +4510,10 @@ select.input {
 
 .spark__area { stroke: none; }
 
+/* Drawn as a zero-length round-capped stroke so it stays circular however
+   the box is stretched. See the note in js/app.js sparkline(). */
+.spark__dot { fill: none; stroke-width: 4.2; }
+
 /* The line you started the season on. Dashed and dim: it is a reference, and
    the moment it competes with the balance itself the chart is ruined. */
 .spark__open {
@@ -4520,15 +4524,15 @@ select.input {
 
 .spark--up   .spark__line { stroke: var(--felt-lift); }
 .spark--up   .spark__area { fill: var(--felt-lift); fill-opacity: 0.12; }
-.spark--up   .spark__dot  { fill: var(--felt-lift); }
+.spark--up   .spark__dot  { stroke: var(--felt-lift); }
 
 .spark--down .spark__line { stroke: var(--clay-lift); }
 .spark--down .spark__area { fill: var(--clay-lift); fill-opacity: 0.12; }
-.spark--down .spark__dot  { fill: var(--clay-lift); }
+.spark--down .spark__dot  { stroke: var(--clay-lift); }
 
 .spark--level .spark__line { stroke: var(--cream-mute); }
 .spark--level .spark__area { fill: var(--cream-mute); fill-opacity: 0.08; }
-.spark--level .spark__dot  { fill: var(--cream-mute); }
+.spark--level .spark__dot  { stroke: var(--cream-mute); }
 
 /* Table column. Narrow enough that Points and Nights keep their weight, wide
    enough that four or five nights are still a shape and not a zigzag. */
