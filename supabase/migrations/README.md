@@ -30,6 +30,7 @@ so the two should never drift.
 | `0022_live_nights_played.sql` | The nights count follows the live points instead of lagging a settle |
 | `0023_live_survives_recompute.sql` | Refresh the live columns after `recompute_season` rebuilds the table, not before |
 | `0024_leaderboard_movement.sql` | `points_delta` and `places_moved` on the board, rebased when a night opens |
+| `0025_leaderboard_history.sql` | Per-member balance series for the current season, drawn as a trend line |
 
 ## The rule that matters
 

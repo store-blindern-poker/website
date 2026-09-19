@@ -104,6 +104,12 @@
     'board.moveSettled': 'Bevegelse og poengendring er fra forrige ' +
       'oppgjorte runde.',
 
+    /* The trend line's accessible label, read out and never seen: it builds
+     * "Sesongkurve: +15 750 over 4 kvelder". */
+    'board.trend': 'Sesongkurve',
+    'board.over': 'over',
+    'board.nights': 'kvelder',
+
     /* The round's two extremes. Deliberately not "gevinst" and "tap", which
      * in Norwegian carry the smell of money the club does not deal in. Up and
      * down are the words already used for places on the same screen. */

@@ -4320,7 +4320,7 @@ select.input {
 
 .board-row {
   display: grid;
-  grid-template-columns: 2.6em 1fr auto auto;
+  grid-template-columns: 2.6em 1fr auto auto auto;
   align-items: center;
   gap: 0 1.2vmin;
   height: var(--board-row-h);
@@ -4479,4 +4479,93 @@ select.input {
    already on the page behind it. */
 @media (max-width: 760px) {
   .board__movers { display: none; }
+}
+
+/* ===========================================================================
+   The trend line: a ticker for one player's season
+   ===========================================================================
+   Three layers and a dot, coloured by whether the season is up or down. The
+   area fill is what makes it read as a ticker rather than a stray squiggle,
+   and it is kept faint so that fifty of them stacked in a table are texture
+   rather than noise.
+
+   The stroke widths are all set with non-scaling-stroke in the markup, so
+   these numbers are real pixels at any column width, on a phone and on the
+   projector alike. Without that the same line is a hairline in the table and
+   a fat crayon on the wall, because the box is stretched, not scaled. */
+
+.spark {
+  display: block;
+  width: 100%;
+  height: 30px;
+  overflow: visible;
+}
+
+.spark__line {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.spark__area { stroke: none; }
+
+/* The line you started the season on. Dashed and dim: it is a reference, and
+   the moment it competes with the balance itself the chart is ruined. */
+.spark__open {
+  stroke: var(--border-loud);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.spark--up   .spark__line { stroke: var(--felt-lift); }
+.spark--up   .spark__area { fill: var(--felt-lift); fill-opacity: 0.12; }
+.spark--up   .spark__dot  { fill: var(--felt-lift); }
+
+.spark--down .spark__line { stroke: var(--clay-lift); }
+.spark--down .spark__area { fill: var(--clay-lift); fill-opacity: 0.12; }
+.spark--down .spark__dot  { fill: var(--clay-lift); }
+
+.spark--level .spark__line { stroke: var(--cream-mute); }
+.spark--level .spark__area { fill: var(--cream-mute); fill-opacity: 0.08; }
+.spark--level .spark__dot  { fill: var(--cream-mute); }
+
+/* Table column. Narrow enough that Points and Nights keep their weight, wide
+   enough that four or five nights are still a shape and not a zigzag. */
+.table th.trend,
+.table td.trend {
+  width: 120px;
+  min-width: 120px;
+  padding-top: var(--space-sm);
+  padding-bottom: var(--space-sm);
+}
+
+.table th.trend {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cream-mute);
+}
+
+/* On the wall it sits between the points and the movement marks, which is
+   where a ticker puts it: the number, the shape, then the change. */
+/* Narrow on purpose. The line only has to carry a shape, and every pixel it
+   takes comes out of the name beside it, which is what people are scanning
+   for. Widening this to 11vmin cut "Sveinung2Swaggy" in half for no gain in
+   legibility of the curve. */
+.board-row__spark {
+  width: 8vmin;
+  max-width: 96px;
+  display: block;
+}
+
+.board-row__spark .spark { height: calc(var(--board-row-h) * 0.62); }
+
+/* A phone has no room for a fifth column, and the row already carries the
+   points change that the line is a picture of. */
+@media (max-width: 640px) {
+  .table th.trend,
+  .table td.trend { display: none; }
 }

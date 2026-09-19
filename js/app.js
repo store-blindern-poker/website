@@ -825,6 +825,7 @@
     // fails the standings still render, and a board with no caveat is worse
     // than a board with one but better than no board at all.
     fetchPendingBanner();
+    fetchHistory();
     fetchLiveLeaderboard()
       .then(function (rows) {
         if (rows && rows.length) {
@@ -899,7 +900,7 @@
    * columns (migration 0024), and on any failure asks again without them.
    * A board with no arrows is a small loss. A board that will not load is
    * the page. */
-  var LB_COLS = 'rank,pseudonym,points,nights_played,pending,provisional';
+  var LB_COLS = 'season_id,rank,pseudonym,points,nights_played,pending,provisional';
   var LB_COLS_MOVE = LB_COLS + ',delta_live,points_delta,places_moved';
 
   function fetchLiveLeaderboard() {
@@ -955,6 +956,7 @@
       if (rows && rows.length) { renderLeaderboard(rows, 'live', null); }
     }).catch(function () { /* keep whatever is on screen */ });
     fetchPendingBanner();
+    fetchHistory();
   }
 
   function startLbPolling() {
@@ -1027,6 +1029,105 @@
     return '<span class="delta delta--' + (up ? 'up' : 'down') + '">' +
              (up ? '+' : '') + fmt(n) +
            '</span>';
+  }
+
+  /* ---------------- the trend line ----------------
+   *
+   * A ticker line for one member: their balance after each settled night,
+   * normalised to its own range so the SHAPE is what you read. Absolute
+   * height would make every line below the leader a flat smear, and the
+   * question this answers is "steady or one enormous Friday", not "how many
+   * points", which is in the next column in full.
+   *
+   * Four marks, in the order they are drawn:
+   *   area    the fill under the line, which is what makes it read as a
+   *           ticker rather than a scribble
+   *   open    a dashed rule at the season's starting points, so above and
+   *           below the line you began on is visible without arithmetic
+   *   line    the balance itself
+   *   dot     the latest value, the ticker's "now"
+   *
+   * Colour is set by the whole season, last against first, not by the last
+   * night. A player who is up 30,000 on the term and lost a little on Friday
+   * is having a good season, and 0024's arrows already say what Friday did.
+   *
+   * non-scaling-stroke is not a detail. The box is stretched by CSS to
+   * whatever the column is wide, and without it the stroke stretches with the
+   * geometry, so the same line is hairline on the page and fat on the wall.
+   */
+  function sparkline(series) {
+    if (!series || series.length < 2) { return ''; }
+    var vals = series.map(Number).filter(function (n) { return isFinite(n); });
+    if (vals.length < 2) { return ''; }
+
+    var W = 100, H = 28, PAD = 3;
+    var min = Math.min.apply(null, vals);
+    var max = Math.max.apply(null, vals);
+    var span = (max - min) || 1;           // a flat season is a flat line, not a divide by zero
+    var xAt = function (i) { return PAD + (i * (W - 2 * PAD)) / (vals.length - 1); };
+    var yAt = function (v) { return H - PAD - ((v - min) / span) * (H - 2 * PAD); };
+
+    var pts = vals.map(function (v, i) { return xAt(i).toFixed(2) + ',' + yAt(v).toFixed(2); });
+    var net = vals[vals.length - 1] - vals[0];
+    var kind = net > 0 ? 'up' : net < 0 ? 'down' : 'level';
+    var openY = yAt(vals[0]).toFixed(2);
+    var lastX = xAt(vals.length - 1).toFixed(2);
+    var lastY = yAt(vals[vals.length - 1]).toFixed(2);
+
+    var label = I18N.t('board.trend', 'Season trend') + ': ' +
+      (net > 0 ? '+' : '') + fmt(net) + ' ' +
+      I18N.t('board.over', 'over') + ' ' + (vals.length - 1) + ' ' +
+      I18N.t('board.nights', 'nights');
+
+    return '<svg class="spark spark--' + kind + '" viewBox="0 0 ' + W + ' ' + H + '" ' +
+             'preserveAspectRatio="none" role="img" aria-label="' + escapeHtml(label) + '">' +
+             '<path class="spark__area" d="M' + xAt(0).toFixed(2) + ',' + (H - PAD) +
+               ' L' + pts.join(' L') + ' L' + lastX + ',' + (H - PAD) + ' Z"/>' +
+             '<line class="spark__open" x1="' + PAD + '" y1="' + openY +
+               '" x2="' + (W - PAD) + '" y2="' + openY + '" vector-effect="non-scaling-stroke"/>' +
+             '<polyline class="spark__line" points="' + pts.join(' ') +
+               '" vector-effect="non-scaling-stroke"/>' +
+             '<circle class="spark__dot" cx="' + lastX + '" cy="' + lastY + '" r="2.1"/>' +
+           '</svg>';
+  }
+
+  /* Keyed on season AND pseudonym. A pseudonym is unique inside a season and
+   * emphatically not across them, and both views carry the season, so there
+   * is no reason to key on the half of that which can collide. */
+  var lbHistory = null;
+
+  function histKey(r) { return String(r.season_id) + '|' + String(r.pseudonym); }
+
+  function sparkFor(r) {
+    if (!lbHistory) { return ''; }
+    return sparkline(lbHistory[histKey(r)] || null);
+  }
+
+  /* Its own read, like the pending banner, and just as disposable. The board
+   * must render whether or not this answers, including on a database that has
+   * not had 0025 applied yet, so every failure here is a warning and a board
+   * without trend lines. */
+  function fetchHistory() {
+    var client = anonClient();
+    if (!client) { return; }
+    try {
+      client.from('v_leaderboard_history')
+        .select('season_id,pseudonym,series')
+        .then(function (res) {
+          if (res.error) { throw res.error; }
+          var map = {};
+          (res.data || []).forEach(function (r) { map[histKey(r)] = r.series; });
+          lbHistory = map;
+          // Arrives after the board in the ordinary case, so the rows already
+          // on screen are redrawn once with their lines in.
+          if (lbRows.length) { renderLeaderboard(lbRows, 'live', null); }
+        })
+        .catch(function (err) {
+          console.warn('Trend lines unavailable:', err);
+        });
+    } catch (err) {
+      console.warn('Trend lines unavailable:', err);
+    }
   }
 
   /* The round's two extremes.
@@ -1119,6 +1220,7 @@
         '<td><span class="player-cell"><span class="player-avatar">' + escapeHtml(initial) +
           '</span><span class="player-name">' + escapeHtml(r.pseudonym) + '</span>' + tag + '</span></td>' +
         '<td class="num">' + fmt(r.points) + deltaChip(r) + '</td>' +
+        '<td class="trend">' + sparkFor(r) + '</td>' +
         '<td class="num">' + fmt(r.nights_played) + '</td>' +
       '</tr>';
     }).join('');
@@ -1255,6 +1357,7 @@
         '<span class="board-row__who">' + escapeHtml(r.pseudonym) + '</span>' + tag +
       '</span>' +
       '<span class="board-row__points">' + fmt(r.points) + '</span>' +
+      '<span class="board-row__spark">' + sparkFor(r) + '</span>' +
       '<span class="board-row__move">' + deltaChip(r) + moveChip(r) + '</span>' +
     '</li>';
   }
