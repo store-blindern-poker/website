@@ -1029,6 +1029,46 @@
            '</span>';
   }
 
+  /* The round's two extremes.
+   *
+   * Computed here rather than in the view because it is not a scoring rule,
+   * it is a max and a min over a column the page has already been handed.
+   * Adding a second read, or a second view to keep in step with 0024's
+   * baseline, would buy nothing.
+   *
+   * NEITHER IS SHOWN UNLESS IT REALLY HAPPENED. If nobody lost points over
+   * the round there is no biggest loss, and the row is absent rather than
+   * handed to whoever gained least. Printing "biggest loss" over a player who
+   * had a perfectly good night, on a screen in front of the room, would be a
+   * straightforward lie about them. Same in reverse on a brutal night where
+   * nobody finished up.
+   *
+   * Ties go to the better-ranked player, because rows arrive in rank order
+   * and the comparison is strict. Deterministic, which matters when this is
+   * on a wall and somebody is arguing about it. */
+  function roundMovers(rows) {
+    var up = null, down = null;
+    rows.forEach(function (r) {
+      if (r.points_delta === null || r.points_delta === undefined) { return; }
+      var d = Number(r.points_delta);
+      if (d > 0 && (!up || d > Number(up.points_delta))) { up = r; }
+      if (d < 0 && (!down || d < Number(down.points_delta))) { down = r; }
+    });
+    return (up || down) ? { up: up, down: down } : null;
+  }
+
+  function moverRowHtml(r, kind) {
+    var label = kind === 'win'
+      ? I18N.t('board.biggestWin', 'Biggest win')
+      : I18N.t('board.biggestLoss', 'Biggest loss');
+    var d = Number(r.points_delta);
+    return '<div class="podium__place podium__place--' + kind + '">' +
+      '<div class="podium__medal">' + label + '</div>' +
+      '<div class="podium__name">' + escapeHtml(r.pseudonym) + '</div>' +
+      '<div class="podium__points">' + (d > 0 ? '+' : '') + fmt(d) + '</div>' +
+    '</div>';
+  }
+
   function renderLeaderboard(rows, source, updated) {
 
     // Podium cards for the top three.
@@ -1049,6 +1089,15 @@
           waiting +
         '</div>';
       }).join('');
+
+      // Appended to the same list rather than given their own card grid: the
+      // top three and the round's movers are the same kind of statement about
+      // the same board, and two competing layouts above one table is noise.
+      var mv = roundMovers(rows);
+      if (mv) {
+        podium.innerHTML += (mv.up ? moverRowHtml(mv.up, 'win') : '') +
+                            (mv.down ? moverRowHtml(mv.down, 'loss') : '');
+      }
       podium.style.display = '';
     }
 
@@ -1180,6 +1229,20 @@
     return { rowH: rowH, rowsPerCol: rowsPerCol, cols: cols };
   }
 
+  function boardMoverHtml(r, kind) {
+    var label = kind === 'win'
+      ? I18N.t('board.biggestWin', 'Biggest win')
+      : I18N.t('board.biggestLoss', 'Biggest loss');
+    var d = Number(r.points_delta);
+    return '<span class="board__mover">' +
+      '<span class="board__mover-label">' + label + '</span>' +
+      '<span class="board__mover-name">' + escapeHtml(r.pseudonym) + '</span>' +
+      '<span class="delta delta--' + (d > 0 ? 'up' : 'down') + '">' +
+        (d > 0 ? '+' : '') + fmt(d) +
+      '</span>' +
+    '</span>';
+  }
+
   function boardRowHtml(r) {
     var top = Number(r.rank) <= 3 ? ' board-row--top' : '';
     var tag = r.pending
@@ -1240,6 +1303,17 @@
       sub.textContent = lbRows[0].delta_live
         ? I18N.t('board.tonight', 'Tonight so far')
         : I18N.t('board.lastRound', 'Last settled round');
+    }
+
+    // In the header rather than the footer: it is the one thing on this screen
+    // somebody reads out loud, and the footer already carries the count that
+    // has to stay visible until the last person has reported.
+    var moversEl = document.getElementById('board-movers');
+    if (moversEl) {
+      var mv = roundMovers(lbRows);
+      moversEl.innerHTML = !mv ? '' :
+        (mv.up ? boardMoverHtml(mv.up, 'win') : '') +
+        (mv.down ? boardMoverHtml(mv.down, 'loss') : '');
     }
 
     // Only run a timer when there is a second page to turn to.

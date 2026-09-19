@@ -4420,3 +4420,63 @@ select.input {
   .board-row { grid-template-columns: 2.2em 1fr auto; }
   .board-row__move { min-width: 0; grid-column: 1 / -1; justify-content: flex-start; }
 }
+
+/* ---------------------------------------------------------------------------
+   The round's two extremes, on the podium list and on the wall
+   ---------------------------------------------------------------------------
+   These reuse .podium__place rather than inventing a card pair, so the top
+   three and the round's movers read as one object above one table. The rule
+   above the pair is the only separation they need: the question changes from
+   "who is winning the season" to "what happened last round", and the eye
+   should notice that without being shouted at. */
+
+.podium__place--win {
+  border-top: 1px solid var(--border-loud);
+  margin-top: var(--space-md);
+}
+
+.podium__place--win .podium__medal  { color: var(--felt-lift); }
+.podium__place--win .podium__points { color: var(--felt-lift); }
+.podium__place--loss .podium__medal  { color: var(--clay-lift); }
+.podium__place--loss .podium__points { color: var(--clay-lift); }
+
+.board__movers {
+  display: flex;
+  align-items: baseline;
+  gap: 2.4vmin;
+  margin-left: auto;
+  margin-right: 2vmin;
+  font-family: var(--font-mono);
+  /* Sized up towards the title: on a wall this is the line somebody reads
+     out, and the header has nothing else competing for the right-hand side. */
+  font-size: clamp(0.75rem, 1.75vmin, 1.5rem);
+  min-width: 0;
+}
+
+.board__mover {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.board__mover-label {
+  color: var(--cream-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.board__mover-name {
+  font-family: var(--font-sans);
+  font-size: 1.15em;
+  color: var(--cream);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A phone holding this open has no width for them, and the same pair is
+   already on the page behind it. */
+@media (max-width: 760px) {
+  .board__movers { display: none; }
+}

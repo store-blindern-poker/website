@@ -104,6 +104,12 @@
     'board.moveSettled': 'Bevegelse og poengendring er fra forrige ' +
       'oppgjorte runde.',
 
+    /* The round's two extremes. Deliberately not "gevinst" and "tap", which
+     * in Norwegian carry the smell of money the club does not deal in. Up and
+     * down are the words already used for places on the same screen. */
+    'board.biggestWin': 'Mest opp',
+    'board.biggestLoss': 'Mest ned',
+
     /* Display mode, the big screen in the room */
     'board.notReported': 'ikke rapportert',
     'board.tonight': 'Så langt i kveld',
