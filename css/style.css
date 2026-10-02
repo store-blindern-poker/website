@@ -4403,6 +4403,13 @@ select.input {
   padding: 0.3em 0.8em;
 }
 
+/* A narrow window is not what this screen is for, but it must not fall
+   apart in one. The row declares three columns here, so every child beyond
+   the third lands in an implicit fourth and steals width from the name:
+   adding the trend line silently did exactly that, and short pseudonyms like
+   "Daniel" started truncating. The line is the first thing to drop, for the
+   same reason it drops from the table: the row already carries the points
+   change it is a picture of. */
 @media (max-width: 760px) {
   .board { padding: var(--space-md); }
   .board-row { grid-template-columns: 2.2em 1fr auto; }
@@ -4554,6 +4561,15 @@ select.input {
 }
 
 .board-row__spark .spark { height: calc(var(--board-row-h) * 0.62); }
+
+/* Dropped on a narrow window, and it has to be stated AFTER the rule above
+   rather than up with the other narrow-width board rules: same specificity,
+   so the later declaration wins, and the earlier one was silently losing.
+   Without it the row declares three columns and gets five children, the line
+   lands in an implicit fourth, and it overlaps the rank. */
+@media (max-width: 760px) {
+  .board-row__spark { display: none; }
+}
 
 /* A phone has no room for a fifth column, and the row already carries the
    points change that the line is a picture of. */
