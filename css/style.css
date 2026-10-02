@@ -4380,18 +4380,6 @@ select.input {
 .board-row--top .board-row__rank,
 .board-row--top .board-row__name { color: var(--brass); }
 
-.board-row__pending {
-  flex: 0 0 auto;
-  font-family: var(--font-mono);
-  font-size: calc(var(--board-row-h) * 0.26);
-  color: var(--cream-mute);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.1em 0.5em;
-  margin-left: 0.6em;
-  white-space: nowrap;
-}
-
 .board__foot {
   flex: 0 0 auto;
   display: flex;

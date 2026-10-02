@@ -1383,16 +1383,24 @@
     '</span>';
   }
 
+  /* NO PER-ROW "not reported" TAG HERE, deliberately, and it is not an
+   * oversight to be put back.
+   *
+   * The wall columns are narrow and the tag is nearly as wide as a pseudonym,
+   * so on the rows that had it the name was squeezed down to an ellipsis and
+   * the row read as a badge with a stump of a name attached. The one thing
+   * somebody in the room is doing is looking for their own name, and the tag
+   * was eating it.
+   *
+   * The information is not lost. The footer carries the count of who is still
+   * out, which is the number anybody can act on, and the leaderboard table on
+   * the page behind this keeps the tag per row where there is width for it. */
   function boardRowHtml(r) {
     var top = Number(r.rank) <= 3 ? ' board-row--top' : '';
-    var tag = r.pending
-      ? ' <span class="board-row__pending">' +
-        I18N.t('board.notReported', 'not reported') + '</span>'
-      : '';
     return '<li class="board-row' + top + '">' +
       '<span class="board-row__rank">' + escapeHtml(r.rank) + '</span>' +
       '<span class="board-row__name">' +
-        '<span class="board-row__who">' + escapeHtml(r.pseudonym) + '</span>' + tag +
+        '<span class="board-row__who">' + escapeHtml(r.pseudonym) + '</span>' +
       '</span>' +
       '<span class="board-row__points">' + fmt(r.points) + '</span>' +
       '<span class="board-row__spark">' + sparkFor(r) + '</span>' +

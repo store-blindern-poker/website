@@ -116,8 +116,9 @@
     'board.biggestWin': 'Mest opp',
     'board.biggestLoss': 'Mest ned',
 
-    /* Display mode, the big screen in the room */
-    'board.notReported': 'ikke rapportert',
+    /* Display mode, the big screen in the room. No 'not reported' string:
+     * the wall has no width for a per-row tag, so the footer carries the
+     * count instead. See boardRowHtml in js/app.js. */
     'board.tonight': 'Så langt i kveld',
     'board.lastRound': 'Forrige oppgjorte runde',
     'board.stillToReport': 'har ikke rapportert ennå',
